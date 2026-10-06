@@ -1,0 +1,1 @@
+启动Lexi源码.command

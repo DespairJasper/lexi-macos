@@ -1,0 +1,14 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup><TargetFramework>net8.0</TargetFramework><Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings></PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Application/Lexi.Application.csproj" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />
+    <Compile Include="../Services/AiService.cs;../Services/DictionaryService.cs;../Services/VocabularyService.cs;../Services/VocabularyService.Archive.cs;../Services/VocabularyService.Quotes.cs;../Services/DatabaseSafety.cs;../Services/ExportService.cs;../Services/QuoteExportService.cs" LinkBase="Services" />
+    <Compile Include="../Platform/WindowsSecretStore.cs" Link="Platform/WindowsSecretStore.cs" />
+    <Compile Include="../Platform/WindowsDocumentLauncher.cs" Link="Platform/WindowsDocumentLauncher.cs" />
+    <Compile Include="../Platform/MacKeychainSecretStore.cs" Link="Platform/MacKeychainSecretStore.cs" />
+    <Compile Include="../Platform/SecretStoreFactory.cs" Link="Platform/SecretStoreFactory.cs" />
+    <Compile Include="../Platform/MacDocumentLauncher.cs" Link="Platform/MacDocumentLauncher.cs" />
+    <InternalsVisibleTo Include="Lexi" />
+  </ItemGroup>
+</Project>

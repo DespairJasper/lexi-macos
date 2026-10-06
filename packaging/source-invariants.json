@@ -1,0 +1,538 @@
+{
+  "baseline": "Original UI contracts and protected asset hashes; no dependency on retired Windows files",
+  "protected": {
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.Win32-2.88.9-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.Linux-8.3.1.1-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.WebAssembly-2.88.9-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/System.Memory-4.5.3-LICENSE.TXT": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.Win32-2.88.9-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.macOS-2.88.9-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/MY-IELTS-SOURCE.md": "6cebe0d6cb66e11bd9f20cac294e32a3d76899682618d4567094f729556f41b6",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.Win32-8.3.1.1-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.macOS-2.88.9-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.Win32-8.3.1.1-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/DICTIONARY_SOURCE.md": "fdb10aff001c3cb591ddab880d0e0f5a35c31417218ffabc6d27a53af8886fbd",
+    "lexi_avalonia/Notices/System.IO.Pipelines-8.0.0-THIRD-PARTY-NOTICES.TXT": "19c19dcac9f3ee6302cfbc6745bb8e79f08efc4c933eb8dc5509bf14b88347ec",
+    "lexi_avalonia/Notices/SkiaSharp-2.88.9-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/HarfBuzzSharp-8.3.1.1-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/INTER-LICENSE.txt": "262481e844521b326f5ecd053e59b98c8b2da78c8ee1bdbb6e8174305e54935a",
+    "lexi_avalonia/Notices/System.Memory-4.5.3-THIRD-PARTY-NOTICES.TXT": "7864a01e2fdef7e8fdf81b906efb1466f083206affea7ba7e6dadea429754765",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.macOS-8.3.1.1-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/DEPENDENCIES.txt": "fcebb1c91aac64be00c86cf97cad4b06e9d06bd74bc6794e00979bb90f7bb380",
+    "lexi_avalonia/Notices/ECDICT-LICENSE.txt": "f8552dd246f61a4e064569eae6194a01c6b3d63b03bf27c6ca863593c549ed0f",
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.Linux-2.88.9-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.WebAssembly-2.88.9-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.WebAssembly-8.3.1.1-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/THIRD-PARTY-NOTICES.txt": "fcebb1c91aac64be00c86cf97cad4b06e9d06bd74bc6794e00979bb90f7bb380",
+    "lexi_avalonia/Notices/Avalonia.Angle.Windows.Natives-2.1.25547.20250602-LICENSE": "54aff7276217df9f6b5181613999d208c9e40d2b1d51bf55217837e6871a4a63",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.Linux-8.3.1.1-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.macOS-8.3.1.1-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/HarfBuzzSharp.NativeAssets.WebAssembly-8.3.1.1-LICENSE.txt": "89101e35a8c66fd4d6dffc1763259161d35cb564c169714ec227a768c89f2938",
+    "lexi_avalonia/Notices/SkiaSharp.NativeAssets.Linux-2.88.9-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Notices/DOTNET-LICENSE.txt": "7f6839a61ce892b79c6549e2dc5a81fdbd240a0b260f8881216b45b7fda8b45d",
+    "lexi_avalonia/Notices/System.IO.Pipelines-8.0.0-LICENSE.TXT": "d7a68596ab69b06f51ca278a6545148e4269a9381c26d597c13df5d88e08cf5b",
+    "lexi_avalonia/Notices/DOTNET-ThirdPartyNotices.txt": "1271701f435f7fe4aa81dc7e273ca80b6391b73580ee20b35a956052c95de4cf",
+    "lexi_avalonia/Notices/SkiaSharp-2.88.9-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
+    "lexi_avalonia/Assets/dictionary.sqlite3": "d5117799b83cb0fc147ff736a91dc53dd843b4ddc3deb03d0ad2fd5b55b43117",
+    "lexi_avalonia/Styles/README.md": "287a08ce1da8b3f0b173c77048b2c87ee2e310e9ae8f1d5f6141150172d6b65b"
+  },
+  "named_controls": {
+    "RootWindowBorder": "{https://github.com/avaloniaui}Border",
+    "DragBar": "{https://github.com/avaloniaui}Border",
+    "ThemeToggleBtn": "{https://github.com/avaloniaui}Button",
+    "HideToTrayBtn": "{https://github.com/avaloniaui}Button",
+    "MaximizeBtn": "{https://github.com/avaloniaui}Button",
+    "MaximizeGlyph": "{https://github.com/avaloniaui}Path",
+    "QuitAppBtn": "{https://github.com/avaloniaui}Button",
+    "NavLookup": "{https://github.com/avaloniaui}Button",
+    "NavVocab": "{https://github.com/avaloniaui}Button",
+    "NavVocabBadge": "{https://github.com/avaloniaui}TextBlock",
+    "NavReview": "{https://github.com/avaloniaui}Button",
+    "NavReviewBadge": "{https://github.com/avaloniaui}TextBlock",
+    "NavSettings": "{https://github.com/avaloniaui}Button",
+    "LookupPageHost": "{https://github.com/avaloniaui}Grid",
+    "PageLookup": "{https://github.com/avaloniaui}ScrollViewer",
+    "LookupPageContent": "{https://github.com/avaloniaui}StackPanel",
+    "LookupInput": "{https://github.com/avaloniaui}TextBox",
+    "LookupClearBtn": "{https://github.com/avaloniaui}Button",
+    "LookupBtn": "{https://github.com/avaloniaui}Button",
+    "LookupResultCard": "{https://github.com/avaloniaui}Border",
+    "ResultWordText": "{https://github.com/avaloniaui}TextBlock",
+    "ResultPhoneticText": "{https://github.com/avaloniaui}TextBlock",
+    "ResultPosPanel": "{https://github.com/avaloniaui}WrapPanel",
+    "ResultTranslationText": "{https://github.com/avaloniaui}TextBlock",
+    "ResultDefinitionText": "{https://github.com/avaloniaui}TextBlock",
+    "AiOptExamples": "{https://github.com/avaloniaui}CheckBox",
+    "AiOptSynonyms": "{https://github.com/avaloniaui}CheckBox",
+    "AiOptAntonyms": "{https://github.com/avaloniaui}CheckBox",
+    "AiOptPhrases": "{https://github.com/avaloniaui}CheckBox",
+    "AiGenerateBtn": "{https://github.com/avaloniaui}Button",
+    "AiCancelBtn": "{https://github.com/avaloniaui}Button",
+    "AiDrawerToggleBtn": "{https://github.com/avaloniaui}Button",
+    "AiDrawerSlot": "{https://github.com/avaloniaui}Border",
+    "AiResultBox": "{https://github.com/avaloniaui}Border",
+    "AiResultExamplesGroup": "{https://github.com/avaloniaui}StackPanel",
+    "AiResultExamplesTitle": "{https://github.com/avaloniaui}TextBlock",
+    "AiResultExamplesBody": "{https://github.com/avaloniaui}TextBlock",
+    "AiResultExamplesContainer": "{https://github.com/avaloniaui}StackPanel",
+    "AiResultPhrasesGroup": "{https://github.com/avaloniaui}StackPanel",
+    "AiResultPhrasesContainer": "{https://github.com/avaloniaui}StackPanel",
+    "AiResultSynonymsGroup": "{https://github.com/avaloniaui}StackPanel",
+    "AiResultSynonymsTitle": "{https://github.com/avaloniaui}TextBlock",
+    "AiResultSynonymsBody": "{https://github.com/avaloniaui}TextBlock",
+    "AiResultSynonymsPanel": "{https://github.com/avaloniaui}WrapPanel",
+    "AiResultAntonymsGroup": "{https://github.com/avaloniaui}StackPanel",
+    "AiResultAntonymsTitle": "{https://github.com/avaloniaui}TextBlock",
+    "AiResultAntonymsBody": "{https://github.com/avaloniaui}TextBlock",
+    "AiResultAntonymsPanel": "{https://github.com/avaloniaui}WrapPanel",
+    "LookupNotFoundCard": "{https://github.com/avaloniaui}Border",
+    "ManualWordInput": "{https://github.com/avaloniaui}TextBox",
+    "ManualPhoneticInput": "{https://github.com/avaloniaui}TextBox",
+    "ManualTranslationInput": "{https://github.com/avaloniaui}TextBox",
+    "ManualDefinitionInput": "{https://github.com/avaloniaui}TextBox",
+    "ManualAddBtn": "{https://github.com/avaloniaui}Button",
+    "LookupEmptyCard": "{https://github.com/avaloniaui}Border",
+    "QuickWord1": "{https://github.com/avaloniaui}Button",
+    "QuickWord2": "{https://github.com/avaloniaui}Button",
+    "QuickWord3": "{https://github.com/avaloniaui}Button",
+    "LookupActionBar": "{https://github.com/avaloniaui}Border",
+    "ArchiveStateText": "{https://github.com/avaloniaui}TextBlock",
+    "EditCurrentArchiveBtn": "{https://github.com/avaloniaui}Button",
+    "RecordEncounterBtn": "{https://github.com/avaloniaui}Button",
+    "AddWordBtn": "{https://github.com/avaloniaui}Button",
+    "PageVocab": "{https://github.com/avaloniaui}Grid",
+    "VocabPageTitle": "{https://github.com/avaloniaui}TextBlock",
+    "VocabPageSubtitle": "{https://github.com/avaloniaui}TextBlock",
+    "VocabSearchInput": "{https://github.com/avaloniaui}TextBox",
+    "VocabStatusFilter": "{https://github.com/avaloniaui}ComboBox",
+    "SelectAllCheckBox": "{https://github.com/avaloniaui}CheckBox",
+    "InvertSelectBtn": "{https://github.com/avaloniaui}Button",
+    "SelectedCountText": "{https://github.com/avaloniaui}TextBlock",
+    "UndoReviewBtn": "{https://github.com/avaloniaui}Button",
+    "VocabListBox": "{https://github.com/avaloniaui}ListBox",
+    "VocabPager": "{https://github.com/avaloniaui}StackPanel",
+    "VocabPreviousBtn": "{https://github.com/avaloniaui}Button",
+    "VocabPageText": "{https://github.com/avaloniaui}TextBlock",
+    "VocabNextBtn": "{https://github.com/avaloniaui}Button",
+    "BatchActionCombo": "{https://github.com/avaloniaui}ComboBox",
+    "ExportPrintBtn": "{https://github.com/avaloniaui}Button",
+    "PageReview": "{https://github.com/avaloniaui}Grid",
+    "ReviewRemainingText": "{https://github.com/avaloniaui}TextBlock",
+    "ReviewHintText": "{https://github.com/avaloniaui}TextBlock",
+    "ReviewCardHost": "{https://github.com/avaloniaui}Grid",
+    "ReviewBackTwo": "{https://github.com/avaloniaui}Border",
+    "ReviewBackOne": "{https://github.com/avaloniaui}Border",
+    "ReviewCard": "{https://github.com/avaloniaui}Border",
+    "ReviewWordText": "{https://github.com/avaloniaui}TextBlock",
+    "ReviewPhoneticText": "{https://github.com/avaloniaui}TextBlock",
+    "ReviewAnswer": "{https://github.com/avaloniaui}Border",
+    "ReviewMeaningText": "{https://github.com/avaloniaui}TextBlock",
+    "ReviewDefinitionText": "{https://github.com/avaloniaui}TextBlock",
+    "ReviewRevealBtn": "{https://github.com/avaloniaui}Button",
+    "ReviewRatingBar": "{https://github.com/avaloniaui}Grid",
+    "ReviewUnfamiliarBtn": "{https://github.com/avaloniaui}Button",
+    "ReviewRememberBtn": "{https://github.com/avaloniaui}Button",
+    "ReviewEmptyCard": "{https://github.com/avaloniaui}Border",
+    "PageSettings": "{https://github.com/avaloniaui}ScrollViewer",
+    "SettingsContent": "{https://github.com/avaloniaui}StackPanel",
+    "ThemeSettingsCard": "{https://github.com/avaloniaui}Border",
+    "SettingsThemeCombo": "{https://github.com/avaloniaui}ComboBox",
+    "HighContrastBox": "{https://github.com/avaloniaui}CheckBox",
+    "OpaqueMaterialBox": "{https://github.com/avaloniaui}CheckBox",
+    "ReduceMotionBox": "{https://github.com/avaloniaui}CheckBox",
+    "SettingsProviderCombo": "{https://github.com/avaloniaui}ComboBox",
+    "SettingsBaseUrlInput": "{https://github.com/avaloniaui}TextBox",
+    "SettingsModelInput": "{https://github.com/avaloniaui}TextBox",
+    "SettingsApiKeyInput": "{https://github.com/avaloniaui}TextBox",
+    "SettingsRememberKeyBox": "{https://github.com/avaloniaui}CheckBox",
+    "SettingsContextCombo": "{https://github.com/avaloniaui}ComboBox",
+    "SettingsContextInput": "{https://github.com/avaloniaui}TextBox",
+    "SettingsIncludeSourceBox": "{https://github.com/avaloniaui}CheckBox",
+    "SettingsTimeoutCombo": "{https://github.com/avaloniaui}ComboBox",
+    "SettingsSaveBtn": "{https://github.com/avaloniaui}Button",
+    "DataIdentityText": "{https://github.com/avaloniaui}TextBlock",
+    "DataLocationText": "{https://github.com/avaloniaui}TextBlock",
+    "LastBackupText": "{https://github.com/avaloniaui}TextBlock",
+    "BackupNowBtn": "{https://github.com/avaloniaui}Button",
+    "RestoreBackupBtn": "{https://github.com/avaloniaui}Button",
+    "OpenDataFolderBtn": "{https://github.com/avaloniaui}Button",
+    "ImportCsvBtn": "{https://github.com/avaloniaui}Button",
+    "ExportCsvBtn": "{https://github.com/avaloniaui}Button",
+    "ExportJsonBtn": "{https://github.com/avaloniaui}Button",
+    "DiagnosticsText": "{https://github.com/avaloniaui}TextBlock",
+    "GlobalStatusText": "{https://github.com/avaloniaui}TextBlock",
+    "DialogEditOverlay": "{https://github.com/avaloniaui}Border",
+    "DialogEditTitle": "{https://github.com/avaloniaui}TextBlock",
+    "DialogEditInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveSourceTypeCombo": "{https://github.com/avaloniaui}ComboBox",
+    "ArchiveSourceTitleInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveExcerptInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveNotesInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveTagsInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveExamplesInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveSynonymsInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveAntonymsInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchivePhrasesInput": "{https://github.com/avaloniaui}TextBox",
+    "ArchiveEditErrorText": "{https://github.com/avaloniaui}TextBlock",
+    "DialogEditCancelBtn": "{https://github.com/avaloniaui}Button",
+    "DialogEditConfirmBtn": "{https://github.com/avaloniaui}Button",
+    "RestoreOverlay": "{https://github.com/avaloniaui}Border",
+    "RestoreDescriptionText": "{https://github.com/avaloniaui}TextBlock",
+    "RestoreCancelBtn": "{https://github.com/avaloniaui}Button",
+    "RestoreConfirmBtn": "{https://github.com/avaloniaui}Button",
+    "DialogStageOverlay": "{https://github.com/avaloniaui}Border",
+    "DialogStageCombo": "{https://github.com/avaloniaui}ComboBox",
+    "DialogStageCancelBtn": "{https://github.com/avaloniaui}Button",
+    "DialogStageConfirmBtn": "{https://github.com/avaloniaui}Button",
+    "DialogDeleteOverlay": "{https://github.com/avaloniaui}Border",
+    "DialogDeleteTitle": "{https://github.com/avaloniaui}TextBlock",
+    "DialogDeleteCancelBtn": "{https://github.com/avaloniaui}Button",
+    "DialogDeleteConfirmBtn": "{https://github.com/avaloniaui}Button"
+  },
+  "bindings": [
+    [
+      "{https://github.com/avaloniaui}Path",
+      "Stroke",
+      "{Binding $parent[Button].Foreground}",
+      4
+    ],
+    [
+      "{https://github.com/avaloniaui}CheckBox",
+      "IsChecked",
+      "{Binding Selected, Mode=TwoWay}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ToggleButton",
+      "IsChecked",
+      "{Binding IsExpanded, Mode=TwoWay}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Word}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Phonetic}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Translation}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding !IsExpanded}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Archive.SourceTitle}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "ItemsSource",
+      "{Binding Archive.Tags}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "IsVisible",
+      "{Binding !IsExpanded}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding StatusLabel}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding NextReviewDisplay}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Tag",
+      "{Binding Id}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}Border",
+      "IsVisible",
+      "{Binding IsExpanded}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}StackPanel",
+      "IsVisible",
+      "{Binding Definition, Converter={x:Static StringConverters.IsNotNullOrEmpty}}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Definition}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding Archive.SourceTitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Archive.SourceExcerpt}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding Archive.SourceExcerpt, Converter={x:Static StringConverters.IsNotNullOrEmpty}}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Notes}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Archive.EncounterCount}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}CheckBox",
+      "IsChecked",
+      "{Binding OptExamples, Mode=TwoWay}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}CheckBox",
+      "IsChecked",
+      "{Binding OptSynonyms, Mode=TwoWay}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}CheckBox",
+      "IsChecked",
+      "{Binding OptAntonyms, Mode=TwoWay}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}CheckBox",
+      "IsChecked",
+      "{Binding OptPhrases, Mode=TwoWay}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Content",
+      "{Binding AiButtonText}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "IsEnabled",
+      "{Binding !IsGeneratingAi}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "IsVisible",
+      "{Binding IsGeneratingAi}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding AiStatusText}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding AiStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding HasAiExamples}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "ItemsSource",
+      "{Binding AiExamples}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "IsVisible",
+      "{Binding HasAiExamples}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding English}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding Chinese}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding HasAiSynonyms}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "ItemsSource",
+      "{Binding AiSynonyms}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "IsVisible",
+      "{Binding HasAiSynonyms}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Content",
+      "{Binding}",
+      2
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding HasAiAntonyms}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "ItemsSource",
+      "{Binding AiAntonyms}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "IsVisible",
+      "{Binding HasAiAntonyms}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "IsVisible",
+      "{Binding HasAiPhrases}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "ItemsSource",
+      "{Binding AiPhrases}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}ItemsControl",
+      "IsVisible",
+      "{Binding HasAiPhrases}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding StageDescription}",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}TextBlock",
+      "Text",
+      "{Binding CreatedAt}",
+      1
+    ]
+  ],
+  "events": [
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnEditWordClick",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnDeleteWordClick",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnRememberWordClick",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnUnfamiliarWordClick",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnEncounterWordClick",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnRowAiGenerateClick",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnRowAiCancelClick",
+      1
+    ],
+    [
+      "{https://github.com/avaloniaui}Button",
+      "Click",
+      "OnRelatedWordClick",
+      2
+    ]
+  ]
+}

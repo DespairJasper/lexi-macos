@@ -1,0 +1,11 @@
+<Project>
+  <PropertyGroup>
+    <!-- Every project, including linked source files, uses a neutral source prefix. -->
+    <PathMap>$(MSBuildThisFileDirectory)=/_/lexi/</PathMap>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+</Project>

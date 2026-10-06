@@ -1,0 +1,25 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lexi.App"
+             RequestedThemeVariant="Light">
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://Lexi/Styles/VisualTheme.axaml" />
+  </Application.Styles>
+
+
+
+  <TrayIcon.Icons>
+    <TrayIcons>
+      <TrayIcon Icon="Assets/icon.ico" ToolTipText="{DynamicResource Ui_0}">
+        <TrayIcon.Menu>
+          <NativeMenu>
+            <NativeMenuItem Header="{DynamicResource Ui_TrayToggle}" Click="OnTrayToggle" />
+            <NativeMenuItemSeparator />
+            <NativeMenuItem Header="{DynamicResource Ui_TrayQuit}" Click="OnTrayQuit" />
+          </NativeMenu>
+        </TrayIcon.Menu>
+      </TrayIcon>
+    </TrayIcons>
+  </TrayIcon.Icons>
+</Application>

@@ -1,0 +1,724 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <ResourceDictionary>
+      <CornerRadius x:Key="ControlRadius">10</CornerRadius>
+      <CornerRadius x:Key="ControlCornerRadius">8</CornerRadius>
+      <CornerRadius x:Key="OverlayCornerRadius">14</CornerRadius>
+      <CornerRadius x:Key="InputRadius">11</CornerRadius>
+      <CornerRadius x:Key="RowRadius">12</CornerRadius>
+      <CornerRadius x:Key="SmallRadius">8</CornerRadius>
+      <CornerRadius x:Key="CardRadius">18</CornerRadius>
+      <Thickness x:Key="ControlPadding">13,7</Thickness>
+      <Thickness x:Key="CardPadding">20</Thickness>
+      <!-- Match the reference's sans-serif mode: bundled Inter; native PingFang SC fallback. -->
+      <FontFamily x:Key="BodyFont">avares://Avalonia.Fonts.Inter/Assets#Inter</FontFamily>
+      <FontFamily x:Key="DisplayFont">avares://Avalonia.Fonts.Inter/Assets#Inter</FontFamily>
+      <!-- Standalone themes: replacing Template alone leaves Fluent's nested
+           state selectors active on PART_ContentPresenter (square/blue fills). -->
+      <ControlTheme x:Key="LexiButtonTheme" TargetType="Button">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      </ControlTheme>
+      <ControlTheme x:Key="LexiRowTheme" TargetType="ListBoxItem">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      </ControlTheme>
+      <ControlTheme x:Key="LexiCapsuleTheme" TargetType="CheckBox">
+        <Setter Property="FocusAdorner" Value="{x:Null}"/>
+      </ControlTheme>
+      <ResourceDictionary.ThemeDictionaries>
+        <!-- Light: glacier white surfaces, restrained deep blue, cool ambient shadows -->
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="SuccessBrush">#39835B</SolidColorBrush>
+          <SolidColorBrush x:Key="DangerBrush">#BD382E</SolidColorBrush>
+          <SolidColorBrush x:Key="OverlayBrush">#660F2138</SolidColorBrush>
+          <SolidColorBrush x:Key="PosBrush">#E9F0F8</SolidColorBrush>
+          <SolidColorBrush x:Key="PosVerbBrush">#DCEBFA</SolidColorBrush>
+          <SolidColorBrush x:Key="PosModifierBrush">#E3E9F5</SolidColorBrush>
+          <SolidColorBrush x:Key="DialogSurfaceBrush">#F6F9FD</SolidColorBrush>
+          <SolidColorBrush x:Key="PaperBrush">#D8F5F9FF</SolidColorBrush>
+          <SolidColorBrush x:Key="CardBrush">#E8FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="InkBrush">#1B2D43</SolidColorBrush>
+          <SolidColorBrush x:Key="MutedBrush">#455B74</SolidColorBrush>
+          <SolidColorBrush x:Key="TintBrush">#E8F0FA</SolidColorBrush>
+          <SolidColorBrush x:Key="LineBrush">#CDDAE9</SolidColorBrush>
+          <SolidColorBrush x:Key="OnPrimaryBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreen">#245FAD</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenHover">#1E5299</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenPressed">#194581</SolidColorBrush>
+          <SolidColorBrush x:Key="InputBg">#E8FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="SelectionBrush">#DFECFB</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBrush">#0B245FAD</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBorderBrush">#20245FAD</SolidColorBrush>
+
+          <LinearGradientBrush x:Key="CardBorderGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#80FFFFFF" Offset="0.0"/>
+            <GradientStop Color="#25245FAD" Offset="0.5"/>
+            <GradientStop Color="#12000000" Offset="1.0"/>
+          </LinearGradientBrush>
+
+          <BoxShadows x:Key="SoftCardShadow">0 3 18 0 #0926476B, 0 1 3 0 #0426476B</BoxShadows>
+          <BoxShadows x:Key="FloatingShadow">0 8 28 0 #1826476B, 0 2 6 0 #0A26476B</BoxShadows>
+          <BoxShadows x:Key="FocusGlowShadow">0 0 8 1 #50245FAD</BoxShadows>
+          <BoxShadows x:Key="DrawerShadow">0 3 12 0 #0D26476B</BoxShadows>
+        </ResourceDictionary>
+
+        <!-- Dark: navy-grey surfaces, ice-blue accents, legible cool secondary ink -->
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="SuccessBrush">#78BA93</SolidColorBrush>
+          <SolidColorBrush x:Key="DangerBrush">#C8463C</SolidColorBrush>
+          <SolidColorBrush x:Key="OverlayBrush">#9908101C</SolidColorBrush>
+          <SolidColorBrush x:Key="PosBrush">#293C53</SolidColorBrush>
+          <SolidColorBrush x:Key="PosVerbBrush">#264463</SolidColorBrush>
+          <SolidColorBrush x:Key="PosModifierBrush">#333F5B</SolidColorBrush>
+          <SolidColorBrush x:Key="DialogSurfaceBrush">#202C3D</SolidColorBrush>
+          <SolidColorBrush x:Key="PaperBrush">#D8182232</SolidColorBrush>
+          <SolidColorBrush x:Key="CardBrush">#E8202C3D</SolidColorBrush>
+          <SolidColorBrush x:Key="InkBrush">#E8F0FC</SolidColorBrush>
+          <SolidColorBrush x:Key="MutedBrush">#ACBED4</SolidColorBrush>
+          <SolidColorBrush x:Key="TintBrush">#263A52</SolidColorBrush>
+          <SolidColorBrush x:Key="LineBrush">#3C516B</SolidColorBrush>
+          <SolidColorBrush x:Key="OnPrimaryBrush">#14243A</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreen">#93C5F8</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenHover">#ADD6FF</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenPressed">#7CB5F0</SolidColorBrush>
+          <SolidColorBrush x:Key="InputBg">#E8202C3D</SolidColorBrush>
+          <SolidColorBrush x:Key="SelectionBrush">#2A4667</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBrush">#152235</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBorderBrush">#3393C5F8</SolidColorBrush>
+
+          <LinearGradientBrush x:Key="CardBorderGradient" StartPoint="0%,0%" EndPoint="100%,100%">
+            <GradientStop Color="#35FFFFFF" Offset="0.0"/>
+            <GradientStop Color="#3393C5F8" Offset="0.5"/>
+            <GradientStop Color="#0FFFFFFF" Offset="1.0"/>
+          </LinearGradientBrush>
+
+          <BoxShadows x:Key="SoftCardShadow">0 5 20 0 #3008101C, 0 1 4 0 #1608101C</BoxShadows>
+          <BoxShadows x:Key="FloatingShadow">0 10 32 0 #60000000, 0 3 10 0 #35000000</BoxShadows>
+          <BoxShadows x:Key="FocusGlowShadow">0 0 8 1 #5593C5F8</BoxShadows>
+          <BoxShadows x:Key="DrawerShadow">0 4 16 0 #35000000</BoxShadows>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+
+  <!-- Global Font and Foreground -->
+  <Style Selector="Window">
+    <Setter Property="FontFamily" Value="{DynamicResource BodyFont}"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+  </Style>
+
+  <Style Selector="TextBlock">
+    <Setter Property="FontFamily" Value="{DynamicResource BodyFont}"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+  </Style>
+
+  <!-- Consistent rounded fallback for content surfaces, including runtime-built boxes.
+       Named layout strips and zero-thickness separators retain their local geometry. -->
+  <Style Selector="Border"><Setter Property="CornerRadius" Value="{DynamicResource RowRadius}"/></Style>
+
+  <Style Selector="TextBlock.muted">
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+    <Setter Property="FontSize" Value="12"/>
+  </Style>
+
+  <Style Selector="TextBlock.eyebrow">
+    <Setter Property="FontSize" Value="10"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+    <Setter Property="Margin" Value="0,0,0,4"/>
+  </Style>
+
+  <Style Selector="TextBlock.h1">
+    <Setter Property="FontSize" Value="24"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="Margin" Value="0,0,0,6"/>
+  </Style>
+
+  <!-- Global Buttons: Press 80ms to 0.98 scale, Restore 200ms with SplineEasing subtle rebound, no continuous animation -->
+  <Style Selector="Button">
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="Theme" Value="{StaticResource LexiButtonTheme}"/>
+    <Setter Property="HorizontalContentAlignment" Value="Center"/>
+    <Setter Property="VerticalContentAlignment" Value="Center"/>
+    <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="ButtonSurface" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="{TemplateBinding CornerRadius}" ClipToBounds="True">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}"
+                            ContentTemplate="{TemplateBinding ContentTemplate}" Padding="{TemplateBinding Padding}"
+                            CornerRadius="{TemplateBinding CornerRadius}"
+                            Foreground="{TemplateBinding Foreground}"
+                            HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                            VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}" RecognizesAccessKey="True"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}"/>
+    <Setter Property="Padding" Value="{DynamicResource ControlPadding}"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="RenderTransform" Value="scale(1)"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="0.32, 0.72, 0, 1"/>
+        <BrushTransition Property="Background" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.12" Easing="CubicEaseOut"/>
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button:pointerover">
+    <Setter Property="Opacity" Value="0.92"/>
+  </Style>
+
+  <Style Selector="Button:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.97)"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.09" Easing="CubicEaseOut"/>
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.primary">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="Button.primary:pointerover">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGreenHover}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+  <Style Selector="Button.primary:pressed">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGreenPressed}"/>
+  </Style>
+
+  <Style Selector="Button.secondary">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+  </Style>
+  <Style Selector="Button.secondary:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+
+  <Style Selector="Button.ghost">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="Button.ghost:pointerover">
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+
+  <!-- Navigation Sidebar Buttons -->
+  <Style Selector="Button.nav">
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+    <Setter Property="Padding" Value="12,10"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}"/>
+    <Setter Property="Margin" Value="0,2"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="BorderThickness" Value="0"/>
+  </Style>
+  <Style Selector="Button.nav:pointerover">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+  <Style Selector="Button.nav.active">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+  </Style>
+
+  <!-- Mac traffic-light appearance; existing minimize/restore/tray handlers are unchanged. -->
+  <Style Selector="Button.window-control">
+    <Setter Property="Background" Value="#FEBB2E"/>
+    <Setter Property="BorderBrush" Value="#D79A20"/>
+    <Setter Property="BorderThickness" Value="0.5"/>
+    <Setter Property="CornerRadius" Value="7"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Width" Value="14"/>
+    <Setter Property="Height" Value="14"/>
+    <Setter Property="Cursor" Value="Arrow"/>
+    <Setter Property="RenderTransform" Value="scale(1)"/>
+  </Style>
+  <Style Selector="Button.window-control Path">
+    <Setter Property="Stroke" Value="#5C4216"/>
+    <Setter Property="Opacity" Value="0"/>
+  </Style>
+  <Style Selector="Button.window-control:pointerover">
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+  <Style Selector="Button.window-control:pointerover Path">
+    <Setter Property="Opacity" Value="0.8"/>
+  </Style>
+  <Style Selector="Button.window-control.maximize">
+    <Setter Property="Background" Value="#28C840"/>
+    <Setter Property="BorderBrush" Value="#1FAA34"/>
+  </Style>
+  <Style Selector="Button.window-control.maximize Path">
+    <Setter Property="Stroke" Value="#165925"/>
+  </Style>
+  <Style Selector="Button.window-control.close">
+    <Setter Property="Background" Value="#FF5F57"/>
+    <Setter Property="BorderBrush" Value="#DE4B45"/>
+  </Style>
+  <Style Selector="Button.window-control.close Path">
+    <Setter Property="Stroke" Value="#6D201D"/>
+  </Style>
+
+  <!-- Sidebar Badges (Fixed Right-Column Alignment) -->
+  <Style Selector="Border.badge">
+    <Setter Property="MinWidth" Value="24"/>
+    <Setter Property="Height" Value="19"/>
+    <Setter Property="Padding" Value="6,1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource InputRadius}"/>
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="HorizontalAlignment" Value="Right"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+  </Style>
+  <Style Selector="TextBlock.badge-text">
+    <Setter Property="FontSize" Value="11"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+    <Setter Property="HorizontalAlignment" Value="Stretch"/>
+    <Setter Property="VerticalAlignment" Value="Center"/>
+    <Setter Property="TextAlignment" Value="Right"/>
+  </Style>
+  <Style Selector="Border.badge.badge-accent">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGreen}"/>
+  </Style>
+  <Style Selector="TextBlock.badge-text.badge-accent-text">
+    <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}"/>
+  </Style>
+
+  <!-- Cards: Semi-transparent background, subtle gradient border, soft shadow -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource CardBorderGradient}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource CardRadius}"/>
+    <Setter Property="Padding" Value="{DynamicResource CardPadding}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource SoftCardShadow}"/>
+  </Style>
+
+  <!-- Input & Search Box: Soft Focus Glow Transition -->
+  <Style Selector="TextBox">
+    <Setter Property="FontFamily" Value="{DynamicResource BodyFont}"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="MinHeight" Value="36"/>
+    <Setter Property="LineHeight" Value="22"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource InputRadius}"/>
+    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Padding" Value="12,8"/>
+  </Style>
+  <Style Selector="TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="CornerRadius" Value="{DynamicResource InputRadius}"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.25" Easing="CubicEaseOut"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="TextBox:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource FocusGlowShadow}"/>
+  </Style>
+  <Style Selector="TextBox /template/ TextBlock#PART_Watermark">
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+    <Setter Property="Opacity" Value="0.8"/>
+  </Style>
+
+  <!-- Clear Button Inside TextBox with 150ms Fade Transition -->
+  <Style Selector="Button.clear-btn">
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="Width" Value="26"/>
+    <Setter Property="Height" Value="26"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <DoubleTransition Property="Opacity" Duration="0:0:0.14" Easing="CubicEaseOut"/>
+        <BrushTransition Property="Background" Duration="0:0:0.15"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.clear-btn:pointerover">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+  <Style Selector="Button.clear-btn:pointerover Path">
+    <Setter Property="Stroke" Value="{DynamicResource InkBrush}"/>
+  </Style>
+
+  <!-- Native Fluent templates retained; named paint layers receive the same rounded geometry. -->
+  <Style Selector="TextBox /template/ Border">
+    <Setter Property="CornerRadius" Value="{DynamicResource InputRadius}"/>
+  </Style>
+  <Style Selector="TextBox:pointerover /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="{DynamicResource InputBg}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+  </Style>
+  <!-- ComboBox -->
+  <Style Selector="ComboBox">
+    <Setter Property="FontFamily" Value="{DynamicResource BodyFont}"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="MinHeight" Value="36"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}"/>
+    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="Padding" Value="10,6"/>
+  </Style>
+
+  <Style Selector="ComboBox /template/ Border#Background, ComboBox /template/ Border#HighlightBackground">
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}"/>
+  </Style>
+  <Style Selector="ComboBox /template/ Border#DropDownOverlay">
+    <Setter Property="CornerRadius" Value="0,10,10,0"/>
+  </Style>
+  <Style Selector="ComboBox /template/ Border#PopupBorder">
+    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}"/>
+    <Setter Property="Background" Value="{DynamicResource DialogSurfaceBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="Padding" Value="5"/>
+    <Setter Property="ClipToBounds" Value="True"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource FloatingShadow}"/>
+  </Style>
+  <Style Selector="ComboBox:focus-visible /template/ Border#HighlightBackground">
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource FocusGlowShadow}"/>
+  </Style>
+  <Style Selector="ComboBoxItem">
+    <Setter Property="CornerRadius" Value="{DynamicResource SmallRadius}"/>
+    <Setter Property="Padding" Value="10,7"/>
+    <Setter Property="Margin" Value="2,1"/>
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+  </Style>
+  <Style Selector="ComboBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource SmallRadius}"/>
+  </Style>
+  <Style Selector="CheckBox">
+    <Setter Property="CornerRadius" Value="5"/>
+    <Setter Property="FontSize" Value="13"/>
+    <Setter Property="FontWeight" Value="Normal"/>
+  </Style>
+  <Style Selector="CheckBox /template/ Border#NormalRectangle">
+    <Setter Property="CornerRadius" Value="5"/>
+  </Style>
+  <Style Selector="CheckBox:focus-visible /template/ Border#NormalRectangle">
+    <Setter Property="BoxShadow" Value="{DynamicResource FocusGlowShadow}"/>
+  </Style>
+  <Style Selector="ToolTip, ContextMenu, MenuFlyoutPresenter, FlyoutPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource OverlayCornerRadius}"/>
+  </Style>
+  <Style Selector="MenuItem">
+    <Setter Property="CornerRadius" Value="{DynamicResource SmallRadius}"/>
+    <Setter Property="FontSize" Value="13"/>
+  </Style>
+
+  <!-- AI Options: Physical Capsule CheckBox, retaining semantics & keyboard accessibility -->
+  <Style Selector="CheckBox.capsule">
+    <Setter Property="Theme" Value="{StaticResource LexiCapsuleTheme}"/>
+    <Setter Property="RenderTransform" Value="scale(1)"/>
+    <Setter Property="RenderTransformOrigin" Value="50%,50%"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="0.32,0.72,0,1"/>
+      </Transitions>
+    </Setter>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Padding" Value="10,5"/>
+    <Setter Property="CornerRadius" Value="14"/>
+    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="PART_RootBorder"
+                Background="{TemplateBinding Background}"
+                BorderBrush="{TemplateBinding BorderBrush}"
+                BorderThickness="{TemplateBinding BorderThickness}"
+                CornerRadius="{TemplateBinding CornerRadius}"
+                Padding="{TemplateBinding Padding}">
+          <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+            <Border Name="PART_Indicator" Width="8" Height="8" CornerRadius="4" Background="{DynamicResource LineBrush}"/>
+            <ContentPresenter Name="PART_ContentPresenter"
+                              Foreground="{TemplateBinding Foreground}"
+                              Content="{TemplateBinding Content}"
+                              ContentTemplate="{TemplateBinding ContentTemplate}"
+                              VerticalAlignment="Center"
+                              RecognizesAccessKey="True"/>
+          </StackPanel>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="CheckBox.capsule /template/ Border#PART_RootBorder">
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="CheckBox.capsule:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+  </Style>
+  <Style Selector="CheckBox.capsule:checked">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="FontWeight" Value="Medium"/>
+  </Style>
+  <Style Selector="CheckBox.capsule:checked /template/ Border#PART_Indicator">
+    <Setter Property="Background" Value="{DynamicResource PrimaryGreen}"/>
+  </Style>
+  <Style Selector="CheckBox.capsule:focus-visible /template/ Border#PART_RootBorder">
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource FocusGlowShadow}"/>
+  </Style>
+
+  <!-- Micro-capsule Button: Synonyms / Antonyms
+       Hover translateY -1px, Pressed scale 0.94, click triggers basic query only -->
+  <Style Selector="Button.micro-capsule">
+    <Setter Property="CornerRadius" Value="12"/>
+    <Setter Property="Padding" Value="10,4"/>
+    <Setter Property="Margin" Value="0,0,6,6"/>
+    <Setter Property="FontSize" Value="12"/>
+    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+    <Setter Property="RenderTransform" Value="translateY(0px) scale(1)"/>
+    <Setter Property="Transitions">
+      <Transitions>
+      <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="0.32,0.72,0,1"/>
+        <BrushTransition Property="Background" Duration="0:0:0.15"/>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15"/>
+        <BrushTransition Property="Foreground" Duration="0:0:0.15"/>
+      </Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="Button.micro-capsule:pointerover">
+    <Setter Property="RenderTransform" Value="translateY(-1px) scale(1)"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+  <Style Selector="Button.micro-capsule:pressed">
+    <Setter Property="RenderTransform" Value="translateY(1px) scale(0.96)"/>
+    <Setter Property="Transitions">
+      <Transitions>
+        <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" Easing="CubicEaseOut"/>
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <!-- Collapsible Drawer Slot: Inset Trough Depth -->
+  <Style Selector="Border.drawer-slot">
+    <Setter Property="Background" Value="{DynamicResource InsetBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource InsetBorderBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource InputRadius}"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource DrawerShadow}"/>
+  </Style>
+
+  <!-- Example Small Cards -->
+  <Style Selector="Border.example-card">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}"/>
+    <Setter Property="Padding" Value="12,10"/>
+    <Setter Property="Margin" Value="0,0,0,6"/>
+    <Setter Property="BoxShadow" Value="{DynamicResource SoftCardShadow}"/>
+  </Style>
+
+  <!-- Rotating Chevron ToggleButton for Vocab List Item Expansion -->
+  <Style Selector="ToggleButton.chevron-toggle">
+    <Setter Property="Width" Value="24"/>
+    <Setter Property="Height" Value="24"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="Cursor" Value="Hand"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Background="Transparent" Width="24" Height="24" CornerRadius="8">
+          <Path Name="PART_Chevron"
+                Data="M 7,9 L 12,14 L 17,9"
+                Stroke="{DynamicResource MutedBrush}"
+                StrokeThickness="1.5"
+                StrokeLineCap="Round"
+                StrokeJoin="Round"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                RenderTransform="rotate(0deg)">
+            <Path.Transitions>
+              <Transitions>
+                <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.2" Easing="CubicEaseOut"/>
+                <BrushTransition Property="Stroke" Duration="0:0:0.15"/>
+              </Transitions>
+            </Path.Transitions>
+          </Path>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ToggleButton.chevron-toggle:pointerover /template/ Path#PART_Chevron">
+    <Setter Property="Stroke" Value="{DynamicResource PrimaryGreen}"/>
+  </Style>
+  <Style Selector="ToggleButton.chevron-toggle:checked /template/ Path#PART_Chevron">
+    <Setter Property="RenderTransform" Value="rotate(180deg)"/>
+    <Setter Property="Stroke" Value="{DynamicResource PrimaryGreen}"/>
+  </Style>
+
+  <Style Selector="CheckBox.capsule:pressed">
+    <Setter Property="RenderTransform" Value="scale(0.98)"/>
+    <Setter Property="Transitions">
+      <Transitions><TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.08" Easing="CubicEaseOut"/></Transitions>
+    </Setter>
+  </Style>
+  <Style Selector="TextBlock.example-en">
+    <Setter Property="FontWeight" Value="Normal"/>
+    <Setter Property="FontSize" Value="14"/>
+    <Setter Property="LineHeight" Value="23"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+  </Style>
+  <Style Selector="TextBlock.example-quote">
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryGreen}"/>
+  </Style>
+  <Style Selector="Border.pos-chip">
+    <Setter Property="Background" Value="{DynamicResource PosBrush}"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource SmallRadius}"/>
+    <Setter Property="Padding" Value="8,3"/>
+    <Setter Property="Margin" Value="0,0,6,0"/>
+  </Style>
+  <Style Selector="Border.pos-chip.verb"><Setter Property="Background" Value="{DynamicResource PosVerbBrush}"/></Style>
+  <Style Selector="Border.pos-chip.modifier"><Setter Property="Background" Value="{DynamicResource PosModifierBrush}"/></Style>
+  <Style Selector="Border.pos-chip TextBlock"><Setter Property="Foreground" Value="{DynamicResource InkBrush}"/></Style>
+  <Style Selector="Button:disabled"><Setter Property="Opacity" Value="0.45"/></Style>
+  <Style Selector="Button.primary /template/ Border#ButtonSurface">
+    <Setter Property="BoxShadow" Value="0 2 6 0 #1526476B"/>
+    <Setter Property="Transitions"><Transitions><BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.08"/></Transitions></Setter>
+  </Style>
+  <Style Selector="Button.primary:pressed /template/ Border#ButtonSurface"><Setter Property="BoxShadow" Value="0 1 2 0 #10000000"/></Style>
+  <!-- Keep keyboard focus above normal/pressed shadows, including solid primary buttons. -->
+  <Style Selector="Button:focus-visible /template/ Border#ButtonSurface">
+    <Setter Property="BoxShadow" Value="{DynamicResource FocusGlowShadow}"/>
+    <Setter Property="BorderBrush" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="BorderThickness" Value="1"/>
+  </Style>
+  <Style Selector="ToggleButton.chevron-toggle:focus-visible /template/ Border">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+  </Style>
+  <Style Selector="ListBoxItem">
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource RowRadius}"/>
+  </Style>
+  <Style Selector="ListBoxItem /template/ ContentPresenter#PART_ContentPresenter">
+    <Setter Property="CornerRadius" Value="{DynamicResource RowRadius}"/>
+  </Style>
+
+  <!-- Row action ghost buttons -->
+  <Style Selector="Button.row-btn">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="CornerRadius" Value="{DynamicResource SmallRadius}"/>
+    <Setter Property="Padding" Value="6,4"/>
+    <Setter Property="Cursor" Value="Hand"/>
+  </Style>
+  <Style Selector="Button.row-btn:pointerover">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+    <Setter Property="Opacity" Value="1"/>
+  </Style>
+  <Style Selector="Button.row-btn:pointerover Path">
+    <Setter Property="Stroke" Value="{DynamicResource InkBrush}"/>
+  </Style>
+
+  <!-- Selection belongs only to row checkboxes. Native ListBox selection has no painted fill. -->
+  <Style Selector="ListBox.vocabulary ListBoxItem">
+    <Setter Property="Theme" Value="{StaticResource LexiRowTheme}"/>
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}"/>
+    <Setter Property="Padding" Value="0"/>
+    <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+    <Setter Property="Template">
+      <ControlTemplate>
+        <Border Name="RowSurface" Background="Transparent" BorderBrush="Transparent" BorderThickness="1" CornerRadius="{DynamicResource RowRadius}">
+          <ContentPresenter Name="PART_ContentPresenter" Content="{TemplateBinding Content}" ContentTemplate="{TemplateBinding ContentTemplate}" HorizontalContentAlignment="Stretch" CornerRadius="{DynamicResource RowRadius}"/>
+        </Border>
+      </ControlTemplate>
+    </Setter>
+  </Style>
+  <Style Selector="ListBox.vocabulary ListBoxItem:focus-visible /template/ Border#RowSurface">
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}"/>
+  </Style>
+  <Style Selector="Window.reduce-motion Button, Window.reduce-motion CheckBox, Window.reduce-motion TextBox">
+    <Setter Property="Transitions" Value="{x:Null}"/>
+  </Style>
+  <Style Selector="Window.reduce-motion Button:pressed, Window.reduce-motion CheckBox:pressed">
+    <Setter Property="RenderTransform" Value="scale(1)"/>
+    <Setter Property="Transitions" Value="{x:Null}"/>
+  </Style>
+  <Style Selector="Window.reduce-motion TextBox /template/ Border#PART_BorderElement">
+    <Setter Property="Transitions" Value="{x:Null}"/>
+  </Style>
+  <Style Selector="Window.compact Border.card"><Setter Property="Padding" Value="16"/></Style>
+  <Style Selector="Window.expanded Border.card"><Setter Property="Padding" Value="24"/></Style>
+  <Style Selector="Window.word-focus Border#LookupResultCard">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="CornerRadius" Value="0"/>
+    <Setter Property="BoxShadow" Value="0 0 0 0 Transparent"/>
+    <Setter Property="Padding" Value="0"/>
+  </Style>
+  <Style Selector="Window.word-focus TextBlock#ResultWordText">
+    <Setter Property="FontWeight" Value="Bold"/>
+  </Style>
+  <Style Selector="TextBox.learning-input /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="BoxShadow" Value="0 0 0 0 Transparent"/>
+  </Style>
+  <Style Selector="TextBox.learning-input:focus /template/ Border#PART_BorderElement">
+    <Setter Property="Background" Value="Transparent"/>
+    <Setter Property="BorderThickness" Value="0"/>
+    <Setter Property="BoxShadow" Value="0 0 0 0 Transparent"/>
+  </Style>
+  <Style Selector="Button.learning-action">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+  </Style>
+</Styles>

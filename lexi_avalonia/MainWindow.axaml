@@ -1,0 +1,738 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:Lexi"
+        x:Class="Lexi.MainWindow"
+        Title="{DynamicResource Ui_0}"
+        Width="1060" Height="760" MinWidth="840" MinHeight="600" CanResize="True"
+        WindowStartupLocation="CenterScreen"
+        UseLayoutRounding="True" RenderOptions.TextRenderingMode="Antialias"
+        Background="Transparent"
+        TransparencyLevelHint="Mica, AcrylicBlur, Blur, None"
+        SystemDecorations="None" ExtendClientAreaToDecorationsHint="True" Topmost="False"
+        Foreground="{DynamicResource InkBrush}"
+        Icon="Assets/icon.ico">
+
+  <Window.Resources>
+    <local:UiValueConverter x:Key="UiValueConverter"/>
+  </Window.Resources>
+
+  <Border Name="RootWindowBorder" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource PaperBrush}" BorderBrush="{DynamicResource CardBorderGradient}" BorderThickness="1" BoxShadow="{DynamicResource FloatingShadow}">
+  <Grid>
+    <!-- Main Window Layout -->
+    <Grid Name="WindowLayoutGrid" RowDefinitions="60,*,36">
+      <!-- Title Bar -->
+      <Border Name="DragBar" Background="Transparent" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="20,0">
+        <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
+          <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="16,0,0,0">
+            <Image Source="avares://Lexi/Assets/lexi-logo.png" Width="30" Height="30" VerticalAlignment="Center"/>
+            <TextBlock Text="lexi" FontSize="20" FontWeight="Medium" VerticalAlignment="Center"/>
+          </StackPanel>
+
+          <Button Name="LanguageToggleBtn" Grid.Column="5" Classes="ghost" Content="EN" ToolTip.Tip="{DynamicResource Ui_LanguageTip}" Margin="0,0,8,0"/>
+          <Button Name="ThemeToggleBtn" Grid.Column="6" Classes="ghost" Content="{DynamicResource Ui_2}" ToolTip.Tip="{DynamicResource Ui_4}" Margin="0,0,12,0"/>
+          <TextBlock Grid.Column="7" Text="⌥ D" Classes="muted" VerticalAlignment="Center" Margin="0,0,0,0"/>
+
+          <!-- Existing caption actions, presented as macOS traffic lights. -->
+          <Button Name="HideToTrayBtn" Grid.Column="1" Classes="window-control" ToolTip.Tip="{DynamicResource Ui_5}" AutomationProperties.Name="{DynamicResource Ui_6}" Margin="0,0,6,0">
+            <Path Data="M 3,8 L 13,8" StrokeThickness="1.5" StrokeLineCap="Round" Width="8" Height="8" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Button>
+          <Button Name="MaximizeBtn" Grid.Column="2" Classes="window-control maximize" ToolTip.Tip="{DynamicResource Ui_7}" AutomationProperties.Name="{DynamicResource Ui_8}" Margin="0,0,6,0">
+            <Path Name="MaximizeGlyph" Data="M 3,3 L 13,3 L 13,13 L 3,13 Z" StrokeThickness="1.2" Width="8" Height="8" Stretch="Uniform"/>
+          </Button>
+          <Button Name="QuitAppBtn" Grid.Column="0" Classes="window-control close" ToolTip.Tip="{DynamicResource Ui_9}" AutomationProperties.Name="{DynamicResource Ui_10}" Margin="0,0,6,0">
+            <Path Data="M 3.5,3.5 L 12.5,12.5 M 12.5,3.5 L 3.5,12.5" StrokeThickness="1.5" StrokeLineCap="Round" Width="8" Height="8" Stretch="Uniform" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- Central Body: Sidebar + Dynamic Page -->
+      <Grid Name="WindowBodyGrid" Grid.Row="1" ColumnDefinitions="216,*">
+        <!-- Sidebar Navigation -->
+        <Border Name="SidebarShell" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0" Padding="12,18,12,14" Background="Transparent">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto">
+            <Button Name="NavLookup" Classes="nav active">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 9.5,3 A 5.5,5.5 0 1 1 4,8.5 A 5.5,5.5 0 0 1 9.5,3 M 13.5,13.5 L 17,17"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5" StrokeLineCap="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="{DynamicResource Ui_11}" VerticalAlignment="Center" FontSize="13" Foreground="{Binding $parent[Button].Foreground}"/>
+                </StackPanel>
+              </Grid>
+            </Button>
+
+            <Button Name="NavVocab" Grid.Row="1" Classes="nav">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 4,4 L 14,4 M 4,8 L 14,8 M 4,12 L 11,12"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5" StrokeLineCap="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="{DynamicResource Ui_12}" VerticalAlignment="Center" FontSize="13" Foreground="{Binding $parent[Button].Foreground}"/>
+                </StackPanel>
+                <Border Grid.Column="1" Classes="badge" VerticalAlignment="Center">
+                  <TextBlock Name="NavVocabBadge" Text="0" Classes="badge-text"/>
+                </Border>
+              </Grid>
+            </Button>
+
+            <Button Name="NavReview" Grid.Row="2" Classes="nav">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 9,3 A 6,6 0 1 1 3,9 A 6,6 0 0 1 9,3 M 9,5.5 L 9,9 L 11.5,10.5"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5" StrokeLineCap="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="{DynamicResource Ui_13}" VerticalAlignment="Center" FontSize="13" Foreground="{Binding $parent[Button].Foreground}"/>
+                </StackPanel>
+                <Border Grid.Column="1" Classes="badge badge-accent" VerticalAlignment="Center">
+                  <TextBlock Name="NavReviewBadge" Text="0" Classes="badge-text badge-accent-text"/>
+                </Border>
+              </Grid>
+            </Button>
+
+            <Button Name="NavIelts" Grid.Row="3" Classes="nav" Content="IELTS 专题" FontSize="13" />
+            <Button Name="NavTyping" Grid.Row="4" Classes="nav" Content="打字练习" FontSize="13" />
+
+            <!-- Bottom Offline Notice & Settings -->
+            <StackPanel Grid.Row="6" Spacing="4" Margin="6,0,6,16">
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}"/>
+                <TextBlock Text="{DynamicResource Ui_14}" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource PrimaryGreen}"/>
+              </StackPanel>
+              <TextBlock Text="{DynamicResource Ui_15}" Classes="muted" FontSize="10" Margin="13,0,0,0"/>
+            </StackPanel>
+
+            <Button Name="NavSettings" Grid.Row="7" Classes="nav">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 9,3.5 L 10,5.5 L 12,5 L 12.5,7 L 14.5,7.5 L 13.5,9.5 L 14.5,11.5 L 12.5,12 L 12,14 L 10,13.5 L 9,15.5 L 8,13.5 L 6,14 L 5.5,12 L 3.5,11.5 L 4.5,9.5 L 3.5,7.5 L 5.5,7 L 6,5 L 8,5.5 Z M 9,7.5 A 2,2 0 1 0 9,11.5 A 2,2 0 1 0 9,7.5"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.3" StrokeLineCap="Round" StrokeJoin="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="{DynamicResource Ui_16}" VerticalAlignment="Center" FontSize="13" Foreground="{Binding $parent[Button].Foreground}"/>
+                </StackPanel>
+              </Grid>
+            </Button>
+          </Grid>
+        </Border>
+
+        <!-- Pages Host Container -->
+        <Panel Grid.Column="1">
+          <!-- 1. LOOKUP PAGE -->
+          <Grid Name="LookupPageHost" RowDefinitions="*,Auto">
+          <!-- Keep spacing outside the ScrollViewer: its Fluent presenter does not
+               subtract Padding from the reported viewport/maximum scroll offset. -->
+          <ScrollViewer Name="PageLookup" HorizontalScrollBarVisibility="Disabled" Margin="36,24,36,24" IsVisible="True">
+            <StackPanel Name="LookupPageContent" Spacing="18" MaxWidth="720" HorizontalAlignment="Stretch">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{DynamicResource Ui_17}" Classes="h1"/>
+              </StackPanel>
+
+              <!-- Search Input Bar with Soft Focus Glow and 150ms Fade-in Clear Button -->
+              <Grid ColumnDefinitions="*,Auto" Margin="0,6,0,0">
+                <TextBox Name="LookupInput"
+                         Watermark="{DynamicResource Ui_19}"
+                         FontSize="15"
+                         Padding="14,10,36,10">
+                  <TextBox.InnerRightContent>
+                    <Button Name="LookupClearBtn"
+                            Classes="clear-btn" Opacity="0" IsHitTestVisible="False" Focusable="False"
+                            ToolTip.Tip="{DynamicResource Ui_20}"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,6,0">
+                      <Path Data="M 4,4 L 12,12 M 12,4 L 4,12"
+                            Stroke="{DynamicResource MutedBrush}"
+                            StrokeThickness="1.5"
+                            StrokeLineCap="Round"
+                            Width="16" Height="16"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                    </Button>
+                  </TextBox.InnerRightContent>
+                </TextBox>
+                <Button Name="LookupBtn" Grid.Column="1" Classes="primary" Content="{DynamicResource Ui_21}" Margin="10,0,0,0" Padding="18,10"/>
+              </Grid>
+
+              <TextBlock Text="{DynamicResource Ui_22}" Classes="muted" FontSize="11"/>
+
+              <!-- Result Word Card -->
+              <Border Name="LookupResultCard" Classes="card" IsVisible="False">
+                <StackPanel Spacing="14">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <TextBlock Text="{DynamicResource Ui_ResultEyebrow}" Classes="eyebrow"/>
+                      <StackPanel Spacing="8">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                          <TextBlock Name="ResultWordText" FontFamily="{DynamicResource DisplayFont}" FontSize="30" TextWrapping="Wrap" FontWeight="Bold" Foreground="{DynamicResource InkBrush}"/>
+                          <!-- 记忆连击：三条竖直指示，自下而上每攒到一次「认识」点亮一格。 -->
+                          <StackPanel Name="FocusStreakBars" Orientation="Vertical" Spacing="2" VerticalAlignment="Center" IsVisible="False">
+                            <Border Name="FocusStreakBar3" Width="3" Height="7" CornerRadius="1.5" Background="#BFC9CFD4"/>
+                            <Border Name="FocusStreakBar2" Width="3" Height="7" CornerRadius="1.5" Background="#BFC9CFD4"/>
+                            <Border Name="FocusStreakBar1" Width="3" Height="7" CornerRadius="1.5" Background="#BFC9CFD4"/>
+                          </StackPanel>
+                        </StackPanel>
+                        <TextBlock Name="ResultPhoneticText" Classes="muted" FontSize="17" Margin="0"/>
+                      </StackPanel>
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{DynamicResource TintBrush}" CornerRadius="12" Padding="10,4" VerticalAlignment="Top">
+                      <TextBlock Text="{DynamicResource Ui_23}" FontSize="10" FontWeight="Medium" Foreground="{DynamicResource PrimaryGreen}"/>
+                    </Border>
+                  </Grid>
+
+                  <WrapPanel Name="ResultPosPanel" IsVisible="False"/>
+                  <TextBlock Name="ResultTranslationText" FontSize="16" FontWeight="Medium" TextWrapping="Wrap" LineHeight="26"/>
+                  <TextBlock Name="ResultDefinitionText" Classes="muted" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
+
+                  <!-- Independent AI Tool Section -->
+                  <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+                    <StackPanel Spacing="12">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="{DynamicResource Ui_24}" FontWeight="Medium" FontSize="13"/>
+                        <TextBlock Grid.Column="1" Text="{DynamicResource Ui_25}" Classes="muted" FontSize="11"/>
+                      </Grid>
+
+                      <!-- Capsule CheckBoxes -->
+                      <WrapPanel Orientation="Horizontal">
+                        <CheckBox Name="AiOptExamples" Classes="capsule" Content="{DynamicResource Ui_26}" IsChecked="True" Margin="0,0,8,6"/>
+                        <CheckBox Name="AiOptSynonyms" Classes="capsule" Content="{DynamicResource Ui_27}" IsChecked="True" Margin="0,0,8,6"/>
+                        <CheckBox Name="AiOptAntonyms" Classes="capsule" Content="{DynamicResource Ui_28}" Margin="0,0,8,6"/>
+                        <CheckBox Name="AiOptPhrases" Classes="capsule" Content="{DynamicResource Ui_29}" Margin="0,0,8,6"/>
+                        <Button Name="AiGenerateBtn" Classes="secondary" Content="{DynamicResource Ui_30}" Margin="10,0,8,6"/>
+                        <Button Name="AiCancelBtn" Classes="ghost" Content="{DynamicResource Ui_31}" IsVisible="False" Margin="0,0,0,6"/>
+                      </WrapPanel>
+
+                      <Button Name="AiDrawerToggleBtn" Classes="ghost" HorizontalAlignment="Left" Content="{DynamicResource Ui_32}" IsVisible="False"/>
+
+                      <!-- Animated Collapsible Drawer with Recessed Trough Depth -->
+                      <Border Name="AiDrawerSlot" Classes="drawer-slot" ClipToBounds="True" Height="0" Opacity="0" IsVisible="False">
+                        <Border Name="AiResultBox" Padding="16,14">
+                          <StackPanel Spacing="12">
+                            <!-- Examples Group -->
+                            <StackPanel Name="AiResultExamplesGroup" Spacing="8" IsVisible="False">
+                              <TextBlock Name="AiResultExamplesTitle" Text="{DynamicResource Ui_34}" FontWeight="Medium" FontSize="12" Foreground="{DynamicResource PrimaryGreen}"/>
+                              <TextBlock Name="AiResultExamplesBody" IsVisible="False" TextWrapping="Wrap" FontSize="12"/>
+                              <StackPanel Name="AiResultExamplesContainer" Spacing="6"/>
+                            </StackPanel>
+
+                            <StackPanel Name="AiResultPhrasesGroup" Spacing="6" IsVisible="False">
+                              <TextBlock Text="{DynamicResource Ui_29}" Classes="eyebrow"/>
+                              <StackPanel Name="AiResultPhrasesContainer" Spacing="6"/>
+                            </StackPanel>
+                            <!-- Synonyms Group (Micro-capsule Buttons) -->
+                            <StackPanel Name="AiResultSynonymsGroup" Spacing="6" IsVisible="False">
+                              <TextBlock Name="AiResultSynonymsTitle" Text="{DynamicResource Ui_35}" FontWeight="Medium" FontSize="12" Foreground="{DynamicResource PrimaryGreen}"/>
+                              <TextBlock Name="AiResultSynonymsBody" IsVisible="False" TextWrapping="Wrap" FontSize="12"/>
+                              <WrapPanel Name="AiResultSynonymsPanel" Orientation="Horizontal"/>
+                            </StackPanel>
+
+                            <!-- Antonyms Group (Micro-capsule Buttons) -->
+                            <StackPanel Name="AiResultAntonymsGroup" Spacing="6" IsVisible="False">
+                              <TextBlock Name="AiResultAntonymsTitle" Text="{DynamicResource Ui_36}" FontWeight="Medium" FontSize="12" Foreground="{DynamicResource PrimaryGreen}"/>
+                              <TextBlock Name="AiResultAntonymsBody" IsVisible="False" TextWrapping="Wrap" FontSize="12"/>
+                              <WrapPanel Name="AiResultAntonymsPanel" Orientation="Horizontal"/>
+                            </StackPanel>
+                          </StackPanel>
+                        </Border>
+                      </Border>
+                    </StackPanel>
+                  </Border>
+
+                </StackPanel>
+              </Border>
+
+              <!-- Not Found / Custom Add Card -->
+              <Border Name="LookupNotFoundCard" Classes="card" IsVisible="False">
+                <StackPanel Spacing="14">
+                  <TextBlock Text="{DynamicResource Ui_37}" FontWeight="Medium" FontSize="15" Foreground="{DynamicResource PrimaryGreen}"/>
+                  <TextBlock Text="{DynamicResource Ui_38}" Classes="muted"/>
+                  <TextBox Name="ManualWordInput" Watermark="{DynamicResource Ui_39}" FontSize="14"/>
+                  <TextBox Name="ManualPhoneticInput" Watermark="{DynamicResource Ui_40}" FontSize="13"/>
+                  <TextBox Name="ManualTranslationInput" Watermark="{DynamicResource Ui_41}" AcceptsReturn="True" Height="65" FontSize="13"/>
+                  <TextBox Name="ManualDefinitionInput" Watermark="{DynamicResource Ui_42}" AcceptsReturn="True" Height="50" FontSize="13"/>
+                  <Button Name="ManualAddBtn" Classes="primary" Content="{DynamicResource Ui_43}" HorizontalAlignment="Right"/>
+                </StackPanel>
+              </Border>
+
+              <!-- Empty Placeholder Card -->
+              <Border Name="LookupEmptyCard" Classes="card" IsVisible="True" Padding="36,28">
+                <StackPanel Spacing="14" HorizontalAlignment="Center">
+                  <TextBlock Text="{DynamicResource Ui_44}" FontWeight="Medium" FontSize="16" HorizontalAlignment="Center"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center" Margin="0,10,0,0">
+                    <Button Name="QuickWord1" Classes="secondary" Content="serendipity ↗"/>
+                    <Button Name="QuickWord2" Classes="secondary" Content="resilient ↗"/>
+                    <Button Name="QuickWord3" Classes="secondary" Content="wander ↗"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+          <!-- An actual layout row, not an overlay: never covers expansion content. -->
+          <Border Name="LookupActionBar" Grid.Row="1" IsVisible="False"
+                  MaxWidth="720" Margin="36,0,50,16" Padding="0,12,0,0"
+                  BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center" Spacing="4" Margin="0,0,12,0">
+                <TextBlock Name="ArchiveStateText" Text="{DynamicResource Ui_47}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+                <WrapPanel>
+                  <Button Name="EditCurrentArchiveBtn" Classes="ghost" Content="{DynamicResource Ui_48}" IsVisible="False"/>
+                  <Button Name="RecordEncounterBtn" Classes="ghost" Content="{DynamicResource Ui_49}" IsVisible="False"/>
+                </WrapPanel>
+              </StackPanel>
+              <Button Name="AddWordBtn" Grid.Column="1" Classes="primary" Content="{DynamicResource Ui_50}" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
+          </Grid>
+
+          <!-- 2. VOCAB NOTEBOOK PAGE -->
+          <Grid Name="PageVocab" RowDefinitions="Auto,Auto,*,Auto" Margin="36,24,36,16" IsVisible="False">
+            <!-- Header -->
+            <StackPanel Spacing="4">
+              <TextBlock Name="VocabPageTitle" Text="{DynamicResource Ui_51}" Classes="h1"/>
+              <TextBlock Name="VocabPageSubtitle" Text="{DynamicResource Ui_52}" Classes="muted"/>
+            </StackPanel>
+
+            <!-- Filters Bar -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,16,0,10">
+              <TextBox Name="VocabSearchInput" Watermark="{DynamicResource Ui_53}" Padding="10,7"/>
+              <ComboBox Name="VocabStatusFilter" Grid.Column="1" Margin="10,0,0,0" SelectedIndex="0" MinWidth="112">
+                <ComboBoxItem Content="{DynamicResource Ui_54}" IsSelected="True"/>
+                <ComboBoxItem Content="{DynamicResource Ui_55}"/>
+                <ComboBoxItem Content="{DynamicResource Ui_56}"/>
+              </ComboBox>
+            </Grid>
+
+            <!-- Words List Container -->
+            <Grid Grid.Row="2" RowDefinitions="Auto,*">
+              <!-- Selection Toolbar -->
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="2,4,2,8">
+                <CheckBox Name="SelectAllCheckBox" Content="{DynamicResource Ui_57}" VerticalAlignment="Center"/>
+                <Button Name="InvertSelectBtn" Grid.Column="1" Classes="ghost" Content="{DynamicResource Ui_58}" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <TextBlock Name="SelectedCountText" Grid.Column="2" Text="{DynamicResource Ui_59}" Classes="muted" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                <Button Name="UndoReviewBtn" Grid.Column="3" Classes="ghost" Content="{DynamicResource Ui_60}" ToolTip.Tip="{DynamicResource Ui_61}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              </Grid>
+
+              <!-- Words Scrollable List with Independent Expandable Rows -->
+              <Border Grid.Row="1" Classes="card" Padding="0">
+                <ListBox Name="VocabListBox" Classes="vocabulary" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <!-- Bounded pages use actual heights: recycling mixed-height AI cards
+                       in Avalonia 11.3 can leave stale row positions during scrolling. -->
+                  <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+                        <StackPanel Spacing="8">
+                          <!-- Main Row -->
+                          <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                            <!-- Checkbox -->
+                            <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                            <!-- Independent Expand Toggle Chevron -->
+                            <ToggleButton Grid.Column="1"
+                                          IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                          Classes="chevron-toggle" AutomationProperties.Name="{DynamicResource Ui_62}"
+                                          ToolTip.Tip="{DynamicResource Ui_63}"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,10,0"/>
+
+                            <!-- Word & Compact Meaning -->
+                            <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                              <WrapPanel Orientation="Horizontal">
+                                <TextBlock Text="{Binding Word}" TextWrapping="Wrap" Margin="0,0,8,0" FontFamily="{DynamicResource DisplayFont}" FontSize="18" FontWeight="Medium" Foreground="{DynamicResource InkBrush}"/>
+                                <TextBlock Text="{Binding Phonetic}" Classes="muted" FontSize="13" VerticalAlignment="Center"/>
+                              </WrapPanel>
+                              <!-- Compact translation (single line with ellipsis) when collapsed -->
+                              <TextBlock Text="{Binding Translation}"
+                                         IsVisible="{Binding !IsExpanded}"
+                                         Classes="muted"
+                                         TextWrapping="NoWrap"
+                                         TextTrimming="CharacterEllipsis"
+                                         FontSize="12"/>
+                              <TextBlock Text="{Binding Archive.SourceTitle}" IsVisible="{Binding !IsExpanded}" Classes="muted" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                              <ItemsControl ItemsSource="{Binding Archive.Tags}" IsVisible="{Binding !IsExpanded}" MaxHeight="24" ClipToBounds="True">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><TextBlock Text="{Binding}" Classes="muted" FontSize="10" Margin="0,0,8,0"/></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+
+                            <!-- Stage Status -->
+                            <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="14,0" HorizontalAlignment="Right">
+                              <Border Background="{DynamicResource TintBrush}" CornerRadius="10" Padding="8,2" HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding StatusLabel, Converter={StaticResource UiValueConverter}}" FontWeight="Medium" FontSize="11" Foreground="{DynamicResource PrimaryGreen}"/>
+                              </Border>
+                              <TextBlock Text="{Binding NextReviewDisplay, Converter={StaticResource UiValueConverter}}" Classes="muted" FontSize="10" HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                            </StackPanel>
+
+                            <!-- Row Actions -->
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                              <Button Tag="{Binding Id}" Click="OnEditWordClick" Classes="row-btn" ToolTip.Tip="{DynamicResource Ui_64}" AutomationProperties.Name="{DynamicResource Ui_64}">
+                                <Path Data="M 3,11 L 11,3 L 13,5 L 5,13 L 2,14 Z" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.2" Width="14" Height="14"/>
+                              </Button>
+                              <Button Tag="{Binding Id}" Click="OnDeleteWordClick" Classes="row-btn" ToolTip.Tip="{DynamicResource Ui_65}">
+                                <Path Data="M 3,3 L 11,11 M 11,3 L 3,11" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.2" StrokeLineCap="Round" Width="14" Height="14"/>
+                              </Button>
+                            </StackPanel>
+                          </Grid>
+
+                          <!-- Expanded Details Section (Shown when IsExpanded == True) -->
+                          <Border IsVisible="{Binding IsExpanded}" Classes="drawer-slot" Padding="14,10" Margin="32,0,0,4">
+                            <StackPanel Spacing="8">
+                              <StackPanel Spacing="2">
+                                <TextBlock Text="{DynamicResource Ui_66}" Classes="eyebrow" FontSize="10"/>
+                                <TextBlock Text="{Binding Translation}" FontSize="14" TextWrapping="Wrap" LineHeight="23"/>
+                              </StackPanel>
+
+                              <StackPanel Spacing="2" IsVisible="{Binding Definition, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="{DynamicResource Ui_67}" Classes="eyebrow" FontSize="10"/>
+                                <TextBlock Text="{Binding Definition}" Classes="muted" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
+                              </StackPanel>
+
+                              <TextBlock Text="{Binding Archive.SourceTitle}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Archive.SourceTitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <TextBlock Text="{Binding Archive.SourceExcerpt}" TextWrapping="Wrap" LineHeight="23" IsVisible="{Binding Archive.SourceExcerpt, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <TextBlock Text="{Binding Notes}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <ItemsControl ItemsSource="{Binding Archive.Tags}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><Border Classes="pos-chip"><TextBlock Text="{Binding}" FontSize="11"/></Border></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <WrapPanel>
+                                <Button Classes="secondary" Content="{DynamicResource Ui_68}" Click="OnRememberWordClick" Margin="0,0,8,6"/>
+                                <Button Classes="ghost" Content="{DynamicResource Ui_69}" Click="OnUnfamiliarWordClick" Margin="0,0,8,6"/>
+                                <Button Classes="ghost" Content="{DynamicResource Ui_70}" Click="OnEncounterWordClick" Margin="0,0,8,6"/>
+                              </WrapPanel>
+                              <TextBlock Text="{Binding Archive.EncounterCount, Converter={StaticResource UiValueConverter}, ConverterParameter=encounters}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+                              <WrapPanel>
+                                <CheckBox Classes="capsule" Content="{DynamicResource Ui_26}" IsChecked="{Binding OptExamples, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <CheckBox Classes="capsule" Content="{DynamicResource Ui_71}" IsChecked="{Binding OptSynonyms, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <CheckBox Classes="capsule" Content="{DynamicResource Ui_72}" IsChecked="{Binding OptAntonyms, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <CheckBox Classes="capsule" Content="{DynamicResource Ui_29}" IsChecked="{Binding OptPhrases, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <Button Classes="secondary" Content="{Binding AiButtonText}" IsEnabled="{Binding !IsGeneratingAi}" Click="OnRowAiGenerateClick" Margin="0,0,6,6"/>
+                                <Button Classes="ghost" Content="{DynamicResource Ui_31}" IsVisible="{Binding IsGeneratingAi}" Click="OnRowAiCancelClick"/>
+                              </WrapPanel>
+                              <TextBlock Text="{Binding AiStatusText, Converter={StaticResource UiValueConverter}}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding AiStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <TextBlock Text="{DynamicResource Ui_34}" Classes="eyebrow" IsVisible="{Binding HasAiExamples}"/>
+                              <ItemsControl ItemsSource="{Binding AiExamples}" IsVisible="{Binding HasAiExamples}">
+                                <ItemsControl.ItemTemplate><DataTemplate>
+                                  <Border Classes="example-card" Margin="0,0,0,6"><StackPanel Spacing="4">
+                                    <TextBlock Text="{Binding English}" FontSize="15" LineHeight="24" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Chinese}" Classes="muted" FontSize="13" LineHeight="21" TextWrapping="Wrap"/>
+                                  </StackPanel></Border>
+                                </DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <TextBlock Text="{DynamicResource Ui_35}" Classes="eyebrow" IsVisible="{Binding HasAiSynonyms}"/>
+                              <ItemsControl ItemsSource="{Binding AiSynonyms}" IsVisible="{Binding HasAiSynonyms}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><Button Classes="micro-capsule" Content="{Binding}" Click="OnRelatedWordClick"/></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <TextBlock Text="{DynamicResource Ui_36}" Classes="eyebrow" IsVisible="{Binding HasAiAntonyms}"/>
+                              <ItemsControl ItemsSource="{Binding AiAntonyms}" IsVisible="{Binding HasAiAntonyms}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><Button Classes="micro-capsule" Content="{Binding}" Click="OnRelatedWordClick"/></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <TextBlock Text="{DynamicResource Ui_29}" Classes="eyebrow" IsVisible="{Binding HasAiPhrases}"/>
+                              <ItemsControl ItemsSource="{Binding AiPhrases}" IsVisible="{Binding HasAiPhrases}">
+                                <ItemsControl.ItemTemplate><DataTemplate>
+                                  <Border Classes="example-card" Margin="0,0,0,6"><StackPanel Spacing="3">
+                                    <TextBlock Text="{Binding English}" FontSize="14" TextWrapping="Wrap"/>
+                                    <TextBlock Text="{Binding Chinese}" Classes="muted" FontSize="13" TextWrapping="Wrap"/>
+                                  </StackPanel></Border>
+                                </DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding StageDescription, Converter={StaticResource UiValueConverter}}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding CreatedAt, Converter={StaticResource UiValueConverter}, ConverterParameter=created}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
+                              </Grid>
+                            </StackPanel>
+                          </Border>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Border>
+            </Grid>
+
+            <!-- Bottom Batch Action Bar -->
+            <Border Grid.Row="3" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,10,0,0">
+              <StackPanel Spacing="6">
+              <StackPanel Name="VocabPager" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" IsVisible="False">
+                <Button Name="VocabPreviousBtn" Classes="ghost" Content="{DynamicResource Ui_73}"/>
+                <TextBlock Name="VocabPageText" Classes="muted" VerticalAlignment="Center"/>
+                <Button Name="VocabNextBtn" Classes="ghost" Content="{DynamicResource Ui_74}"/>
+              </StackPanel>
+              <Grid ColumnDefinitions="Auto,*,Auto">
+                <ComboBox Name="BatchActionCombo" SelectedIndex="0">
+                  <ComboBoxItem Content="{DynamicResource Ui_75}"/>
+                  <ComboBoxItem Content="{DynamicResource Ui_76}"/>
+                  <ComboBoxItem Content="{DynamicResource Ui_77}"/>
+                  <ComboBoxItem Content="{DynamicResource Ui_78}"/>
+                  <ComboBoxItem Content="{DynamicResource Ui_79}"/>
+                  <ComboBoxItem Content="{DynamicResource Ui_80}"/>
+                  <ComboBoxItem Content="{DynamicResource Ui_81}"/>
+                </ComboBox>
+                <Button Name="ExportPrintBtn" Grid.Column="2" Classes="primary" Content="{DynamicResource Ui_82}"/>
+              </Grid>
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <!-- Full-page recall; native window owns the exterior frame. -->
+          <Grid Name="PageReview" IsVisible="False" Margin="24,52,24,20" RowDefinitions="Auto,*,Auto">
+            <Grid ColumnDefinitions="Auto,*,Auto" MinHeight="42">
+              <Button Name="ReviewBackBtn" Classes="ghost" Content="‹" FontSize="26" ToolTip.Tip="Esc"/>
+              <TextBlock Name="ReviewRemainingText" Grid.Column="1" Classes="muted" VerticalAlignment="Center" Margin="12,0"/>
+              <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="8">
+                <Button Name="ReviewUndoBtn" Classes="ghost" Content="↶  ⌥Space"/>
+                <Button Name="ReviewMasterBtn" Classes="ghost" Content="熟  Del"/>
+              </StackPanel>
+            </Grid>
+            <Grid Name="ReviewCardHost" Grid.Row="1" Margin="180,54,180,24">
+              <!-- 保留 Windows 契约控件：卡片堆叠装饰由 macOS 极简卡面取代，保持隐藏。 -->
+              <Border Name="ReviewBackTwo" IsVisible="False" IsHitTestVisible="False"/>
+              <Border Name="ReviewBackOne" IsVisible="False" IsHitTestVisible="False"/>
+              <Border Name="ReviewCard" Background="Transparent" BorderThickness="0" CornerRadius="0" Padding="0">
+                <Grid RowDefinitions="*,Auto">
+                  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="16">
+                      <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Name="ReviewWordText" FontSize="32" FontWeight="Bold" TextWrapping="Wrap"/>
+                        <!-- 记忆连击：三条竖直指示，自下而上每攒到一次「认识」点亮一格。 -->
+                        <StackPanel Name="ReviewStreakBars" Orientation="Vertical" Spacing="2" VerticalAlignment="Center" IsVisible="False">
+                          <Border Name="ReviewStreakBar3" Width="3" Height="7" CornerRadius="1.5" Background="#BFC9CFD4"/>
+                          <Border Name="ReviewStreakBar2" Width="3" Height="7" CornerRadius="1.5" Background="#BFC9CFD4"/>
+                          <Border Name="ReviewStreakBar1" Width="3" Height="7" CornerRadius="1.5" Background="#BFC9CFD4"/>
+                        </StackPanel>
+                      </StackPanel>
+                      <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Button Name="ReviewPronounceBtn" Classes="secondary" Content="英  ▷" FontSize="12" Padding="8,2"/>
+                        <TextBlock Name="ReviewPhoneticText" Classes="muted" FontSize="15" TextWrapping="Wrap"/>
+                      </StackPanel>
+                      <Border Name="ReviewAnswer" Background="Transparent" IsVisible="False" Padding="0,10,0,8">
+                        <StackPanel Spacing="12">
+                          <TextBlock Name="ReviewMeaningText" FontSize="16" LineHeight="26" FontWeight="Medium" TextWrapping="Wrap"/>
+                          <TextBlock Name="ReviewDefinitionText" Classes="muted" FontSize="14" TextWrapping="Wrap" LineHeight="24"/>
+                          <StackPanel Name="ReviewDetails" Spacing="10"/>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                  <!-- 保留 Windows 契约控件：新流程评价即揭示释义，不再需要单独的查看按钮。 -->
+                  <Button Name="ReviewRevealBtn" Grid.Row="1" Classes="ghost" Content="查看释义  Space" FontSize="14" HorizontalAlignment="Left" Margin="0,16,0,0" IsVisible="False"/>
+                </Grid>
+              </Border>
+            </Grid>
+            <Border Name="ReviewEmptyCard" Grid.Row="1" Classes="card" Background="Transparent" BorderThickness="0" BoxShadow="0 0 0 0 Transparent" VerticalAlignment="Center" IsVisible="False">
+              <StackPanel Spacing="12" HorizontalAlignment="Center">
+                <TextBlock Name="ReviewEmptyTitle" Text="{DynamicResource Ui_85}" FontSize="26" FontWeight="Medium" HorizontalAlignment="Center"/>
+                <TextBlock Name="ReviewEmptyBody" Text="{DynamicResource Ui_86}" Classes="muted" TextWrapping="Wrap" TextAlignment="Center" MaxWidth="420" HorizontalAlignment="Center"/>
+                <Button Name="ReviewRestartBtn" Classes="secondary" Content="返回阅读" FontSize="13" HorizontalAlignment="Center" Margin="0,6,0,0" IsVisible="False"/>
+              </StackPanel>
+            </Border>
+            <StackPanel Grid.Row="2" Spacing="16">
+              <TextBlock Name="ReviewHintText" Classes="muted" FontSize="12" TextAlignment="Center" TextWrapping="Wrap" Opacity="0.65"/>
+              <Grid Name="ReviewRatingBar" ColumnDefinitions="*,*,*" MinHeight="64" IsVisible="False">
+                <Button Name="ReviewRememberBtn" Classes="ghost" Content="认识  Q" FontSize="14" HorizontalAlignment="Center"/>
+                <Button Name="ReviewUnsureBtn" Grid.Column="1" Classes="ghost" Content="模糊  W" FontSize="14" HorizontalAlignment="Center"/>
+                <Button Name="ReviewUnfamiliarBtn" Grid.Column="2" Classes="ghost" Content="忘记了  E" FontSize="14" HorizontalAlignment="Center"/>
+              </Grid>
+            </StackPanel>
+          </Grid>
+
+          <!-- 3. SETTINGS PAGE -->
+          <ScrollViewer Name="PageSettings" HorizontalScrollBarVisibility="Disabled" Margin="36,24,36,24" IsVisible="False">
+            <StackPanel Name="SettingsContent" Spacing="18" MaxWidth="760" HorizontalAlignment="Left">
+              <StackPanel Spacing="4">
+                <TextBlock Text="{DynamicResource Ui_16}" Classes="h1"/>
+                <TextBlock Text="{DynamicResource Ui_88}" Classes="muted"/>
+              </StackPanel>
+
+              <Border Name="ThemeSettingsCard" Classes="card">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{DynamicResource Ui_89}" FontWeight="Medium" FontSize="16"/>
+                    <ComboBox Name="SettingsThemeCombo"><ComboBoxItem Content="{DynamicResource Ui_90}"/><ComboBoxItem Content="{DynamicResource Ui_91}"/></ComboBox>
+                    <TextBlock Text="{DynamicResource Ui_LanguageLabel}" Classes="muted" FontSize="12"/>
+                    <ComboBox Name="SettingsLanguageCombo"><ComboBoxItem Content="中文"/><ComboBoxItem Content="English"/></ComboBox>
+                    <CheckBox Name="HighContrastBox" Content="{DynamicResource Ui_92}"/>
+                    <CheckBox Name="OpaqueMaterialBox" Content="{DynamicResource Ui_93}"/>
+                    <CheckBox Name="ReduceMotionBox" Content="{DynamicResource Ui_94}"/>
+                    <TextBlock Text="{DynamicResource Ui_95}" Classes="muted" FontSize="11"/>
+                  </StackPanel>
+              </Border>
+
+              <Border Classes="card"><StackPanel Spacing="10">
+                <TextBlock Text="{DynamicResource Ui_96}" FontSize="16" FontWeight="Medium"/>
+                <TextBlock Text="{DynamicResource Ui_97}" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="{DynamicResource Ui_98}" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="{DynamicResource Ui_99}" Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel></Border>
+              <Border Classes="card">
+                <StackPanel Spacing="16">
+                  <TextBlock Text="{DynamicResource Ui_100}" FontSize="16" FontWeight="Medium"/>
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{DynamicResource Ui_101}" FontWeight="Medium" FontSize="12"/>
+                    <ComboBox Name="SettingsProviderCombo">
+                      <ComboBoxItem Content="DeepSeek"/>
+                      <ComboBoxItem Content="{DynamicResource Ui_102}"/>
+                      <ComboBoxItem Content="{DynamicResource Ui_103}"/>
+                      <ComboBoxItem Content="{DynamicResource Ui_104}"/>
+                    </ComboBox>
+                  </StackPanel>
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{DynamicResource Ui_105}" FontWeight="Medium" FontSize="12"/>
+                    <TextBox Name="SettingsBaseUrlInput"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{DynamicResource Ui_106}" FontWeight="Medium" FontSize="12"/>
+                    <TextBox Name="SettingsModelInput"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="API Key" FontWeight="Medium" FontSize="12"/>
+                    <TextBox Name="SettingsApiKeyInput" PasswordChar="●"/>
+                  </StackPanel>
+
+                  <CheckBox Name="SettingsRememberKeyBox" Content="{DynamicResource Ui_107}"/>
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{DynamicResource Ui_108}" FontWeight="Medium" FontSize="12"/>
+                    <ComboBox Name="SettingsContextCombo" SelectedIndex="0">
+                      <ComboBoxItem Content="{DynamicResource Ui_109}"/><ComboBoxItem Content="{DynamicResource Ui_110}"/>
+                      <ComboBoxItem Content="{DynamicResource Ui_111}"/><ComboBoxItem Content="{DynamicResource Ui_112}"/><ComboBoxItem Content="{DynamicResource Ui_113}"/>
+                    </ComboBox>
+                    <TextBox Name="SettingsContextInput" Watermark="{DynamicResource Ui_114}" MaxLength="500" IsVisible="False"/>
+                    <CheckBox Name="SettingsIncludeSourceBox" Content="{DynamicResource Ui_115}"/>
+                  </StackPanel>
+
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="{DynamicResource Ui_116}" FontWeight="Medium" FontSize="12"/>
+                    <ComboBox Name="SettingsTimeoutCombo">
+                      <ComboBoxItem Content="{DynamicResource Ui_117}"/>
+                      <ComboBoxItem Content="{DynamicResource Ui_118}" IsSelected="True"/>
+                      <ComboBoxItem Content="{DynamicResource Ui_119}"/>
+                    </ComboBox>
+                  </StackPanel>
+
+                  <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="{DynamicResource Ui_120}" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+                      <Button Name="SettingsSaveBtn" Grid.Column="1" Classes="primary" Content="{DynamicResource Ui_121}"/>
+                    </Grid>
+                  </Border>
+                </StackPanel>
+              </Border>
+              <Border Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="{DynamicResource Ui_122}" FontWeight="Medium" FontSize="16"/>
+                  <TextBlock Name="DataIdentityText" TextWrapping="Wrap" FontWeight="Medium"/>
+                  <TextBlock Name="DataLocationText" Classes="muted" TextWrapping="Wrap"/>
+                  <TextBlock Name="LastBackupText" Classes="muted" TextWrapping="Wrap"/>
+                  <WrapPanel>
+                    <Button Name="BackupNowBtn" Classes="secondary" Content="{DynamicResource Ui_123}" Margin="0,0,8,8"/>
+                    <Button Name="RestoreBackupBtn" Classes="ghost" Content="{DynamicResource Ui_124}" Margin="0,0,8,8"/>
+                    <Button Name="OpenDataFolderBtn" Classes="ghost" Content="{DynamicResource Ui_125}" Margin="0,0,8,8"/>
+                  </WrapPanel>
+                  <WrapPanel>
+                    <Button Name="ImportCsvBtn" Classes="secondary" Content="{DynamicResource Ui_126}" Margin="0,0,8,8"/>
+                    <Button Name="ExportCsvBtn" Classes="secondary" Content="{DynamicResource Ui_127}" Margin="0,0,8,8"/>
+                    <Button Name="ExportJsonBtn" Classes="secondary" Content="{DynamicResource Ui_128}" Margin="0,0,8,8"/>
+                  </WrapPanel>
+                  <TextBlock Text="{DynamicResource Ui_129}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+                </StackPanel>
+              </Border>
+              <Border Classes="card"><StackPanel Spacing="10">
+                <TextBlock Text="{DynamicResource Ui_130}" FontSize="16" FontWeight="Medium"/>
+                <TextBlock Name="DiagnosticsText" Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel></Border>
+            </StackPanel>
+          </ScrollViewer>
+        </Panel>
+      </Grid>
+
+      <!-- Bottom Global Status Bar -->
+      <Border Name="WindowStatusBar" Grid.Row="2" Background="{DynamicResource TintBrush}" Padding="20,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Name="GlobalStatusText" Text="{DynamicResource Ui_132}" VerticalAlignment="Center" FontSize="11"/>
+          <TextBlock Grid.Column="1" Text="lexi 3.0.1" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Overlay Dialog: Edit Translation -->
+    <Border Name="DialogEditOverlay" Background="{DynamicResource OverlayBrush}" IsVisible="False">
+      <Border Classes="card" Background="{DynamicResource DialogSurfaceBrush}" Width="620" MaxHeight="620" Margin="30" HorizontalAlignment="Center" VerticalAlignment="Stretch">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <TextBlock Name="DialogEditTitle" Text="{DynamicResource Ui_64}" FontWeight="Medium" FontSize="18" Margin="0,0,0,14"/>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
+            <StackPanel Spacing="8" Margin="0,0,14,0">
+              <TextBlock Text="{DynamicResource Ui_133}" Classes="eyebrow"/>
+              <TextBox Name="DialogEditInput" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBlock Text="{DynamicResource Ui_134}" Classes="eyebrow"/>
+              <ComboBox Name="ArchiveSourceTypeCombo" SelectedIndex="0"><ComboBoxItem Content="{DynamicResource Ui_135}"/><ComboBoxItem Content="{DynamicResource Ui_136}"/><ComboBoxItem Content="{DynamicResource Ui_137}"/><ComboBoxItem Content="{DynamicResource Ui_138}"/><ComboBoxItem Content="{DynamicResource Ui_139}"/></ComboBox>
+              <TextBox Name="ArchiveSourceTitleInput" Watermark="{DynamicResource Ui_140}" MaxLength="1000"/>
+              <TextBox Name="ArchiveExcerptInput" Watermark="{DynamicResource Ui_141}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBox Name="ArchiveNotesInput" Watermark="{DynamicResource Ui_142}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBox Name="ArchiveTagsInput" Watermark="{DynamicResource Ui_143}" MaxLength="1000"/>
+              <TextBlock Text="{DynamicResource Ui_144}" Classes="eyebrow" Margin="0,8,0,0"/>
+              <TextBlock Text="{DynamicResource Ui_145}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+              <TextBox Name="ArchiveExamplesInput" Watermark="{DynamicResource Ui_170}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="75" MaxLength="10000"/>
+              <TextBox Name="ArchiveSynonymsInput" Watermark="{DynamicResource Ui_147}" MaxLength="2000"/>
+              <TextBox Name="ArchiveAntonymsInput" Watermark="{DynamicResource Ui_148}" MaxLength="2000"/>
+              <TextBox Name="ArchivePhrasesInput" Watermark="{DynamicResource Ui_171}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBlock Name="ArchiveEditErrorText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryGreen}"/>
+            </StackPanel>
+          </ScrollViewer>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Name="DialogEditCancelBtn" Classes="ghost" Content="{DynamicResource Ui_31}"/>
+            <Button Name="DialogEditConfirmBtn" Classes="primary" Content="{DynamicResource Ui_150}"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Border>
+
+    <Border Name="RestoreOverlay" Background="{DynamicResource OverlayBrush}" IsVisible="False">
+      <Border Classes="card" Background="{DynamicResource DialogSurfaceBrush}" MaxWidth="500" Margin="30" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="{DynamicResource Ui_151}" FontWeight="Medium" FontSize="18"/>
+          <TextBlock Name="RestoreDescriptionText" TextWrapping="Wrap"/>
+          <TextBlock Text="{DynamicResource Ui_152}" Classes="muted" TextWrapping="Wrap"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Name="RestoreCancelBtn" Classes="ghost" Content="{DynamicResource Ui_31}"/>
+            <Button Name="RestoreConfirmBtn" Classes="primary" Content="{DynamicResource Ui_153}"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Overlay Dialog: Change Stage -->
+    <Border Name="DialogStageOverlay" Background="{DynamicResource OverlayBrush}" IsVisible="False">
+      <Border Classes="card" MaxWidth="380" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="{DynamicResource Ui_154}" FontWeight="Medium" FontSize="16"/>
+          <TextBlock Text="{DynamicResource Ui_155}" Classes="muted"/>
+          <ComboBox Name="DialogStageCombo">
+            <ComboBoxItem Content="{DynamicResource Ui_156}" IsSelected="True"/>
+            <ComboBoxItem Content="{DynamicResource Ui_157}"/>
+            <ComboBoxItem Content="{DynamicResource Ui_158}"/>
+            <ComboBoxItem Content="{DynamicResource Ui_159}"/>
+            <ComboBoxItem Content="{DynamicResource Ui_160}"/>
+            <ComboBoxItem Content="{DynamicResource Ui_161}"/>
+          </ComboBox>
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Name="DialogStageCancelBtn" Classes="ghost" Content="{DynamicResource Ui_31}"/>
+            <Button Name="DialogStageConfirmBtn" Classes="primary" Content="{DynamicResource Ui_162}"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Overlay Dialog: Confirm Delete -->
+    <Border Name="DialogDeleteOverlay" Background="{DynamicResource OverlayBrush}" IsVisible="False">
+      <Border Classes="card" MaxWidth="400" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Name="DialogDeleteTitle" Text="{DynamicResource Ui_163}" FontWeight="Medium" FontSize="16"/>
+          <TextBlock Text="{DynamicResource Ui_164}" Classes="muted" TextWrapping="Wrap"/>
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Name="DialogDeleteCancelBtn" Classes="ghost" Content="{DynamicResource Ui_31}"/>
+            <Button Name="DialogDeleteConfirmBtn" Classes="primary" Background="{DynamicResource DangerBrush}" Foreground="White" Content="{DynamicResource Ui_165}"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+  </Border>
+</Window>

@@ -1,0 +1,1 @@
+构建Lexi应用.command

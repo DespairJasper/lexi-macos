@@ -1,0 +1,27 @@
+# 本机 SDK、构建与发布产物
+.tools/
+dist/
+**/bin/
+**/obj/
+**/publish/
+verification/
+
+# macOS 与 IDE 生成文件
+.DS_Store
+**/.DS_Store
+*.user
+
+# 本机资料与密钥
+USER-STEERING.md
+README_macOS.md
+IELTS-升级说明.md
+macOS版本历史.md
+*.pdb
+*.log
+*.dmg
+*.p12
+*.pfx
+*.key
+*.pem
+signing.json
+vocab.sqlite3

@@ -1,0 +1,32 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Lexi</AssemblyName><RootNamespace>Lexi</RootNamespace>
+    <Version>3.0.1</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <EnableDefaultItems>true</EnableDefaultItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />
+    <AvaloniaResource Include="Assets/icon.ico" />
+    <AvaloniaResource Include="Assets/lexi-logo.png" />
+    <Content Include="Assets/lexi-logo.png" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/IELTS/**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/dictionary.sqlite3" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Notices/**" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Remove="publish/**;tests/**;Core/**;Domain/**;Application/**;Infrastructure/**;Models/**;Platform/**;Services/AiService.cs;Services/DictionaryService.cs;Services/VocabularyService.cs;Services/VocabularyService.Archive.cs;Services/VocabularyService.Quotes.cs;Services/DatabaseSafety.cs;Services/ExportService.cs;Services/QuoteExportService.cs;Services/ArchiveTransferService*.cs" />
+    <ProjectReference Include="Core/Lexi.Core.csproj" />
+    <ProjectReference Include="Infrastructure/Lexi.Infrastructure.csproj" />
+    <InternalsVisibleTo Include="MacPlatformTests" />
+    <InternalsVisibleTo Include="SelectionTests" />
+    <None Remove="publish/**" />
+    <AvaloniaXaml Remove="publish/**" />
+  </ItemGroup>
+</Project>
