@@ -299,7 +299,7 @@
     <Setter Property="Foreground" Value="{DynamicResource MutedBrush}"/>
     <Setter Property="HorizontalAlignment" Value="Stretch"/>
     <Setter Property="VerticalAlignment" Value="Center"/>
-    <Setter Property="TextAlignment" Value="Right"/>
+    <Setter Property="TextAlignment" Value="Center"/>
   </Style>
   <Style Selector="Border.badge.badge-accent">
     <Setter Property="Background" Value="{DynamicResource PrimaryGreen}"/>

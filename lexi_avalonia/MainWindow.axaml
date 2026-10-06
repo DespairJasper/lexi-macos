@@ -485,7 +485,7 @@
               <Border Name="ReviewBackOne" IsVisible="False" IsHitTestVisible="False"/>
               <Border Name="ReviewCard" Background="Transparent" BorderThickness="0" CornerRadius="0" Padding="0">
                 <Grid RowDefinitions="*,Auto">
-                  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                  <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
                     <StackPanel Spacing="16">
                       <StackPanel Orientation="Horizontal" Spacing="10">
                         <TextBlock Name="ReviewWordText" FontSize="32" FontWeight="Bold" TextWrapping="Wrap"/>
@@ -647,7 +647,7 @@
       <Border Name="WindowStatusBar" Grid.Row="2" Background="{DynamicResource TintBrush}" Padding="20,0">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Name="GlobalStatusText" Text="{DynamicResource Ui_132}" VerticalAlignment="Center" FontSize="11"/>
-          <TextBlock Grid.Column="1" Text="lexi 3.0.1" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+          <TextBlock Grid.Column="1" Text="lexi 3.0.2" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
         </Grid>
       </Border>
     </Grid>

@@ -33,6 +33,7 @@ public partial class MainWindow
     private double _focusOriginalCardMaxWidth;
     private double _focusOriginalWordFontSize;
     private HorizontalAlignment _focusOriginalCardAlignment;
+    private ScrollBarVisibility _focusOriginalVerticalScrollBarVisibility;
     private Control[] _focusDecorations = [];
     private Thickness _focusOriginalLookupMargin;
 
@@ -182,6 +183,8 @@ public partial class MainWindow
         _wordFocusSnapshot = snapshot ?? CaptureFocusSnapshot();
         // Switch page before setting active, so ordinary navigation hooks cannot exit us.
         ShowPage("lookup");
+        _focusOriginalVerticalScrollBarVisibility = PageLookup.VerticalScrollBarVisibility;
+        PageLookup.VerticalScrollBarVisibility = ScrollBarVisibility.Hidden;
         _wordFocusActive = true;
         Classes.Set("word-focus", true);
         var layout = this.FindControl<Grid>("WindowLayoutGrid")!;
@@ -240,6 +243,7 @@ public partial class MainWindow
         ++_focusEpoch;
         var snapshot = _wordFocusSnapshot;
         _wordFocusActive = false;
+        PageLookup.VerticalScrollBarVisibility = _focusOriginalVerticalScrollBarVisibility;
         StopLearningSpeech();
         _focusDetails!.IsVisible = false;
         _focusPronounceButton!.IsVisible = false;

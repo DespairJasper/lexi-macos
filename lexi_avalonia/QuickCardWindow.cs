@@ -76,7 +76,7 @@ internal sealed class QuickCardWindow : Window
         _allow.Click+=(_,_)=>MacOSNative.OpenAccessibilitySettings();
         var actions=new WrapPanel {Orientation=Orientation.Horizontal};foreach(var button in new[]{_run,_save,_copy,_pronounce,_detail,_cancel}) {button.Margin=new Thickness(0,0,6,6);actions.Children.Add(button);}body.Children.Add(actions);body.Children.Add(_status);
         body.Children.Add(_allow);
-        var surface=new Border {Padding=new Thickness(20,38,20,18),CornerRadius=new CornerRadius(14),Child=new ScrollViewer {Content=body,HorizontalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled},
+        var surface=new Border {Padding=new Thickness(20,38,20,18),CornerRadius=new CornerRadius(14),Child=new ScrollViewer {Content=body,HorizontalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled,VerticalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden},
             Background=new SolidColorBrush(Color.Parse(settings.Theme=="Dark"?"#CC152332":"#DDF1F7FC"))};
         if(settings.OpaqueMaterial||settings.HighContrast)surface.Background=new SolidColorBrush(Color.Parse(settings.Theme=="Dark"?"#152332":"#F7FAFD"));
         if(settings.Material=="LiquidGlass"&&!settings.OpaqueMaterial&&!settings.HighContrast)surface.Background=new SolidColorBrush(Color.Parse(settings.Theme=="Dark"?"#40152332":"#40F1F7FC"));
