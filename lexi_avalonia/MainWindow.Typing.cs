@@ -2,13 +2,16 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.LogicalTree;
+using Avalonia.Threading;
 using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace Lexi;
 
 public partial class MainWindow
 {
     private readonly TypingSession _typingSession = new();
+    private readonly TypingFeedbackAudio _typingFeedbackAudio = new();
     private ComboBox _typingSource = null!, _typingMode = null!;
     private TextBox _typingInput = null!;
     private TextBlock _typingLetters = null!, _typingMeaning = null!, _typingFeedback = null!, _typingStats = null!;
@@ -20,6 +23,13 @@ public partial class MainWindow
     private readonly List<(string Id, string Title)> _typingSources = [];
     private int _typingLoadEpoch;
     private string _typingDeckTitle = "";
+    private DispatcherTimer? _typingShakeTimer;
+    private TranslateTransform? _typingShakeTransform;
+    private readonly Stopwatch _typingShakeClock = new();
+    private bool _typingShakeTimerHooked;
+    private bool _typingAttemptWrongFeedbackPlayed;
+    private const double TypingShakeDurationMs = 820;
+    private static readonly double[] TypingShakeOffsets = [0, -1, 2, -4, 4, -4, 4, -4, 2, -1, 0];
 
     private void RenderTypingSetup()
     {
@@ -92,6 +102,7 @@ public partial class MainWindow
     }
     private void RenderTypingWord()
     {
+        StopTypingShake();
         _typingUpdating = true; _typingInput.Text = ""; _typingUpdating = false;
         _typingFeedback.Text = ""; _typingFeedback.IsVisible = false;
         var playing = _typingSession.Current != null;
@@ -130,20 +141,25 @@ public partial class MainWindow
         var target = TypingSession.Normalize(word.Word);
         var failed = _typingSession.Outcome == TypingOutcome.Retry;
         var input = failed ? _typingSession.FailedInput : _typingSession.Input;
-        var length = failed ? input.Length : _typingSession.Hints ? target.Length : input.Length;
-        for (var i = 0; i < length; i++)
+        var letters = TypingFeedbackModel.Build(target, input, _typingSession.Hints, _typingSession.Outcome);
+        foreach (var letter in letters)
         {
-            var typed = i < input.Length;
-            var character = typed ? input[i] : target[i];
+            var character = letter.Character;
             var run = new Avalonia.Controls.Documents.Run(failed && character == ' ' ? "·" : character.ToString());
-            run.Foreground = failed ? new SolidColorBrush(Color.Parse(i < target.Length && character == target[i] ? "#169E85" : "#D84D43"))
-                : typed && _typingSession.Hints ? new SolidColorBrush(Color.Parse("#169E85"))
-                : typed ? (IBrush?)this.FindResource(ActualThemeVariant, "InkBrush")
-                : new SolidColorBrush(Color.Parse(_settings.Theme == "Dark" ? "#75858E" : "#BAC8CC"));
+            var dark = _settings.Theme == "Dark";
+            run.Foreground = letter.Tone switch
+            {
+                TypingLetterTone.Correct => (IBrush?)this.FindResource(ActualThemeVariant, "SuccessBrush"),
+                TypingLetterTone.Wrong => new SolidColorBrush(Color.Parse(_typingSession.Hints
+                    ? (dark ? "#DC2626" : "#F87171") : (dark ? "#F87171" : "#DC2626"))),
+                TypingLetterTone.Neutral => new SolidColorBrush(Color.Parse(dark ? "#F9FAFB" : "#4B5563")),
+                _ => new SolidColorBrush(Color.Parse("#9CA3AF"))
+            };
             _typingLetters.Inlines.Add(run);
         }
-        _typingFeedback.IsVisible = failed;
-        _typingFeedback.Text = failed ? target : "";
+        var showAnswerLine = failed && !_typingSession.Hints;
+        _typingFeedback.IsVisible = showAnswerLine;
+        _typingFeedback.Text = showAnswerLine ? target : "";
         var available = Math.Max(240, (Bounds.Width > 0 ? Bounds.Width : Width) - 100);
         var fontSize = Math.Clamp(available / (Math.Max(target.Length, input.Length) * .65 + 1), 20, 44);
         _typingInput.FontSize = _typingLetters.FontSize = _typingFeedback.FontSize = fontSize;
@@ -163,20 +179,85 @@ public partial class MainWindow
     {
         if (_typingUpdating || !_typingPlaying || _typingSession.Current == null || _currentPage != "typing") return;
         if (_typingSession.Outcome == TypingOutcome.Correct || (_typingSession.Outcome == TypingOutcome.Retry && string.IsNullOrEmpty(_typingInput.Text))) return;
-        var outcome = _typingSession.Submit(_typingInput.Text ?? "");
+        var submitted = _typingInput.Text ?? "";
+        var previousInput = _typingSession.Input;
+        var normalizedSubmission = TypingSession.Normalize(submitted);
+        if (_typingSession.Outcome == TypingOutcome.Retry && previousInput.Length == 0 && normalizedSubmission.Length > 0)
+            _typingAttemptWrongFeedbackPlayed = false;
+        var addedCharacters = normalizedSubmission.Length > previousInput.Length && normalizedSubmission.StartsWith(previousInput, StringComparison.Ordinal);
+        var target = TypingSession.Normalize(_typingSession.Current.Word);
+        var addedWrongCharacter = addedCharacters && Enumerable.Range(previousInput.Length, normalizedSubmission.Length - previousInput.Length)
+            .Any(index => index >= target.Length || normalizedSubmission[index] != target[index]);
+        var outcome = _typingSession.Submit(submitted);
+        var wrongFeedbackPlayed = false;
+        if (addedWrongCharacter)
+        {
+            _typingFeedbackAudio.PlayWrong(); ShakeTypingError(); wrongFeedbackPlayed = true; _typingAttemptWrongFeedbackPlayed = true;
+        }
         if (outcome == TypingOutcome.Retry)
         {
+            if (!wrongFeedbackPlayed && !_typingAttemptWrongFeedbackPlayed) { _typingFeedbackAudio.PlayWrong(); ShakeTypingError(); _typingAttemptWrongFeedbackPlayed = true; }
             _learningProgress.Errors.Add(_typingSession.Current.Id); SaveLearningProgress();
             _typingUpdating = true; _typingInput.Text = ""; _typingUpdating = false;
         }
         else if (outcome == TypingOutcome.Correct)
         {
+            _typingAttemptWrongFeedbackPlayed = false;
+            _typingFeedbackAudio.PlayCorrect();
             _learningProgress.Typed.Add(_typingSession.Current.Id); SaveLearningProgress();
             _typingInput.IsEnabled = false;
             _typingAdvanceCts?.Cancel(); var cts = _typingAdvanceCts = new CancellationTokenSource();
             _ = AdvanceTypingAsync(cts.Token);
         }
+        else if (addedCharacters && !wrongFeedbackPlayed) _typingFeedbackAudio.PlayKey();
         RenderTypingLetters();
+    }
+    private void ShakeTypingError()
+    {
+        _typingShakeTransform ??= new TranslateTransform();
+        _typingWordArea.RenderTransform = _typingShakeTransform;
+        var timer = _typingShakeTimer ??= new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(16) };
+        timer.Stop(); _typingShakeClock.Restart(); _typingShakeTransform.X = 0;
+        if (!_typingShakeTimerHooked)
+        {
+            _typingShakeTimerHooked = true;
+            timer.Tick += (_, _) =>
+            {
+                var progress = _typingShakeClock.Elapsed.TotalMilliseconds / TypingShakeDurationMs;
+                if (progress >= 1)
+                {
+                    timer.Stop(); _typingShakeClock.Stop(); _typingShakeTransform!.X = 0; return;
+                }
+
+                var segment = Math.Min((int)(progress * (TypingShakeOffsets.Length - 1)), TypingShakeOffsets.Length - 2);
+                var segmentProgress = progress * (TypingShakeOffsets.Length - 1) - segment;
+                var eased = CubicBezierProgress(segmentProgress, .36, .07, .19, .97);
+                _typingShakeTransform!.X = TypingShakeOffsets[segment] + (TypingShakeOffsets[segment + 1] - TypingShakeOffsets[segment]) * eased;
+            };
+        }
+        timer.Start();
+    }
+    private static double CubicBezierProgress(double x, double x1, double y1, double x2, double y2)
+    {
+        static double Curve(double t, double p1, double p2)
+        {
+            var inverse = 1 - t;
+            return 3 * inverse * inverse * t * p1 + 3 * inverse * t * t * p2 + t * t * t;
+        }
+
+        var low = 0d; var high = 1d;
+        for (var i = 0; i < 12; i++)
+        {
+            var t = (low + high) / 2;
+            if (Curve(t, x1, x2) < x) low = t; else high = t;
+        }
+        return Curve((low + high) / 2, y1, y2);
+    }
+    private void StopTypingShake()
+    {
+        _typingShakeTimer?.Stop(); _typingShakeClock.Stop();
+        if (_typingShakeTransform == null) return;
+        _typingShakeTransform.X = 0; _typingWordArea.RenderTransform = null;
     }
     private async Task AdvanceTypingAsync(CancellationToken token)
     {

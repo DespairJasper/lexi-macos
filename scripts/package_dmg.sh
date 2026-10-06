@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/Lexi.app"
-DMG_NAME="Lexi-3.0.2-macOS-arm64.dmg"
+DMG_NAME="Lexi-3.0.3-macOS-arm64.dmg"
 OUTPUT="$DIST_DIR/$DMG_NAME"
 PYTHON_VENV="$ROOT_DIR/.tools/dmg-python/venv"
 LAYOUT_SCRIPT="$ROOT_DIR/packaging/macOS/dmg-layout.py"
@@ -42,7 +42,7 @@ done
 /usr/bin/codesign --verify --deep --strict "$APP_BUNDLE"
 python3 "$SCRIPT_DIR/stable_signing.py" verify "$APP_BUNDLE"
 python3 "$SCRIPT_DIR/verify_release_privacy.py" "$APP_BUNDLE"
-[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Info.plist")" == "3.0.2" ]] || { echo "App version does not match DMG version 3.0.2." >&2; exit 1; }
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Info.plist")" == "3.0.3" ]] || { echo "App version does not match DMG version 3.0.3." >&2; exit 1; }
 
 # Install only into this project's isolated environment; never alter the user's global Python.
 if [[ ! -x "$PYTHON_VENV/bin/python" ]]; then
@@ -127,7 +127,7 @@ REPORT="$WORK_DIR/validation.txt"
 echo "Creating a compressed read-only UDZO image / 正在生成只读压缩安装包…"
 /usr/bin/hdiutil create -volname 'lexi · Install' -srcfolder "$STAGING" -fs HFS+ -format UDZO -imagekey zlib-level=9 "$NEW_DMG"
 {
-    echo "Lexi 3.0.2 — Apple Silicon installer validation"
+    echo "Lexi 3.0.3 — Apple Silicon installer validation"
     /usr/bin/hdiutil verify "$NEW_DMG"
     /usr/bin/hdiutil imageinfo "$NEW_DMG" | /usr/bin/grep -E 'Format:|Class Name:|Checksum Type:|Size Information:' || true
 } > "$REPORT" 2>&1

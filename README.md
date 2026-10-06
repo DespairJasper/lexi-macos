@@ -1,8 +1,8 @@
 # Lexi · macOS 英语学习软件
 
-Lexi 是一款面向 macOS 的英语词汇学习与阅读辅助应用。当前版本为 **3.0.2**，支持 Apple Silicon（M 系列）和 macOS 12 或更新版本。
+Lexi 是一款面向 macOS 的英语词汇学习与阅读辅助应用。当前版本为 **3.0.3**，支持 Apple Silicon（M 系列）和 macOS 12 或更新版本。
 
-[下载 Apple Silicon 安装包（DMG）](https://github.com/DespairJasper/lexi-macos/releases/latest/download/Lexi-3.0.2-macOS-arm64.dmg) · [查看所有版本与 SHA256 校验文件](https://github.com/DespairJasper/lexi-macos/releases)
+[下载 Apple Silicon 安装包（DMG）](https://github.com/DespairJasper/lexi-macos/releases/latest/download/Lexi-3.0.3-macOS-arm64.dmg) · [查看所有版本与 SHA256 校验文件](https://github.com/DespairJasper/lexi-macos/releases)
 
 ## 特色功能
 
@@ -26,8 +26,8 @@ Lexi 是一款面向 macOS 的英语词汇学习与阅读辅助应用。当前�
 
 ### 安装步骤
 
-1. 从上方链接下载 `Lexi-3.0.2-macOS-arm64.dmg`。
-2. 在终端进入 DMG 所在目录，运行 `shasum -a 256 -c Lexi-3.0.2-macOS-arm64.dmg.sha256`，确认校验通过。
+1. 从上方链接下载 `Lexi-3.0.3-macOS-arm64.dmg`。
+2. 在终端进入 DMG 所在目录，运行 `shasum -a 256 -c Lexi-3.0.3-macOS-arm64.dmg.sha256`，确认校验通过。
 3. 打开 DMG，将 Lexi 拖入“应用程序”，推出磁盘映像后再启动应用。
 4. 首次使用跨应用选词时，按系统提示授权辅助功能。
 
@@ -57,7 +57,7 @@ Lexi 自有代码按根目录 [`LICENSE`](LICENSE) 中的**非商业许可**发�
 
 ## 发布前沿革
 
-在此次发布前，Lexi 共经历 **3 代、6 个主要阶段、至少 11 轮更新**：
+截至此次发布，Lexi 共经历 **3 代、至少 13 轮更新**：
 
 | 阶段 | 主要升级 |
 | --- | --- |
@@ -66,6 +66,8 @@ Lexi 自有代码按根目录 [`LICENSE`](LICENSE) 中的**非商业许可**发�
 | 第二代 · 学习界面 | 全屏学习卡、错字反馈、词数及顺序选择、快捷键修复 |
 | 第二代 · 记忆轮次 | 认识出队、模糊回队、忘记重学、撤销改判 |
 | 第二代 · 连击记忆 | 三次认识规则、逐遍随机、三格记忆指示 |
-| 第三代 · 当前 3.0.2 | 跨应用查词/翻译/收藏卡片、背词卡隐藏滚动条、导航数字居中、金句本、流式 AI、液态玻璃 |
+| 第三代 · 3.0.1 | 跨应用查词/翻译/收藏卡片、金句本、流式 AI、液态玻璃 |
+| 第三代 · 3.0.2 | 背词卡隐藏滚动条、导航数字居中 |
+| 第三代 · 当前 3.0.3 | 英文打字完成反馈修复、逐字反馈及正确/错误音效、错误抖动、学习进度保护、导航栏退出修复、菜单栏模板图标 |
 
-**本次发布前共计：3 代、6 个主要阶段、至少 11 轮更新。**
+**本次发布共计：3 代、至少 13 轮更新。后续每次发布都会在此表新增一行。**

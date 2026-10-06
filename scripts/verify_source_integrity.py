@@ -62,7 +62,7 @@ def main():
     version=ET.parse(source/'Lexi.csproj').getroot().findtext('./PropertyGroup/Version')
     import plistlib
     with (ROOT_DIR/'packaging/macOS/Info.plist').open('rb') as file: plist=plistlib.load(file)
-    if version!='3.0.2' or plist['CFBundleShortVersionString']!=version or plist['CFBundleVersion']!=version:failures.append('release version consistency')
+    if version!='3.0.3' or plist['CFBundleShortVersionString']!=version or plist['CFBundleVersion']!=version:failures.append('release version consistency')
     if failures:print('FAIL',failures);return 1
     print('PASS protected assets, original UI contracts, dictionary and release version',version);return 0
 if __name__=='__main__':sys.exit(main())

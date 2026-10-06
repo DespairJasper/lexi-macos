@@ -219,6 +219,13 @@ public partial class MainWindow : Window
     public void ForceClose()
     {
         if (_restoring) return;
+        PrepareForApplicationShutdown();
+        Close();
+    }
+
+    internal void PrepareForApplicationShutdown()
+    {
+        if (_isForceClose) return;
         StopLearningSpeech();
         _aiCts?.Cancel();
         _lookupAiCts?.Cancel();
@@ -227,7 +234,6 @@ public partial class MainWindow : Window
         foreach (var cts in _rowAiRequests.Values) cts.Cancel();
         ++_drawerAnimVersion;
         _isForceClose = true;
-        Close();
     }
 
     public void HideToTray()
@@ -248,6 +254,12 @@ public partial class MainWindow : Window
         Show();
         WindowState = restoreState;
         Activate();
+        if (_wordFocusActive || _typingPlaying)
+        {
+            if (_wordFocusActive) _focusBackButton?.Focus();
+            else if (_currentPage == "typing" && _typingSession.Current != null && _typingSession.Outcome != TypingOutcome.Correct) _typingInput.Focus();
+            return;
+        }
         ShowPage("lookup");
         LookupInput.Focus();
     }
@@ -272,9 +284,19 @@ public partial class MainWindow : Window
     private void ShowPage(string page)
     {
         if (!_databaseAvailable) return;
+        if (page == "lookup" && _wordFocusActive)
+        {
+            _focusBackButton?.Focus();
+            return;
+        }
+        if (page == "lookup" && _typingPlaying && _currentPage == "typing")
+        {
+            _typingInput.Focus();
+            return;
+        }
         StopLearningSpeech();
         if (_wordFocusActive && page != "lookup") ExitWordFocus();
-        SetFullPageReview(page == "review");
+        SetFullPageReview(page == "review" || (page == "typing" && _typingPlaying));
         ++_reviewEpoch; // Invalidate any in-flight card transition before page navigation.
         var previousPage = _currentPage;
         _currentPage = page;
@@ -308,7 +330,7 @@ public partial class MainWindow : Window
         if (page == "settings") UpdateDataInfo();
         if (page == "quotes") RenderQuotes();
         if (page == "ielts") RenderIeltsPage();
-        if (page == "typing") RenderTypingSetup();
+        if (page == "typing") ShowTypingPractice();
     }
 
     private CancellationTokenSource? _pageTransitionCts;

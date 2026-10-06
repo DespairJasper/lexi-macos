@@ -50,9 +50,11 @@ public static class LearningUiTests
             bitmap.Render(window); bitmap.Save(Path.Combine(folder, name + ".png"));
         }
         var code = 0;
+        var shutdownCompleted = false;
         try
         {
             window.Width = 1000; window.Height = 780;
+            var successColor = ((Avalonia.Media.ISolidColorBrush)window.FindResource(window.ActualThemeVariant, "SuccessBrush")!).Color;
             Click("NavIelts"); await Task.Delay(220);
             Check(C<Grid>("PageIelts").IsVisible && !C<Grid>("LookupPageHost").IsVisible, "IELTS is an integrated exclusive native page");
             Check(C<ComboBox>("IeltsSection").ItemCount == 22 && C<StackPanel>("IeltsRows").Children.Count == 30, "22 chapters with bounded pages");
@@ -67,15 +69,30 @@ public static class LearningUiTests
             Check(!C<Border>("SidebarShell").IsEffectivelyVisible && !C<Border>("DragBar").IsEffectivelyVisible
                 && !C<TextBlock>("TypingStats").IsEffectivelyVisible && C<TextBox>("TypingInput").BorderThickness == default(Thickness), "typing is full-page without chrome, live metrics or an input frame");
             C<TextBox>("TypingInput").Text = "ax"; await Task.Delay(60);
-            Check(C<TextBox>("TypingInput").Text == "" && C<TextBlock>("TypingFeedback").Text == "atmosphere", "hinted typo resets immediately and displays letter comparison");
+            Check(C<TextBox>("TypingInput").Text == "" && C<TextBlock>("TypingFeedback").Text == "" && !C<TextBlock>("TypingFeedback").IsVisible,
+                "hinted typo resets and keeps the separate spelling answer hidden");
             var errorRuns = C<TextBlock>("TypingLetters").Inlines!.OfType<Avalonia.Controls.Documents.Run>().ToList();
-            Check(errorRuns[0].Foreground is Avalonia.Media.ISolidColorBrush good && good.Color == Avalonia.Media.Color.Parse("#169E85")
-                && errorRuns[1].Foreground is Avalonia.Media.ISolidColorBrush bad && bad.Color == Avalonia.Media.Color.Parse("#D84D43"), "error comparison highlights only incorrect letters in red");
+            Check(errorRuns[0].Foreground is Avalonia.Media.ISolidColorBrush good && good.Color == successColor
+                && errorRuns[1].Foreground is Avalonia.Media.ISolidColorBrush bad && bad.Color == Avalonia.Media.Color.Parse("#F87171"), "hint mode uses Lexi's muted success green and Qwerty-style error red");
+            var shakeTimer = (Avalonia.Threading.DispatcherTimer)typeof(MainWindow).GetField("_typingShakeTimer", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+            var shakeOffsets = (double[])typeof(MainWindow).GetField("TypingShakeOffsets", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)!;
+            Check(shakeTimer.Interval == TimeSpan.FromMilliseconds(16)
+                && (double)typeof(MainWindow).GetField("TypingShakeDurationMs", BindingFlags.Static | BindingFlags.NonPublic)!.GetValue(null)! == 820
+                && shakeOffsets.SequenceEqual([0, -1, 2, -4, 4, -4, 4, -4, 2, -1, 0]), "error shake follows Qwerty Learner's 0.82-second keyframes");
             await Snapshot("typing-hints-error");
             Click("TypingReplayBtn"); Check(C<Button>("TypingReplayBtn").Content?.ToString()?.Contains("/") == true && Audio.Calls.Last().Text == "atmosphere", "central audio control pronounces and reveals phonetic");
-            C<TextBox>("TypingInput").Text = "atmosphere"; await Task.Delay(400);
-            Check(Audio.Calls.Last().Text == "hydrosphere", "only correct input advances and pronounces next word");
+            C<TextBox>("TypingInput").Text = "atmosphere";
+            for (var attempt = 0; attempt < 20 && Audio.Calls.Last().Text != "hydrosphere"; attempt++) await Task.Delay(50);
+            Check(Audio.Calls.Last().Text == "hydrosphere", $"only correct input advances and pronounces next word (last={Audio.Calls.Last().Text})");
             await Snapshot("typing-hints-light");
+            C<TextBox>("TypingInput").Text = "hy"; await Task.Delay(60);
+            window.HideToTray(); window.ShowAndActivate(); await Task.Delay(100);
+            Check(C<Grid>("PageTyping").IsVisible && C<TextBox>("TypingInput").Text == "hy",
+                "reopening Lexi preserves the active typing question and partial input");
+            Click("NavIelts"); Click("NavTyping");
+            Check(C<Grid>("PageTyping").IsVisible && C<TextBox>("TypingInput").Text == "hy",
+                "leaving and returning through navigation preserves the active typing question and input");
+            C<TextBox>("TypingInput").Text = "hydrosphere"; await Task.Delay(400);
             Click("TypingExitBtn");
             Check(C<Border>("SidebarShell").IsEffectivelyVisible, "exiting a typing round restores ordinary navigation");
             Click("NavIelts"); C<ComboBox>("IeltsPracticeMode").SelectedIndex = 2; C<NumericUpDown>("IeltsCount").Value = 2;
@@ -90,9 +107,17 @@ public static class LearningUiTests
             Click("TypingStartBtn"); await Task.Delay(100);
             Check(!(C<TextBlock>("TypingLetters").Inlines!.Text ?? "").Contains("atmosphere"), "no-hint display does not reveal spelling");
             C<TextBox>("TypingInput").Text = "ax"; await Task.Delay(60);
-            Check(C<TextBox>("TypingInput").Text == "ax" && C<TextBlock>("TypingFeedback").Text == "", "no-hint partial incorrect input shows no feedback");
+            Check(C<TextBox>("TypingInput").Text == "ax" && C<TextBlock>("TypingFeedback").Text == ""
+                && C<TextBlock>("TypingLetters").Inlines!.OfType<Avalonia.Controls.Documents.Run>().ElementAt(0).Foreground is Avalonia.Media.ISolidColorBrush dictationGood && dictationGood.Color == successColor
+                && C<TextBlock>("TypingLetters").Inlines!.OfType<Avalonia.Controls.Documents.Run>().ElementAt(1).Foreground is Avalonia.Media.ISolidColorBrush dictationBad && dictationBad.Color == Avalonia.Media.Color.Parse("#DC2626"),
+                "dictation shows only typed letters with Qwerty-aligned per-letter correctness");
             C<TextBox>("TypingInput").Text = "axmosphere"; await Task.Delay(60);
-            Check(C<TextBox>("TypingInput").Text == "" && C<TextBlock>("TypingFeedback").Text == "atmosphere", "no-hint full-length typo reports and resets same word");
+            var dictationErrorRuns = C<TextBlock>("TypingLetters").Inlines!.OfType<Avalonia.Controls.Documents.Run>().ToList();
+            Check(C<TextBox>("TypingInput").Text == "" && C<TextBlock>("TypingFeedback").Text == "atmosphere" && C<TextBlock>("TypingFeedback").IsVisible
+                && (C<TextBlock>("TypingLetters").Inlines!.Text ?? "") == "axmosphere"
+                && dictationErrorRuns[0].Foreground is Avalonia.Media.ISolidColorBrush firstGood && firstGood.Color == successColor
+                && dictationErrorRuns[1].Foreground is Avalonia.Media.ISolidColorBrush firstBad && firstBad.Color == Avalonia.Media.Color.Parse("#DC2626"),
+                "dictation error shows the correct spelling beneath its marked input");
             await Snapshot("typing-no-hints-error");
             C<TextBox>("TypingInput").Text = "a"; await Task.Delay(60);
             Check(!C<TextBlock>("TypingFeedback").IsVisible && C<TextBox>("TypingInput").Text == "a", "first retry letter dismisses error comparison and starts same word");
@@ -103,6 +128,11 @@ public static class LearningUiTests
             Check(C<Button>("FocusStartRecallBtn").IsEffectivelyVisible && !C<Button>("FocusKnownBtn").IsEffectivelyVisible,
                 "a brand-new word opens the study card with the meaning visible instead of a blind recall");
             await (Task)Call("LoadFocusWordAsync")!; Check(Audio.Calls.Last().Text == "atmosphere", "word-card render automatically pronounces");
+            var currentCardWord = C<TextBlock>("ResultWordText").Text;
+            window.HideToTray(); window.ShowAndActivate(); await Task.Delay(100);
+            Check((bool)typeof(MainWindow).GetField("_wordFocusActive", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!
+                && C<Border>("WordFocusBar").IsEffectivelyVisible && C<TextBlock>("ResultWordText").Text == currentCardWord,
+                "reopening Lexi preserves the active word-card recall and current word");
             C<CheckBox>("ReduceMotionBox").IsChecked = true;
             var round = (StudyRound<string>)typeof(MainWindow).GetField("_focusRound", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
             // 首次学习：先把整组学完（三张学习卡），回忆遍在轮内打乱顺序。
@@ -176,9 +206,15 @@ public static class LearningUiTests
             Call("OpenTypingWords", new List<LearningWord> { new() { Id = "fixture:colour", Words = ["colour", "color"] } }, "variant test");
             var session = (TypingSession)typeof(MainWindow).GetField("_typingSession",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(window)!;
             Check(session.Count == 2, "typing includes all spelling variants");
-            C<TextBox>("TypingInput").Text = "colour"; await Task.Delay(400);
-            C<TextBox>("TypingInput").Text = "color"; await Task.Delay(400);
+            C<TextBox>("TypingInput").Text = "colour";
+            for (var attempt = 0; attempt < 20 && session.Cursor == 0; attempt++) await Task.Delay(50);
+            C<TextBox>("TypingInput").Text = "color";
+            for (var attempt = 0; attempt < 20 && !C<TextBlock>("TypingStats").IsEffectivelyVisible; attempt++) await Task.Delay(50);
             Check(C<TextBlock>("TypingStats").IsEffectivelyVisible && !C<TextBox>("TypingInput").IsEffectivelyVisible, "metrics appear only on the round completion screen");
+            Check(C<TextBlock>("TypingStats").Text!.Contains("Accuracy")
+                && C<TextBlock>("TypingStats").Text!.Contains("Retries")
+                && !C<TextBlock>("TypingStats").Text!.Contains("准确率"),
+                "typing completion statistics follow the selected English UI language");
             Click("TypingRestartBtn"); Check(session.Count == 2, "restart does not duplicate spelling variants");
             var store = (IVocabularyArchive)typeof(MainWindow).GetField("_vocabService",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(window)!;
             store.AddWord("apple", "", "苹果", ""); store.ExecuteBatch([store.GetAllWords().Single(w => w.Word == "apple").Id], "today"); Call("RefreshWords"); Click("NavReview");
@@ -210,9 +246,18 @@ public static class LearningUiTests
             await staleLookup;
             var expansion = typeof(MainWindow).GetField("_currentExpansion", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window);
             Check(navigationSafe && expansion == null && C<TextBlock>("ResultWordText").Text == "apple", $"pending IELTS card preserves newer navigation ({navigationSafe}); stale query preserves current expansion ({expansion == null})");
+            var desktop = (IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!;
+            var dockQuitAllowed = false;
+            desktop.ShutdownRequested += (_, _) => dockQuitAllowed = (bool)typeof(MainWindow).GetField("_isForceClose", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+            shutdownCompleted = desktop.TryShutdown();
+            Check(shutdownCompleted && dockQuitAllowed && !window.IsVisible,
+                "macOS app-icon Quit request fully closes Lexi instead of hiding the window");
             Console.WriteLine(string.Join("\n", report));
         }
         catch(Exception ex) { code = 1; File.WriteAllText(Path.Combine(folder,"learning-ui-error.txt"),ex.ToString()); Console.Error.WriteLine(ex); }
-        finally { if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown(code); }
+        finally
+        {
+            if (!shutdownCompleted && Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop) desktop.Shutdown(code);
+        }
     }
 }

@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Lexi</AssemblyName><RootNamespace>Lexi</RootNamespace>
-    <Version>3.0.2</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <Version>3.0.3</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
     <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <EnableDefaultItems>true</EnableDefaultItems>
@@ -15,10 +15,12 @@
     <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />
     <AvaloniaResource Include="Assets/icon.ico" />
+    <AvaloniaResource Include="Assets/tray-icon-macos.png" />
     <AvaloniaResource Include="Assets/lexi-logo.png" />
     <Content Include="Assets/lexi-logo.png" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets/icon.ico" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets/IELTS/**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/Typing/**" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets/dictionary.sqlite3" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Notices/**" CopyToOutputDirectory="PreserveNewest" />
     <Compile Remove="publish/**;tests/**;Core/**;Domain/**;Application/**;Infrastructure/**;Models/**;Platform/**;Services/AiService.cs;Services/DictionaryService.cs;Services/VocabularyService.cs;Services/VocabularyService.Archive.cs;Services/VocabularyService.Quotes.cs;Services/DatabaseSafety.cs;Services/ExportService.cs;Services/QuoteExportService.cs;Services/ArchiveTransferService*.cs" />

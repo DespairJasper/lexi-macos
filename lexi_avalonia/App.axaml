@@ -11,7 +11,7 @@
 
   <TrayIcon.Icons>
     <TrayIcons>
-      <TrayIcon Icon="Assets/icon.ico" ToolTipText="{DynamicResource Ui_0}">
+      <TrayIcon Icon="{OnPlatform Default='Assets/icon.ico', macOS='Assets/tray-icon-macos.png'}" MacOSProperties.IsTemplateIcon="true" ToolTipText="{DynamicResource Ui_0}">
         <TrayIcon.Menu>
           <NativeMenu>
             <NativeMenuItem Header="{DynamicResource Ui_TrayToggle}" Click="OnTrayToggle" />

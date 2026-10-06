@@ -2,6 +2,22 @@ using Lexi;
 using System.Text.Json;
 void Check(bool value, string message) { if (!value) throw new Exception("FAIL: " + message); Console.WriteLine("PASS: " + message); }
 LearningWord W(string text) => new() { Id = text, Words = [text] };
+var hintedPrefix = TypingFeedbackModel.Build("apple", "ap", true, TypingOutcome.Pending);
+Check(new string(hintedPrefix.Select(letter => letter.Character).ToArray()) == "apple" &&
+    hintedPrefix.Select(letter => letter.Tone).SequenceEqual([TypingLetterTone.Correct, TypingLetterTone.Correct, TypingLetterTone.Hint, TypingLetterTone.Hint, TypingLetterTone.Hint]),
+    "淡写逐字母显示正确前缀与未输入字母");
+var hintedError = TypingFeedbackModel.Build("apple", "ax", true, TypingOutcome.Retry);
+Check(new string(hintedError.Select(letter => letter.Character).ToArray()) == "axple" &&
+    hintedError.Select(letter => letter.Tone).SequenceEqual([TypingLetterTone.Correct, TypingLetterTone.Wrong, TypingLetterTone.Hint, TypingLetterTone.Hint, TypingLetterTone.Hint]),
+    "淡写错误反馈标出错字并保留后续提示");
+var dictationPrefix = TypingFeedbackModel.Build("apple", "ax", false, TypingOutcome.Pending);
+Check(new string(dictationPrefix.Select(letter => letter.Character).ToArray()) == "ax" &&
+    dictationPrefix.Select(letter => letter.Tone).SequenceEqual([TypingLetterTone.Correct, TypingLetterTone.Wrong]),
+    "默写逐字母反馈已输入内容且不显示答案");
+var dictationError = TypingFeedbackModel.Build("apple", "axple", false, TypingOutcome.Retry);
+Check(new string(dictationError.Select(letter => letter.Character).ToArray()) == "axple" &&
+    dictationError.Select(letter => letter.Tone).SequenceEqual([TypingLetterTone.Correct, TypingLetterTone.Wrong, TypingLetterTone.Correct, TypingLetterTone.Correct, TypingLetterTone.Correct]),
+    "默写错误反馈逐字母标记正确与错误且不泄露答案");
 var session = new TypingSession();
 session.Reset([W("apple"), W("ice cream")], true);
 Check(!session.Advance(), "不能未答先推进");

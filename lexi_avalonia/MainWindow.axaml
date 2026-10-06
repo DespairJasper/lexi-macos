@@ -647,7 +647,7 @@
       <Border Name="WindowStatusBar" Grid.Row="2" Background="{DynamicResource TintBrush}" Padding="20,0">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Name="GlobalStatusText" Text="{DynamicResource Ui_132}" VerticalAlignment="Center" FontSize="11"/>
-          <TextBlock Grid.Column="1" Text="lexi 3.0.2" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+          <TextBlock Grid.Column="1" Text="lexi 3.0.3" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
         </Grid>
       </Border>
     </Grid>

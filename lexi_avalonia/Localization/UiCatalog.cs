@@ -431,7 +431,7 @@ internal static class UiCatalog
         ["顺序"] = "Order",
         ["开始学习"] = "Start learning",
         ["重新练习"] = "Practice again",
-        ["准确率 {0}% · {1} WPM · 重试 {2} 次"] = "Accuracy {0}% · {1} WPM · Retries {2}",
+        ["准确率 {0:F0}% · {1} WPM · 重试 {2} 次"] = "Accuracy {0:F0}% · {1} WPM · Retries {2}",
         ["本轮认识 {0}/{1}"] = "Known streak {0}/{1} this round",
         ["已记为认识（{0}/{1}），本轮还会再出现。"] = "Marked as known ({0}/{1}) — this word returns later in the round.",
         ["离线查词不调用 AI。关闭窗口后快捷卡片继续可用；⌘Q 完全退出。"] = "Offline lookup never calls AI. Quick cards stay available after closing the window; ⌘Q quits.",

@@ -39,6 +39,10 @@ public partial class App : Application
         {
             var mainWindow = Environment.GetCommandLineArgs().Contains("--learning-test") ? LearningUiTests.CreateWindow() : new MainWindow();
             desktop.MainWindow = mainWindow;
+            desktop.ShutdownRequested += (_, _) =>
+            {
+                if (!mainWindow.IsRestoring) mainWindow.PrepareForApplicationShutdown();
+            };
             if (Environment.GetCommandLineArgs().Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test"))
             {
                 var started = false;

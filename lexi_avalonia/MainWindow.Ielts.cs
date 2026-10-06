@@ -74,7 +74,7 @@ public partial class MainWindow
             vocabTyping.Click += (_, _) => OpenTypingWords(_filteredWords.Select(ArchiveLearningWord).ToList(), T("当前筛选词汇"));
             _ieltsFilterTimer.Tick += (_, _) => { _ieltsFilterTimer.Stop(); _ieltsListPage = 0; RenderIeltsPage(); };
             _writingSaveTimer.Tick += (_, _) => { _writingSaveTimer.Stop(); SaveLearningProgress(); };
-            Closed += (_, _) => { _ieltsFilterTimer.Stop(); _writingSaveTimer.Stop(); if (_writingDirty) SaveLearningProgress(); _wordAudio.Dispose(); };
+            Closed += (_, _) => { _ieltsFilterTimer.Stop(); _writingSaveTimer.Stop(); if (_writingDirty) SaveLearningProgress(); StopTypingShake(); _typingFeedbackAudio.Dispose(); _wordAudio.Dispose(); };
         }
         catch (Exception ex) { SetStatus(T("IELTS 内容加载失败：") + ex.Message); NavIelts.IsEnabled = NavTyping.IsEnabled = false; }
         finally { _learningConfiguring = false; }
@@ -269,7 +269,34 @@ public partial class MainWindow
     {
         ++_learningNavigationVersion;
         NavIelts.Classes.Set("active", page == "ielts"); NavTyping.Classes.Set("active", page == "typing");
-        if (page != "typing") { _typingAdvanceCts?.Cancel(); _typingPlaying = false; Classes.Set("typing-focus", false); }
+        if (page != "typing") { _typingAdvanceCts?.Cancel(); _typingAdvanceCts = null; Classes.Set("typing-focus", false); }
+    }
+    private void ShowTypingPractice()
+    {
+        if (!_typingPlaying)
+        {
+            RenderTypingSetup();
+            return;
+        }
+
+        _typingSetupView.IsVisible = false; _typingPlayArea.IsVisible = true;
+        if (_typingSession.Current is null)
+        {
+            _typingInput.IsEnabled = false;
+            RenderTypingStats();
+            return;
+        }
+
+        if (_typingSession.Outcome == TypingOutcome.Correct)
+        {
+            _typingSession.Advance();
+            RenderTypingWord();
+            return;
+        }
+
+        _typingInput.IsEnabled = true;
+        RenderTypingLetters();
+        _typingInput.Focus();
     }
     private void RefreshLearningLabels()
     {
