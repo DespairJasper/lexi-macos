@@ -171,4 +171,259 @@ drop.Reset(["only"], StudyMode.Review);
 drop.CompleteCurrent();
 Check(drop.IsFinished && drop.Known == 1 && drop.UndoLast()!.Value.Rating == StudyRating.Known && drop.Current == "only",
     "标记已掌握直接完成且可撤销");
+DailyStudyPlanWord PW(string id) => new() { Id = id, Word = id, Meaning = "meaning " + id };
+var monday = new DateOnly(2026, 10, 5);
+var sourceWords = new List<DailyStudyPlanWord> { PW("a"), PW("b"), PW("c"), PW("d"), PW("e") };
+var daily = DailyStudyPlanRules.Create("Daily", DailyStudyPlanSource.Archive, "Archive", sourceWords, 2, false, 7);
+Check(daily.Words.Select(w => w.Id).SequenceEqual(["a", "b", "c", "d", "e"]) &&
+    DailyStudyPlanRules.EstimatedDaysRemaining(daily) == 3, "计划冻结输入顺序，剩余天数向上取整");
+sourceWords[0].Word = "changed";
+sourceWords.Add(PW("f"));
+Check(daily.Words.Count == 5 && daily.Words[0].Word == "a", "新归档词与源词修改不改变已有计划");
+Check(DailyStudyPlanRules.GetTodayWords(daily, monday).Select(w => w.Id).SequenceEqual(["a", "b"]), "每日批次限制为设定词数");
+Check(DailyStudyPlanRules.CompleteWord(daily, "a", monday) &&
+    DailyStudyPlanRules.GetTodayWords(daily, monday).Select(w => w.Id).SequenceEqual(["b"]), "中断后继续当天未完成的批次");
+Check(DailyStudyPlanRules.EstimatedDaysRemaining(daily) == 3, "部分完成的批次仍计入剩余天数");
+Check(!DailyStudyPlanRules.CompleteWord(daily, "c", monday) &&
+    !DailyStudyPlanRules.CompleteWord(daily, "a", monday), "不能越过批次或重复完成词条");
+Check(DailyStudyPlanRules.CompleteWord(daily, "b", monday) &&
+    DailyStudyPlanRules.GetTodayWords(daily, monday).Count == 0 &&
+    DailyStudyPlanRules.EstimatedDaysRemaining(daily) == 2, "完成当天批次后当天不开放下一批");
+Check(DailyStudyPlanRules.GetTodayWords(daily, monday.AddDays(1)).Select(w => w.Id).SequenceEqual(["c", "d"]), "次日开放下一批");
+var resumed = DailyStudyPlanRules.Create("Resumed", DailyStudyPlanSource.Ielts, "IELTS", [PW("i1"), PW("i2"), PW("i3")], 2, false, 1);
+Check(DailyStudyPlanRules.CompleteWord(resumed, "i1", monday) &&
+    DailyStudyPlanRules.GetTodayWords(resumed, monday.AddDays(2)).Select(w => w.Id).SequenceEqual(["i2"]), "跨日中断仍继续原批次");
+var shuffledA = DailyStudyPlanRules.Create("Shuffle", DailyStudyPlanSource.Ielts, "IELTS", sourceWords, 3, true, 31);
+var shuffledB = DailyStudyPlanRules.Create("Shuffle", DailyStudyPlanSource.Ielts, "IELTS", sourceWords, 3, true, 31);
+Check(shuffledA.Words.Select(w => w.Id).SequenceEqual(shuffledB.Words.Select(w => w.Id)) &&
+    shuffledA.Words.Select(w => w.Id).Order().SequenceEqual(sourceWords.Select(w => w.Id).Order()) &&
+    !shuffledA.Words.Select(w => w.Id).SequenceEqual(sourceWords.Select(w => w.Id)), "随机顺序按种子复现且不丢词");
+var archiveOverlap = DailyStudyPlanRules.Create("Archive plan", DailyStudyPlanSource.Archive, "A", [PW("shared")], 1, false, 0);
+var ieltsOverlap = DailyStudyPlanRules.Create("IELTS plan", DailyStudyPlanSource.Ielts, "I", [PW("shared")], 1, false, 0);
+var archiveDraft = DailyStudyPlanRules.Create("Draft", DailyStudyPlanSource.Archive, "A", [PW("shared")], 1, false, 0);
+Check(DailyStudyPlanRules.FindOverlaps([archiveOverlap, ieltsOverlap], archiveDraft)
+    .Select(x => x.PlanName).SequenceEqual(["Archive plan"]), "重叠提示按来源隔离");
+var sameWordDifferentId = PW("different-id");
+sameWordDifferentId.Word = "  SHARED  ";
+var ieltsDraft = DailyStudyPlanRules.Create("IELTS draft", DailyStudyPlanSource.Ielts, "I", [sameWordDifferentId], 1, false, 0);
+Check(DailyStudyPlanRules.FindOverlaps([archiveOverlap, ieltsOverlap], ieltsDraft)
+    .Select(x => x.PlanName).SequenceEqual(["IELTS plan"]), "同来源同词异 ID 仍提示重叠，忽略大小写与首尾空格");
+DailyStudyPlanRules.Stop(archiveOverlap);
+Check(archiveOverlap.Status == DailyStudyPlanStatus.Stopped &&
+    DailyStudyPlanRules.GetTodayWords(archiveOverlap, monday).Count == 0 &&
+    DailyStudyPlanRules.FindOverlaps([archiveOverlap, ieltsOverlap], archiveDraft).Count == 0,
+    "停止计划不出词且不占用词条");
+Check(!DailyStudyPlanRules.CompleteWord(archiveOverlap, "shared", monday), "停止计划不能继续完成词条");
+Check(DailyStudyPlanRules.CompleteWord(ieltsOverlap, "shared", monday) &&
+    ieltsOverlap.Status == DailyStudyPlanStatus.Completed &&
+    DailyStudyPlanRules.GetTodayWords(ieltsOverlap, monday.AddDays(1)).Count == 0 &&
+    DailyStudyPlanRules.EstimatedDaysRemaining(ieltsOverlap) == 0,
+    "完成最后一词自动结束计划");
+Check(DailyStudyPlanRules.FindOverlaps([ieltsOverlap],
+    DailyStudyPlanRules.Create("I draft", DailyStudyPlanSource.Ielts, "I", [PW("shared")], 1, false, 0)).Count == 0,
+    "已完成计划不占用词条");
+void RejectPlan(Action action, string label)
+{
+    try { action(); throw new Exception("FAIL: " + label); }
+    catch (ArgumentException) { Console.WriteLine("PASS: " + label); }
+}
+RejectPlan(() => DailyStudyPlanRules.Create(" ", DailyStudyPlanSource.Archive, "A", [PW("a")], 1, false, 0), "计划名不可为空");
+RejectPlan(() => DailyStudyPlanRules.Create("X", DailyStudyPlanSource.Archive, "A", [], 1, false, 0), "计划词表不可为空");
+RejectPlan(() => DailyStudyPlanRules.Create("X", DailyStudyPlanSource.Archive, "A", [PW("a")], 0, false, 0), "每日词数必须为正");
+RejectPlan(() => DailyStudyPlanRules.Create("X", DailyStudyPlanSource.Archive, "A", [PW("a"), PW("a")], 1, false, 0), "词条 ID 必须唯一");
+var planPath = Path.Combine(Path.GetTempPath(), "lexi-daily-plan-test-" + Guid.NewGuid().ToString("N"), "daily-plans.json");
+try
+{
+    var planStore = new DailyStudyPlanStore(planPath);
+    Check(planStore.Load().Count == 0, "独立计划文件不存在时返回空列表");
+    planStore.Save([daily, resumed]);
+    var loaded = planStore.Load();
+    Check(loaded.Count == 2 && loaded[0].Words.Select(w => w.Id).SequenceEqual(["a", "b", "c", "d", "e"]) &&
+        loaded[0].CompletedWordIds.SetEquals(["a", "b"]) && loaded[0].LastBatchCompletedDate == monday &&
+        loaded[1].CompletedWordIds.SetEquals(["i1"]), "独立 JSON 保存并恢复批次和完成状态");
+    planStore.Save([loaded[0]]);
+    Check(planStore.Load().Count == 1, "原子替换已有计划文件");
+    Check(Directory.GetFiles(Path.GetDirectoryName(planPath)!, "*.tmp").Length == 0, "保存后无临时文件残留");
+    File.WriteAllText(planPath, "[{\"Name\":\"broken\",\"Words\":[]}]");
+    try { planStore.Load(); throw new Exception("FAIL: 损坏计划结构必须拒绝"); }
+    catch (InvalidDataException) { Console.WriteLine("PASS: 损坏计划结构必须拒绝"); }
+}
+finally { Directory.Delete(Path.GetDirectoryName(planPath)!, recursive: true); }
+var sequential = new StudyRound<string>(new Random(17));
+sequential.Reset(Deck(6), StudyMode.FirstLearn, shuffle: false);
+var sequentialLearn = new List<string>();
+for (var i = 0; i < 6; i++) { sequentialLearn.Add(sequential.Current); sequential.CompleteLearn(); }
+Check(sequentialLearn.SequenceEqual(Deck(6)), "顺序计划的学习遍保留原顺序");
+var sequentialRecall = new List<string>();
+for (var i = 0; i < 6; i++) { sequentialRecall.Add(sequential.Current); sequential.Commit(StudyRating.Unsure); }
+Check(sequentialRecall.SequenceEqual(Deck(6)) && sequential.Current == "w1", "顺序计划的回忆遍保留原顺序");
+var planSessionPlan = DailyStudyPlanRules.Create("Cards", DailyStudyPlanSource.Archive, "A", [PW("p1"), PW("p2"), PW("p3")], 2, false, 0);
+var planSession = new DailyStudyPlanSession(planSessionPlan, monday);
+Check(planSession.Round.CurrentStep == StudyStep.Learn && planSessionPlan.CurrentBatchWordIds.SequenceEqual(["p1", "p2"]), "计划使用独立首学卡片并冻结当天完整批次");
+planSession.CompleteLearn(); planSession.CompleteLearn();
+Check(planSession.Rate(StudyRating.Forgot, () => true) is { Completed: false } && planSessionPlan.ForgotWordIds.Contains("p1"), "仅忘记评价记入独立计划忘记集合");
+for (var guard = 0; guard < 30 && !planSessionPlan.CompletedWordIds.Contains("p1"); guard++)
+{
+    if (planSession.Round.CurrentStep == StudyStep.Learn) planSession.CompleteLearn();
+    else planSession.Rate(StudyRating.Known, () => true);
+}
+Check(planSessionPlan.CompletedWordIds.Contains("p1"), "计划仅在连击通过后保存完成词条");
+var partialPlan = DailyStudyPlanRules.Create("Partial", DailyStudyPlanSource.Archive, "A", [PW("p1"), PW("p2"), PW("p3")], 2, false, 0);
+new DailyStudyPlanSession(partialPlan, monday);
+DailyStudyPlanRules.CompleteWord(partialPlan, "p1", monday);
+var resumedSession = new DailyStudyPlanSession(partialPlan, monday.AddDays(1));
+Check(partialPlan.CurrentBatchWordIds.SequenceEqual(["p1", "p2"]) && resumedSession.BatchWords.Select(w => w.Id).SequenceEqual(["p1", "p2"]), "中断恢复后拼写范围仍是完整原批次");
+var saveFailurePlan = DailyStudyPlanRules.Create("Failure", DailyStudyPlanSource.Ielts, "I", [PW("f1"), PW("f2")], 2, false, 0);
+var saveFailureSession = new DailyStudyPlanSession(saveFailurePlan, monday);
+saveFailureSession.CompleteLearn(); saveFailureSession.CompleteLearn();
+Check(saveFailureSession.Rate(StudyRating.Forgot, () => false) == null && saveFailureSession.Round.Current == "f1" && saveFailureSession.Round.Forgot == 0 && saveFailurePlan.ForgotWordIds.Count == 0, "保存失败恢复队列、评价统计和忘记集合");
+Check(saveFailureSession.Rate(StudyRating.Known, () => true) is { Completed: false } && saveFailurePlan.CompletedWordIds.Count == 0, "首次认识不能提前完成计划词条");
+Check(saveFailureSession.Undo(() => true) && saveFailureSession.Round.Completed == 0 && saveFailureSession.Round.Current == "f1", "计划撤销仅恢复独立进度与队列");
+for (var guard = 0; guard < 10 && !saveFailurePlan.CompletedWordIds.Contains("f1"); guard++) saveFailureSession.Rate(StudyRating.Known, () => true);
+Check(saveFailurePlan.CompletedWordIds.Contains("f1") && saveFailureSession.ReclassifyAsForgot(() => true) is { Completed: false } && !saveFailurePlan.CompletedWordIds.Contains("f1") && saveFailurePlan.ForgotWordIds.Contains("f1"), "完成后改判忘记撤销计划完成状态");
+
+var finalSavePlan = DailyStudyPlanRules.Create("Final save", DailyStudyPlanSource.Archive, "A", [PW("final")], 1, false, 0);
+var finalSaveSession = new DailyStudyPlanSession(finalSavePlan, monday);
+finalSaveSession.CompleteLearn();
+finalSaveSession.Rate(StudyRating.Known, () => true); finalSaveSession.Rate(StudyRating.Known, () => true);
+Check(finalSaveSession.Rate(StudyRating.Known, () => false) == null && finalSaveSession.Round.CurrentStreak == 2 &&
+    finalSaveSession.Round.Completed == 0 && finalSavePlan.CompletedWordIds.Count == 0 && finalSavePlan.LastBatchCompletedDate == null &&
+    finalSavePlan.Status == DailyStudyPlanStatus.Active, "最后一次认识保存失败恢复连击、完成数与完成日期");
+finalSaveSession.Rate(StudyRating.Known, () => true);
+Check(!finalSaveSession.Undo(() => false) && finalSaveSession.Round.IsFinished && finalSavePlan.Status == DailyStudyPlanStatus.Completed,
+    "撤销保存失败保留已经完成的队列与计划");
+Check(finalSaveSession.ReclassifyAsForgot(() => false) == null && finalSaveSession.Round.IsFinished && finalSavePlan.ForgotWordIds.Count == 0 &&
+    finalSavePlan.CompletedWordIds.Count == 1, "改判保存失败保留原评价、完成与忘记集合");
+var completedSession = new DailyStudyPlanSession(finalSavePlan, monday.AddDays(1));
+Check(!completedSession.Round.HasCurrent && completedSession.BatchWords.Single().Id == "final", "完成计划仍恢复最后批次用于可选拼写");
+var metadataPath = Path.Combine(Path.GetTempPath(), "lexi-plan-metadata-" + Guid.NewGuid().ToString("N"), "plans.json");
+try
+{
+    var metadataStore = new DailyStudyPlanStore(metadataPath);
+    metadataStore.Save([saveFailurePlan]);
+    var persistedMetadata = metadataStore.Load().Single();
+    Check(persistedMetadata.CurrentBatchWordIds.SequenceEqual(["f1", "f2"]) && persistedMetadata.ForgotWordIds.SetEquals(["f1"]),
+        "完整批次与曾忘记词条集合在独立 JSON 中持久化");
+    var oldPlans = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(metadataPath))!.AsArray();
+    oldPlans[0]!.AsObject().Remove("CurrentBatchWordIds"); oldPlans[0]!.AsObject().Remove("ForgotWordIds");
+    oldPlans[0]!.AsObject().Remove("CurrentBatchRandomOrder"); oldPlans[0]!.AsObject().Remove("OriginalWordIds");
+    File.WriteAllText(metadataPath, oldPlans.ToJsonString());
+    var legacyPlan = metadataStore.Load().Single();
+    Check(legacyPlan.CurrentBatchWordIds.Count == 0 && legacyPlan.ForgotWordIds.Count == 0 &&
+        new DailyStudyPlanSession(legacyPlan, monday).BatchWords.Count == 2, "旧计划 JSON 缺少新字段时兼容加载并恢复原批次");
+}
+finally { Directory.Delete(Path.GetDirectoryName(metadataPath)!, recursive: true); }
+
+// Changing tomorrow's quota must never truncate a batch already in progress.
+var countRegression = DailyStudyPlanRules.Create("Quota", DailyStudyPlanSource.Archive, "A", [PW("a"), PW("b"), PW("c"), PW("d"), PW("e")], 4, false, 0);
+new DailyStudyPlanSession(countRegression, monday);
+DailyStudyPlanRules.CompleteWord(countRegression, "a", monday);
+countRegression = DailyStudyPlanRules.Adjust(countRegression, "Quota adjusted", 1, false, 11);
+Check(DailyStudyPlanRules.GetTodayWords(countRegression, monday).Select(w => w.Id).SequenceEqual(["b", "c", "d"]),
+    "降低每日词数不截断正在进行的原批次");
+
+var reducedBatchSession = new DailyStudyPlanSession(countRegression, monday.AddDays(2));
+Check(reducedBatchSession.BatchWords.Select(w => w.Id).SequenceEqual(["a", "b", "c", "d"]) &&
+    DailyStudyPlanRules.EstimatedDaysRemaining(countRegression) == 2, "降低配额后跨日保留完整批次且正确估算天数");
+foreach (var id in new[] { "b", "c", "d" }) Check(DailyStudyPlanRules.CompleteWord(countRegression, id, monday.AddDays(2)), "原批次继续完成 " + id);
+Check(countRegression.LastBatchCompletedDate == monday.AddDays(2) && DailyStudyPlanRules.GetTodayWords(countRegression, monday.AddDays(2)).Count == 0 &&
+    DailyStudyPlanRules.GetTodayWords(countRegression, monday.AddDays(3)).Select(w => w.Id).SequenceEqual(["e"]), "完成原批次后当天等待且次日采用新配额");
+var adjustSource = DailyStudyPlanRules.Create("Original", DailyStudyPlanSource.Archive, "A", Enumerable.Range(1, 9).Select(i => PW("a" + i)).ToList(), 2, false, 1);
+new DailyStudyPlanSession(adjustSource, monday);
+DailyStudyPlanRules.CompleteWord(adjustSource, "a1", monday); adjustSource.ForgotWordIds.Add("a2");
+var sourceBeforeAdjustment = JsonSerializer.Serialize(adjustSource);
+var increased = DailyStudyPlanRules.Adjust(adjustSource, "  Increased  ", 4, true, 17);
+Check(JsonSerializer.Serialize(adjustSource) == sourceBeforeAdjustment && !ReferenceEquals(adjustSource, increased) &&
+    increased.Id == adjustSource.Id && increased.CreatedAt == adjustSource.CreatedAt && increased.Name == "Increased" &&
+    increased.CompletedWordIds.SetEquals(["a1"]) && increased.ForgotWordIds.SetEquals(["a2"]) &&
+    increased.CurrentBatchWordIds.SequenceEqual(["a1", "a2"]) && increased.LastBatchCompletedDate == adjustSource.LastBatchCompletedDate &&
+    increased.Status == DailyStudyPlanStatus.Active, "调整返回同一身份的独立克隆，保留全部进度及日期供事务保存");
+Check(DailyStudyPlanRules.GetTodayWords(increased, monday).Select(w => w.Id).SequenceEqual(["a2"]) &&
+    DailyStudyPlanRules.EstimatedDaysRemaining(increased) == 3 && increased.CurrentBatchRandomOrder == false,
+    "提高配额和开启随机不扩张或重排正在进行的批次");
+var independentClone = DailyStudyPlanRules.Adjust(adjustSource, "Independent", 2, false, 9);
+independentClone.Words[0].Meaning = "clone only"; independentClone.ForgotWordIds.Clear(); independentClone.CurrentBatchWordIds.Clear();
+Check(JsonSerializer.Serialize(adjustSource) == sourceBeforeAdjustment, "调整克隆的词条与集合修改不会污染原计划");
+var randomizedAgain = DailyStudyPlanRules.Adjust(adjustSource, "Random again", 4, true, 17);
+Check(increased.Words.Select(w => w.Id).SequenceEqual(randomizedAgain.Words.Select(w => w.Id)) &&
+    increased.Words.Select(w => w.Id).Order().SequenceEqual(adjustSource.Words.Select(w => w.Id).Order()) &&
+    !increased.Words.Skip(2).Select(w => w.Id).SequenceEqual(["a3", "a4", "a5", "a6", "a7", "a8", "a9"]),
+    "未来随机顺序可复现，词表不增删且当前批次固定");
+var orderedAgain = DailyStudyPlanRules.Adjust(increased, "Ordered", 4, false, 2);
+Check(orderedAgain.Words.Select(w => w.Id).SequenceEqual(["a1", "a2", "a3", "a4", "a5", "a6", "a7", "a8", "a9"]),
+    "切回顺序恢复未来词条的原始输入顺序");
+DailyStudyPlanRules.CompleteWord(orderedAgain, "a2", monday);
+var afterCompleteAdjustment = DailyStudyPlanRules.Adjust(orderedAgain, "Next quota", 3, false, 3);
+Check(DailyStudyPlanRules.GetTodayWords(afterCompleteAdjustment, monday).Count == 0 &&
+    DailyStudyPlanRules.GetTodayWords(afterCompleteAdjustment, monday.AddDays(1)).Select(w => w.Id).SequenceEqual(["a3", "a4", "a5"]),
+    "今日完成后修改配额仍等待次日并按新词数开批");
+var stopped = DailyStudyPlanRules.Adjust(adjustSource, "Resume", 2, false, 1);
+DailyStudyPlanRules.Stop(stopped);
+var stoppedBefore = JsonSerializer.Serialize(stopped);
+Check(DailyStudyPlanRules.Resume(stopped) && stopped.Status == DailyStudyPlanStatus.Active &&
+    stopped.CompletedWordIds.SetEquals(["a1"]) && stopped.ForgotWordIds.SetEquals(["a2"]) &&
+    stopped.CurrentBatchWordIds.SequenceEqual(["a1", "a2"]) && stopped.LastBatchCompletedDate == adjustSource.LastBatchCompletedDate &&
+    DailyStudyPlanRules.GetTodayWords(stopped, monday.AddDays(5)).Select(w => w.Id).SequenceEqual(["a2"]), "停止后恢复保留完成、忘记与原批次，跨日继续");
+Check(!DailyStudyPlanRules.Resume(stopped) && !DailyStudyPlanRules.Resume(ieltsOverlap), "仅停止状态允许恢复且不会重复计划");
+var stoppedForValidation = JsonSerializer.Deserialize<DailyStudyPlan>(stoppedBefore)!;
+RejectPlan(() => DailyStudyPlanRules.Adjust(stoppedForValidation, "No", 2, false, 0), "停止计划不可调整");
+RejectPlan(() => DailyStudyPlanRules.Adjust(ieltsOverlap, "No", 2, false, 0), "已完成计划不可调整");
+RejectPlan(() => DailyStudyPlanRules.Adjust(adjustSource, " ", 2, false, 0), "调整拒绝空名称");
+RejectPlan(() => DailyStudyPlanRules.Adjust(adjustSource, "Invalid", 0, false, 0), "调整拒绝非正配额");
+var legacyAdjusted = JsonSerializer.Deserialize<DailyStudyPlan>(sourceBeforeAdjustment)!;
+legacyAdjusted.CurrentBatchWordIds.Clear(); legacyAdjusted.OriginalWordIds.Clear(); legacyAdjusted.CurrentBatchRandomOrder = null;
+legacyAdjusted = DailyStudyPlanRules.Adjust(legacyAdjusted, "Legacy", 1, true, 17);
+Check(legacyAdjusted.CurrentBatchWordIds.SequenceEqual(["a1", "a2"]) &&
+    DailyStudyPlanRules.GetTodayWords(legacyAdjusted, monday.AddDays(1)).Select(w => w.Id).SequenceEqual(["a2"]),
+    "旧 JSON 调整前先按旧配额恢复中断批次");
+var randomBatch = DailyStudyPlanRules.Create("Random batch", DailyStudyPlanSource.Archive, "A", Enumerable.Range(1, 9).Select(i => PW("r" + i)).ToList(), 3, true, 17);
+new DailyStudyPlanSession(randomBatch, monday);
+var randomBatchAdjusted = DailyStudyPlanRules.Adjust(randomBatch, "Ordered future", 2, false, 19);
+Check(randomBatchAdjusted.CurrentBatchRandomOrder == true && randomBatchAdjusted.CurrentBatchWordIds.SequenceEqual(randomBatch.CurrentBatchWordIds),
+    "关闭随机仍保留当前批次原有随机模式");
+var adjustedPath = Path.Combine(Path.GetTempPath(), "lexi-adjusted-" + Guid.NewGuid().ToString("N"), "plans.json");
+try
+{
+    var adjustedStore = new DailyStudyPlanStore(adjustedPath); adjustedStore.Save([increased]);
+    var restoredAdjustment = adjustedStore.Load().Single();
+    Check(restoredAdjustment.Id == adjustSource.Id && restoredAdjustment.DailyWordCount == 4 && restoredAdjustment.RandomOrder &&
+        restoredAdjustment.CurrentBatchRandomOrder == false && restoredAdjustment.OriginalWordIds.SequenceEqual(adjustSource.OriginalWordIds) &&
+        restoredAdjustment.CurrentBatchWordIds.SequenceEqual(["a1", "a2"]) && restoredAdjustment.ForgotWordIds.SetEquals(["a2"]) &&
+        restoredAdjustment.CompletedWordIds.SetEquals(["a1"]), "调整后所有元数据独立持久化且不新增身份");
+}
+finally { Directory.Delete(Path.GetDirectoryName(adjustedPath)!, recursive: true); }
+
+var previewPlan = DailyStudyPlanRules.Create("Preview", DailyStudyPlanSource.Archive, "A", [PW("v1"), PW("v2"), PW("v3"), PW("v4"), PW("v5")], 4, false, 0);
+var previewBefore = JsonSerializer.Serialize(previewPlan);
+DailyStudyPlanRules.GetTodayWords(previewPlan, monday); DailyStudyPlanRules.EstimatedDaysRemaining(previewPlan);
+Check(JsonSerializer.Serialize(previewPlan) == previewBefore, "计划列表查询不会冻结批次或修改状态");
+var unstartedAdjusted = DailyStudyPlanRules.Adjust(previewPlan, "Preview updated", 2, false, 17);
+Check(unstartedAdjusted.CurrentBatchWordIds.Count == 0 && DailyStudyPlanRules.GetTodayWords(unstartedAdjusted, monday).Select(w => w.Id).SequenceEqual(["v1", "v2"]),
+    "尚未开始的计划立即按新词数提供首批");
+new DailyStudyPlanSession(previewPlan, monday);
+var switchedPreview = DailyStudyPlanRules.Adjust(previewPlan, "Future random", 1, true, 17);
+var preservedOrderSession = new DailyStudyPlanSession(switchedPreview, monday, new StudyRound<string>(new Random(17)));
+var preservedLearningOrder = new List<string>();
+for (var i = 0; i < 4; i++) { preservedLearningOrder.Add(preservedOrderSession.Round.Current); preservedOrderSession.CompleteLearn(); }
+Check(preservedLearningOrder.SequenceEqual(["v1", "v2", "v3", "v4"]), "计划会话使用冻结顺序模式，编辑后不打乱当前学习卡");
+var sameDayStopped = DailyStudyPlanRules.Adjust(orderedAgain, "Resume gate", 2, false, 17);
+DailyStudyPlanRules.Stop(sameDayStopped);
+var resumeExpected = JsonSerializer.Deserialize<DailyStudyPlan>(JsonSerializer.Serialize(sameDayStopped))!;
+resumeExpected.Status = DailyStudyPlanStatus.Active;
+Check(DailyStudyPlanRules.Resume(sameDayStopped) && JsonSerializer.Serialize(sameDayStopped) == JsonSerializer.Serialize(resumeExpected) &&
+    DailyStudyPlanRules.GetTodayWords(sameDayStopped, monday).Count == 0 &&
+    DailyStudyPlanRules.GetTodayWords(sameDayStopped, monday.AddDays(1)).Select(w => w.Id).SequenceEqual(["a3", "a4"]),
+    "恢复只修改状态并保留今日完成后的日期门槛");
+var invalidOrderPath = Path.Combine(Path.GetTempPath(), "lexi-invalid-order-" + Guid.NewGuid().ToString("N"), "plans.json");
+try
+{
+    var invalidOrderStore = new DailyStudyPlanStore(invalidOrderPath); invalidOrderStore.Save([increased]);
+    var invalidOrderJson = System.Text.Json.Nodes.JsonNode.Parse(File.ReadAllText(invalidOrderPath))!.AsArray();
+    invalidOrderJson[0]!["OriginalWordIds"] = System.Text.Json.Nodes.JsonNode.Parse("[\"a1\",\"a1\"]");
+    File.WriteAllText(invalidOrderPath, invalidOrderJson.ToJsonString());
+    try { invalidOrderStore.Load(); throw new Exception("FAIL: 原始词序重复或缺词必须拒绝"); }
+    catch (InvalidDataException) { Console.WriteLine("PASS: 原始词序重复或缺词必须拒绝"); }
+}
+finally { Directory.Delete(Path.GetDirectoryName(invalidOrderPath)!, recursive: true); }
+
 Console.WriteLine("All learning tests passed.");

@@ -283,7 +283,7 @@ public partial class MainWindow : Window
 
     private void ShowPage(string page)
     {
-        if (!_databaseAvailable) return;
+        if (!_databaseAvailable || PlanDialogOverlay.IsVisible || _planActionOverlay?.IsVisible == true) return;
         if (page == "lookup" && _wordFocusActive)
         {
             _focusBackButton?.Focus();
@@ -296,6 +296,7 @@ public partial class MainWindow : Window
         }
         StopLearningSpeech();
         if (_wordFocusActive && page != "lookup") ExitWordFocus();
+        if (_planTypingActive && page != "typing") RenderTypingSetup();
         SetFullPageReview(page == "review" || (page == "typing" && _typingPlaying));
         ++_reviewEpoch; // Invalidate any in-flight card transition before page navigation.
         var previousPage = _currentPage;
@@ -330,6 +331,7 @@ public partial class MainWindow : Window
         if (page == "settings") UpdateDataInfo();
         if (page == "quotes") RenderQuotes();
         if (page == "ielts") RenderIeltsPage();
+        if (page == "plans") RenderStudyPlanLists();
         if (page == "typing") ShowTypingPractice();
     }
 
@@ -342,6 +344,7 @@ public partial class MainWindow : Window
         "review" => PageReview,
         "settings" => PageSettings,
         "ielts" => _ieltsPage,
+        "plans" => _studyPlanPage,
         "typing" => _typingPage,
         "quotes" => _quotesPage,
         _ => null,
@@ -353,6 +356,7 @@ public partial class MainWindow : Window
         if (_quotesPage != null) _quotesPage.IsVisible = page == "quotes";
         _quotesNav?.Classes.Set("active",page == "quotes");
         if (_ieltsPage != null) _ieltsPage.IsVisible = page == "ielts";
+        if (_studyPlanPage != null) _studyPlanPage.IsVisible = page == "plans";
         if (_typingPage != null) _typingPage.IsVisible = page == "typing";
         PageLookup.IsVisible = true; // 宿主的显隐已经足够，淡出过程中内容不应提前消失
         foreach (var (key, control) in new (string, Control)[]
@@ -495,6 +499,7 @@ public partial class MainWindow : Window
 
     private void AddCurrentWordToVocab()
     {
+        if (_planCardActive) return;
         var word = ResultWordText.Text?.Trim();
         if (string.IsNullOrEmpty(word)) return;
 

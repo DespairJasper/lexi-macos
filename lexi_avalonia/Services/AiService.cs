@@ -346,7 +346,7 @@ public sealed class AiService : IAiExpansion
         {
             using var req = new HttpRequestMessage(HttpMethod.Post, url);
             req.Headers.Authorization = new AuthenticationHeaderValue("Bearer", config.ApiKey.Trim());
-            req.Headers.UserAgent.ParseAdd("Lexi/3.0.3");
+            req.Headers.UserAgent.ParseAdd("Lexi/3.0.4");
             req.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue(protocol == "responses" ? "text/event-stream" : "application/json"));
             req.Content = new StringContent(jsonPayload, Encoding.UTF8, "application/json");
             using var response = await _httpClient.SendAsync(req, HttpCompletionOption.ResponseHeadersRead, cts.Token);

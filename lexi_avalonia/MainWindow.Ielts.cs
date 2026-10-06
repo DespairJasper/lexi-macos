@@ -65,9 +65,11 @@ public partial class MainWindow
                 SetStatus(T("学习记录读取失败，原文件已保留：") + preserved + " · " + ex.Message);
             }
             ConfigureIeltsPage(); ConfigureTypingPage();
+            ConfigureStudyPlans();
             var host = (Panel)LookupPageHost.Parent!;
-            host.Children.Add(_ieltsPage!); host.Children.Add(_typingPage!);
+            host.Children.Add(_ieltsPage!); host.Children.Add(_typingPage!); host.Children.Add(_studyPlanPage!);
             NavIelts.Click += (_, _) => { if (FocusCanNavigate) ShowPage("ielts"); };
+            NavPlans.Click += (_, _) => { if (FocusCanNavigate) ShowPage("plans"); };
             NavTyping.Click += (_, _) => { if (FocusCanNavigate) ShowPage("typing"); };
             var vocabTyping = LearningButton("打字练习", "VocabTypingBtn");
             ((StackPanel)VocabPageTitle.Parent!).Children.Add(vocabTyping);
@@ -268,6 +270,7 @@ public partial class MainWindow
     private void UpdateLearningNavigation(string page)
     {
         ++_learningNavigationVersion;
+        NavPlans.Classes.Set("active", page == "plans");
         NavIelts.Classes.Set("active", page == "ielts"); NavTyping.Classes.Set("active", page == "typing");
         if (page != "typing") { _typingAdvanceCts?.Cancel(); _typingAdvanceCts = null; Classes.Set("typing-focus", false); }
     }

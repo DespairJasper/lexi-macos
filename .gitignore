@@ -25,3 +25,8 @@ macOS版本历史.md
 *.pem
 signing.json
 vocab.sqlite3
+
+# Python 与临时审查缓存
+**/__pycache__/
+*.pyc
+.superpowers/

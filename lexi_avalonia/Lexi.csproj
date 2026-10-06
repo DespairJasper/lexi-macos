@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Lexi</AssemblyName><RootNamespace>Lexi</RootNamespace>
-    <Version>3.0.3</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <Version>3.0.4</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
     <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <EnableDefaultItems>true</EnableDefaultItems>

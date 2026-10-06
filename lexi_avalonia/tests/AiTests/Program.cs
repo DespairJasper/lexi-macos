@@ -88,7 +88,7 @@ foreach (var bad in new[] { "http://example.org/v1", "https://u:p@example.org/v1
 using (var client = new HttpClient(new TestHandler(async (req, ct) =>
 {
     Check(req.RequestUri!.AbsoluteUri == "https://relay.example.org/agent/responses", "translation calls Responses endpoint");
-    Check(req.Headers.UserAgent.ToString().Contains("Lexi/3.0.3"), "request supplies relay compatible User-Agent");
+    Check(req.Headers.UserAgent.ToString().Contains("Lexi/3.0.4"), "request supplies relay compatible User-Agent");
     Check(req.Headers.Authorization?.Scheme == "Bearer" && req.Headers.Authorization.Parameter == "test-secret", "authorization on request");
     using var body = JsonDocument.Parse(await req.Content!.ReadAsStringAsync(ct));
     var root = body.RootElement;

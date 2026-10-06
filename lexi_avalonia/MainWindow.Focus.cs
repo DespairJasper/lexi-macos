@@ -44,7 +44,8 @@ public partial class MainWindow
 
     private bool FocusCanNavigate => _databaseAvailable && !_restoring && !_isForceClose
         && !DialogEditOverlay.IsVisible && !DialogStageOverlay.IsVisible
-        && !DialogDeleteOverlay.IsVisible && !RestoreOverlay.IsVisible;
+        && !DialogDeleteOverlay.IsVisible && !RestoreOverlay.IsVisible
+        && !PlanDialogOverlay.IsVisible && _planSpellingOverlay?.IsVisible != true && _planActionOverlay?.IsVisible != true;
 
     private void ConfigureWordFocus()
     {
@@ -215,7 +216,7 @@ public partial class MainWindow
         foreach (var answer in new Control[] { ResultTranslationText, ResultDefinitionText, ResultPosPanel }) HideForFocus(answer);
         _focusAiVisible = false;
         _focusAiToggleButton!.IsVisible = true;
-        BeginFocusLearning();
+        if (!_planCardActive) BeginFocusLearning();
         ApplyLearningBackdrop();
         PageLookup.Offset = default;
         RefreshWordFocusLabels();
@@ -286,6 +287,7 @@ public partial class MainWindow
             else _ = CloseDrawerAsync(immediate: true);
         }
         UpdateLookupArchiveState();
+        if (_planCardActive) EndPlanCardFocus();
         _wordFocusSnapshot = null;
         ShowPage(snapshot.Page);
         ApplyLearningBackdrop();

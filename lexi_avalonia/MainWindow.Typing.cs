@@ -35,12 +35,15 @@ public partial class MainWindow
     {
         if (_typingSetupView == null) return;
         _typingAdvanceCts?.Cancel(); _typingPlaying = false; ++_typingLoadEpoch;
+        _planTypingActive = false;
         Classes.Set("typing-focus", false); SetFullPageReview(false);
         _typingSetupView.IsVisible = true; _typingPlayArea.IsVisible = false; _typingStart.IsEnabled = true;
     }
     private void StopTypingRound()
     {
+        var returnToPlans = _planTypingActive;
         StopLearningSpeech(); RenderTypingSetup();
+        if (returnToPlans) ShowPage("plans");
     }
     private void OpenTypingWords(List<LearningWord> words, string title)
     {
@@ -94,8 +97,9 @@ public partial class MainWindow
     {
         _typingAdvanceCts?.Cancel(); StopLearningSpeech();
         _typingDeck = selected.ToList(); _typingDeckTitle = title;
-        _learningProgress.TypingHints = _typingMode.SelectedIndex == 0; SaveLearningProgress();
-        _typingSession.Reset(_typingDeck, _learningProgress.TypingHints);
+        var hints = _typingMode.SelectedIndex == 0;
+        if (!_planTypingActive) { _learningProgress.TypingHints = hints; SaveLearningProgress(); }
+        _typingSession.Reset(_typingDeck, hints);
         _typingPlaying = true; _typingSetupView.IsVisible = false; _typingPlayArea.IsVisible = true;
         Classes.Set("typing-focus", true); SetFullPageReview(true);
         RenderTypingWord();
@@ -103,6 +107,7 @@ public partial class MainWindow
     private void RenderTypingWord()
     {
         StopTypingShake();
+        _typingPlayArea.GetLogicalDescendants().OfType<Button>().First(b => b.Name == "TypingSaveBtn").IsVisible = !_planTypingActive;
         _typingUpdating = true; _typingInput.Text = ""; _typingUpdating = false;
         _typingFeedback.Text = ""; _typingFeedback.IsVisible = false;
         var playing = _typingSession.Current != null;
@@ -124,7 +129,7 @@ public partial class MainWindow
     private void ReplayTypingWord(bool showPhonetic = false)
     {
         if (_typingSession.Current is not { } word) return;
-        var original = _ieltsCatalog?.Find(word.Word);
+        var original = _planTypingActive ? null : _ieltsCatalog?.Find(word.Word);
         var recording = IeltsCatalog.ResolveAsset(word.AudioPath) ??
             (string.Equals(original?.Word, word.Word, StringComparison.OrdinalIgnoreCase) ? IeltsCatalog.ResolveAsset(original?.AudioPath) : null);
         _wordAudio.Play(word.Word, recording);
@@ -197,14 +202,14 @@ public partial class MainWindow
         if (outcome == TypingOutcome.Retry)
         {
             if (!wrongFeedbackPlayed && !_typingAttemptWrongFeedbackPlayed) { _typingFeedbackAudio.PlayWrong(); ShakeTypingError(); _typingAttemptWrongFeedbackPlayed = true; }
-            _learningProgress.Errors.Add(_typingSession.Current.Id); SaveLearningProgress();
+            if (!_planTypingActive) { _learningProgress.Errors.Add(_typingSession.Current.Id); SaveLearningProgress(); }
             _typingUpdating = true; _typingInput.Text = ""; _typingUpdating = false;
         }
         else if (outcome == TypingOutcome.Correct)
         {
             _typingAttemptWrongFeedbackPlayed = false;
             _typingFeedbackAudio.PlayCorrect();
-            _learningProgress.Typed.Add(_typingSession.Current.Id); SaveLearningProgress();
+            if (!_planTypingActive) { _learningProgress.Typed.Add(_typingSession.Current.Id); SaveLearningProgress(); }
             _typingInput.IsEnabled = false;
             _typingAdvanceCts?.Cancel(); var cts = _typingAdvanceCts = new CancellationTokenSource();
             _ = AdvanceTypingAsync(cts.Token);

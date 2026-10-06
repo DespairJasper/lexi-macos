@@ -145,7 +145,7 @@ public partial class MainWindow
         _focusUndoButton = new Button { Name = "FocusUndoBtn", Classes = { "ghost" }, Content = "↶  ⌥Space", IsEnabled = false };
         _focusUndoButton.Click += async (_, _) => await UndoFocusRatingAsync();
         _focusSaveButton = new Button { Name = "FocusSaveBtn", Classes = { "ghost" }, Content = "☆  C" };
-        _focusSaveButton.Click += (_, _) => { AddCurrentWordToVocab(); RefreshFocusLearningLabels(); };
+        _focusSaveButton.Click += (_, _) => { if (!_planCardActive) AddCurrentWordToVocab(); RefreshFocusLearningLabels(); };
         _focusMasterButton = new Button { Name = "FocusMasterBtn", Classes = { "ghost" }, Content = T("熟") + "  Del" };
         _focusMasterButton.Click += async (_, _) => await MasterFocusAsync();
         tools.Children.Add(_focusUndoButton); tools.Children.Add(_focusSaveButton); tools.Children.Add(_focusMasterButton);
@@ -184,7 +184,7 @@ public partial class MainWindow
         ((StackPanel)LookupResultCard.Child!).Children.Add(_focusDetails);
         _focusPronounceButton = new Button { Name = "FocusPronounceBtn", Classes = { "secondary" }, Content = "英  ▷", FontSize = 12,
             Padding = new Thickness(8, 2), IsVisible = false };
-        _focusPronounceButton.Click += (_, _) => SpeakLearningText(ResultWordText.Text);
+        _focusPronounceButton.Click += (_, _) => SpeakFocusedWord();
         var phoneticParent = (StackPanel)ResultPhoneticText.Parent!;
         phoneticParent.Children.Remove(ResultPhoneticText);
         var pronunciation = new StackPanel { Orientation = Orientation.Horizontal, Spacing = 8 };
@@ -200,11 +200,12 @@ public partial class MainWindow
             else if (e.KeyModifiers == KeyModifiers.None && e.Key is Key.Q or Key.W or Key.E or Key.Delete or Key.C or Key.Space or Key.A or Key.S)
             {
                 e.Handled = true;
-                if (e.Key == Key.C) { AddCurrentWordToVocab(); RefreshFocusLearningLabels(); }
-                else if (e.Key == Key.A) SpeakLearningText(ResultWordText.Text);
-                else if (e.Key == Key.S && _focusAnswerRevealed) SpeakLearningText(FindCurrentArchive()?.AiResult?.Examples.FirstOrDefault()?.English ?? _currentExpansion?.Examples.FirstOrDefault()?.English);
+                if (e.Key == Key.C) { if (!_planCardActive) AddCurrentWordToVocab(); RefreshFocusLearningLabels(); }
+                else if (e.Key == Key.A) SpeakFocusedWord();
+                else if (e.Key == Key.S && _focusAnswerRevealed) SpeakLearningText((_planCardActive ? _currentExpansion : FindCurrentArchive()?.AiResult ?? _currentExpansion)?.Examples.FirstOrDefault()?.English);
                 else if (e.Key == Key.Delete) await MasterFocusAsync();
-                else if (e.Key == Key.Space && _focusRound.HasCurrent && _focusRound.CurrentStep == StudyStep.Learn) await CompleteFocusLearnAsync();
+                else if (e.Key == Key.Space && _focusRound.HasCurrent && _focusRound.CurrentStep == StudyStep.Learn
+                    && (!_planCardActive || !_focusRated)) await CompleteFocusLearnAsync();
                 else if (e.Key == Key.Space) await AdvanceFocusAsync();
                 else if (e.Key == Key.Q) await RateFocusedWordAsync(StudyRating.Known);
                 else if (e.Key == Key.W) await RateFocusedWordAsync(StudyRating.Unsure);
@@ -236,7 +237,7 @@ public partial class MainWindow
         PaintFocusStreak(_focusRound.CurrentStreak, _focusRound.CurrentTarget, animateNewest: false);
         if (_focusRound.HasCurrent && _focusRound.CurrentStep == StudyStep.Learn) ShowFocusLearnAnswer();
         else RefreshFocusLearningLabels();
-        SpeakLearningText(ResultWordText.Text);
+        SpeakFocusedWord();
     }
 
     private WordItem? FindArchive(string word) =>
@@ -292,6 +293,7 @@ public partial class MainWindow
         {
             ((TextBlock)((StackPanel)button.Content!).Children[0]).Text = T(label) + "  " + key;
         }
+        RefreshPlanFocusLabels();
     }
 
     private void ResetFocusAnswer()
@@ -322,7 +324,9 @@ public partial class MainWindow
         ResultTranslationText.IsVisible = !string.IsNullOrWhiteSpace(ResultTranslationText.Text);
         ResultDefinitionText.IsVisible = string.IsNullOrWhiteSpace(ResultTranslationText.Text) && !string.IsNullOrWhiteSpace(ResultDefinitionText.Text);
         _focusDetails!.Children.Clear();
-        AddLearningDetails(_focusDetails, FindCurrentArchive()?.AiResult ?? _currentExpansion);
+        if (_planCardActive && !string.IsNullOrWhiteSpace(ResultTranslationText.Text) && !string.IsNullOrWhiteSpace(ResultDefinitionText.Text))
+            _focusDetails.Children.Add(new TextBlock { Text = ResultDefinitionText.Text, TextWrapping = TextWrapping.Wrap, FontSize = 15 });
+        AddLearningDetails(_focusDetails, _planCardActive ? _currentExpansion : FindCurrentArchive()?.AiResult ?? _currentExpansion);
         _focusDetails.IsVisible = _focusDetails.Children.Count > 0;
         RefreshFocusLearningLabels();
         if (_focusNextButton!.IsVisible) _focusNextButton.Focus();
@@ -343,7 +347,8 @@ public partial class MainWindow
     {
         if (!_wordFocusActive || _focusRatingBusy || !FocusCanNavigate || !_focusRound.HasCurrent
             || _focusRound.CurrentStep != StudyStep.Learn) return Task.CompletedTask;
-        _focusRound.CompleteLearn();
+        if (_planCardActive) _planLearningSession!.CompleteLearn();
+        else _focusRound.CompleteLearn();
         _focusRated = false;
         ResetFocusAnswer();
         return AdvanceFocusCardAsync();
@@ -367,6 +372,7 @@ public partial class MainWindow
             _focusRated = false;
             if (_focusRound.IsFinished)
             {
+                if (_planCardActive) { FinishPlanCardRound(); return; }
                 // 最后一个词评完仍保留释义与轮次统计，按「完成」才收起按钮。
                 StopLearningSpeech(); RefreshFocusLearningLabels();
                 return;
@@ -412,6 +418,7 @@ public partial class MainWindow
     {
         if (!_wordFocusActive || !FocusCanNavigate || _focusRatingBusy || _focusRated
             || !_focusRound.HasCurrent || _focusRound.CurrentStep != StudyStep.Recall) return;
+        if (_planCardActive) { await RatePlanFocusedWordAsync(rating); return; }
         _focusRatingBusy = true;
         string? error = null;
         var word = _focusRound.Current;
@@ -486,7 +493,8 @@ public partial class MainWindow
     private async Task ReclassifyFocusAsync()
     {
         if (!_wordFocusActive || _focusRatingBusy || _focusRated == false
-            || _focusLastRating == StudyRating.Forgot || !_focusRound.HasCurrent || !FocusCanNavigate) return;
+            || _focusLastRating == StudyRating.Forgot || (!_planCardActive && !_focusRound.HasCurrent) || !FocusCanNavigate) return;
+        if (_planCardActive) { await ReclassifyPlanFocusAsync(); return; }
         var word = _focusRatedWord ?? _focusRound.Current;
         _focusRatingBusy = true;
         string? error = null;
@@ -532,6 +540,7 @@ public partial class MainWindow
     /// <summary>标记已掌握：直接出队完成本轮，可用 ⌥Space 撤销。</summary>
     private async Task MasterFocusAsync()
     {
+        if (_planCardActive) return;
         if (!_wordFocusActive || !FocusCanNavigate || _focusRatingBusy || !_focusRound.HasCurrent) return;
         var word = _focusRound.Current;
         var step = _focusRound.CurrentStep;
@@ -562,6 +571,7 @@ public partial class MainWindow
 
     private async Task UndoFocusRatingAsync()
     {
+        if (_planCardActive) { await UndoPlanFocusAsync(); return; }
         if (_focusRatingBusy || _focusUndo.Count == 0 || !FocusCanNavigate) return;
         _focusRatingBusy = true;
         string? error = null;
@@ -586,6 +596,7 @@ public partial class MainWindow
 
     private async Task LoadFocusWordAsync()
     {
+        if (_planCardActive) { await LoadPlanFocusWordAsync(); return; }
         LookupInput.Text = _focusRound.HasCurrent ? _focusRound.Current : ResultWordText.Text!;
         await PerformLookupAsync();
         if (!_wordFocusActive) return;
@@ -598,6 +609,6 @@ public partial class MainWindow
         if (_focusRound.HasCurrent && _focusRound.CurrentStep == StudyStep.Learn) ShowFocusLearnAnswer();
         else RefreshFocusLearningLabels();
         _focusBackButton!.Focus();
-        SpeakLearningText(ResultWordText.Text);
+        SpeakFocusedWord();
     }
 }

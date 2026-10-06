@@ -30,6 +30,8 @@ public partial class MainWindow
         foreach (var card in this.GetVisualDescendants().OfType<Border>().Where(x => x.Classes.Contains("card")))
         {
             if (_wordFocusActive && card == LookupResultCard) continue;
+            // The shared plan form changes content height between creation and adjustment.
+            if (card == PlanDialogCard) continue;
             var dimensions = _cardDimensions.GetValue(card, x => new CardDimensions(x));
             if (double.IsFinite(dimensions.Width)) card.Width = dimensions.Width * _cardWidthRatio;
             if (double.IsFinite(dimensions.MaxWidth)) card.MaxWidth = dimensions.MaxWidth * _cardWidthRatio;

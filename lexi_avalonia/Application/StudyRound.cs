@@ -50,6 +50,7 @@ public sealed class StudyRound<T>
     private readonly List<Card> _next = [];
     private readonly Random _random;
     private (Card Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated)? _last;
+    private bool _shuffle = true;
     private T? _lastShown;
     private bool _hasLastShown;
 
@@ -80,22 +81,23 @@ public sealed class StudyRound<T>
     /// <summary>当前词本轮完成所需的认识次数：多为 3，复习首次作答前为 1。</summary>
     public int CurrentTarget => _current.Count > 0 ? TargetFor(_current[0]) : RequiredStreak;
 
-    public void Reset(IEnumerable<T> words, StudyMode mode)
+    public void Reset(IEnumerable<T> words, StudyMode mode, bool shuffle = true)
     {
         ArgumentNullException.ThrowIfNull(words);
-        Reset(words, _ => mode == StudyMode.FirstLearn, mode);
+        Reset(words, _ => mode == StudyMode.FirstLearn, mode, shuffle);
     }
 
     /// <summary>按每个词的新旧程度决定起始步骤：新词先学后测，已有档案的词直接回忆。</summary>
-    public void Reset(IEnumerable<T> words, Func<T, bool> isFirstLearn)
+    public void Reset(IEnumerable<T> words, Func<T, bool> isFirstLearn, bool shuffle = true)
     {
         ArgumentNullException.ThrowIfNull(isFirstLearn);
-        Reset(words, isFirstLearn, StudyMode.Review);
+        Reset(words, isFirstLearn, StudyMode.Review, shuffle);
     }
 
-    private void Reset(IEnumerable<T> words, Func<T, bool> isFirstLearn, StudyMode mode)
+    private void Reset(IEnumerable<T> words, Func<T, bool> isFirstLearn, StudyMode mode, bool shuffle)
     {
         ArgumentNullException.ThrowIfNull(words);
+        _shuffle = shuffle;
         _states.Clear();
         _current.Clear();
         _next.Clear();
@@ -215,6 +217,30 @@ public sealed class StudyRound<T>
     private static StudyStep DeferredStep((Card Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated) last) =>
         last.Rating == StudyRating.Forgot && last.Card.IsNew ? StudyStep.Learn : last.Card.Step;
 
+    /// <summary>保存事务检查点；保存失败时恢复队列、连击、统计与可撤销评价。</summary>
+    public sealed class Checkpoint
+    {
+        private readonly Action _restore;
+        internal Checkpoint(Action restore) => _restore = restore;
+        public void Restore() => _restore();
+    }
+
+    public Checkpoint CaptureCheckpoint()
+    {
+        var states = _states.Select(pair => (pair.Key, pair.Value.Streak, pair.Value.FirstRated)).ToList();
+        var current = _current.ToList(); var next = _next.ToList();
+        var last = _last; var shown = _lastShown; var hasShown = _hasLastShown;
+        var completed = Completed; var known = Known; var unsure = Unsure; var forgot = Forgot;
+        return new Checkpoint(() =>
+        {
+            _states.Clear();
+            foreach (var state in states) _states[state.Key] = new WordState { Streak = state.Streak, FirstRated = state.FirstRated };
+            _current.Clear(); _current.AddRange(current); _next.Clear(); _next.AddRange(next);
+            _last = last; _lastShown = shown; _hasLastShown = hasShown;
+            Completed = completed; Known = known; Unsure = unsure; Forgot = forgot;
+        });
+    }
+
     private int TargetFor(Card card)
     {
         if (card.IsNew) return RequiredStreak;
@@ -244,7 +270,7 @@ public sealed class StudyRound<T>
         var pass = new List<Card>(_next);
         _next.Clear();
         Shuffle(pass);
-        if (pass.Count > 1 && _hasLastShown)
+        if (_shuffle && pass.Count > 1 && _hasLastShown)
         {
             var comparer = EqualityComparer<T>.Default;
             if (comparer.Equals(pass[0].Word, _lastShown))
@@ -271,6 +297,7 @@ public sealed class StudyRound<T>
 
     private void Shuffle(List<Card> cards)
     {
+        if (!_shuffle) return;
         for (var i = cards.Count - 1; i > 0; i--)
         {
             var j = _random.Next(i + 1);

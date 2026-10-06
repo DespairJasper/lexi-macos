@@ -102,6 +102,7 @@ public partial class MainWindow
 
     private void SaveTypingWord(LearningWord word)
     {
+        if (_planTypingActive) return;
         try
         {
             _vocabService.AddWord(word.Word, word.Phonetic, word.Pos + " " + word.Meaning, word.Extra);

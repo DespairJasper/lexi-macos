@@ -6,6 +6,7 @@ using Avalonia.Interactivity;
 using Avalonia.Input;
 using Avalonia.LogicalTree;
 using Avalonia.Media.Imaging;
+using Microsoft.Data.Sqlite;
 
 namespace Lexi;
 
@@ -58,6 +59,458 @@ public static class LearningUiTests
             Click("NavIelts"); await Task.Delay(220);
             Check(C<Grid>("PageIelts").IsVisible && !C<Grid>("LookupPageHost").IsVisible, "IELTS is an integrated exclusive native page");
             Check(C<ComboBox>("IeltsSection").ItemCount == 22 && C<StackPanel>("IeltsRows").Children.Count == 30, "22 chapters with bounded pages");
+            // Plan creation and progress use their own manager, frozen words and JSON store.
+            T Field<T>(string name) => (T)typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+            async Task InvokeAsync(string name, params object[] args) => await (Task)Call(name, args)!;
+            async Task SelectPlanWords(params string[] words)
+            {
+                Click("PlanClearSelectionBtn");
+                foreach (var word in words)
+                {
+                    C<TextBox>("PlanWordSearch").Text = word;
+                    await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, Avalonia.Threading.DispatcherPriority.Background);
+                    C<StackPanel>("PlanWordChoices").Children.OfType<CheckBox>().Single(c =>
+                        (c.Content as TextBlock)?.Text?.StartsWith(word + "  ·  ", StringComparison.Ordinal) == true).IsChecked = true;
+                }
+                C<TextBox>("PlanWordSearch").Text = "";
+                await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() => { }, Avalonia.Threading.DispatcherPriority.Background);
+            }
+            async Task FinishPlanRound()
+            {
+                var planRound = Field<StudyRound<string>>("_focusRound");
+                for (var guard = 0; guard < 80 && !planRound.IsFinished; guard++)
+                {
+                    if (planRound.CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
+                    else { await InvokeAsync("RateFocusedWordAsync", StudyRating.Known); await InvokeAsync("AdvanceFocusAsync"); }
+                }
+                Check(planRound.IsFinished, "plan recall completes only after all words reach their known streak");
+            }
+            var planArchive = Field<IVocabularyArchive>("_vocabService");
+            planArchive.AddWord("planfixture", "", "计划测试词", "fixture definition");
+            Call("RefreshWords");
+            Click("NavVocab");
+            Check(!C<Grid>("PageStudyPlan").IsVisible
+                && C<Button>("ArchivePlanCreateBtn").GetLogicalAncestors().Any(a => a == C<Grid>("PageStudyPlan"))
+                && C<StackPanel>("ArchivePlanRows").GetLogicalAncestors().Any(a => a == C<Grid>("PageStudyPlan"))
+                && !C<Grid>("PageVocab").GetLogicalDescendants().OfType<Control>().Any(c => c.Name is "ArchivePlanCreateBtn" or "ArchivePlanRows"),
+                "archive page contains no embedded plan creation or plan list");
+            Click("NavIelts");
+            Check(!C<Grid>("PageStudyPlan").IsVisible
+                && C<Button>("IeltsPlanCreateBtn").GetLogicalAncestors().Any(a => a == C<Grid>("PageStudyPlan"))
+                && C<StackPanel>("IeltsPlanRows").GetLogicalAncestors().Any(a => a == C<Grid>("PageStudyPlan"))
+                && !C<Grid>("PageIelts").GetLogicalDescendants().OfType<Control>().Any(c => c.Name is "IeltsPlanCreateBtn" or "IeltsPlanRows")
+                && !window.GetLogicalDescendants().OfType<CheckBox>().Any(c => c.Name == "IeltsPlanSelectBox"),
+                "IELTS page contains no embedded plans or removed plan-selection column");
+            Click("NavPlans");
+            Check(C<Grid>("PageStudyPlan").IsVisible && !C<Grid>("PageIelts").IsVisible && !C<Grid>("PageVocab").IsVisible
+                && !C<Grid>("LookupPageHost").IsVisible && C<Button>("ArchivePlanCreateBtn").IsEffectivelyVisible,
+                "dedicated plans navigation opens an exclusive native manager");
+            Click("ArchivePlanCreateBtn");
+            Check(C<Border>("PlanDialogOverlay").IsVisible && C<TextBlock>("PlanSourceSummary").Text!.Contains("已选 0 词"),
+                "archive plan opens a checklist with no implicit whole-archive selection");
+            C<TextBox>("PlanNameInput").Text = "empty fixture"; Click("PlanCreateConfirmBtn");
+            Check(C<TextBlock>("PlanDialogError").Text!.Contains("选择"), "empty plan selection cannot be created");
+            Click("PlanCancelBtn");
+            Field<List<WordItem>>("_allWords").Single(w => w.Word == "planfixture").Selected = true;
+            Click("ArchivePlanCreateBtn");
+            Check(C<TextBlock>("PlanSourceSummary").Text!.Contains("已选 1 词"),
+                "archive plan preselects the current archive checklist selection");
+            await SelectPlanWords("planfixture");
+            C<TextBox>("PlanNameInput").Text = "Archive fixture";
+            C<NumericUpDown>("PlanDailyCountInput").Value = 1;
+            Click("PlanCreateConfirmBtn");
+            var planWord = planArchive.GetAllWords().Single(w => w.Word == "planfixture");
+            using var planSql = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = planArchive.DatabasePath, Pooling = false }.ToString());
+            planSql.Open();
+            string ReviewState()
+            {
+                using var command = planSql.CreateCommand();
+                command.CommandText = "SELECT stage || '|' || status || '|' || COALESCE(next_review_date,'') || '|' || COALESCE(last_reviewed_at,'') || '|' || review_count || '|' || (SELECT count(*) FROM review_logs WHERE word_id=$id) FROM words WHERE id=$id";
+                command.Parameters.AddWithValue("$id", planWord.Id);
+                return (string)command.ExecuteScalar()!;
+            }
+            var reviewBeforePlan = ReviewState();
+            var plansPath = Path.Combine(folder, "daily-study-plans.json");
+            Check(C<StackPanel>("ArchivePlanRows").Children.Count == 1 && File.Exists(plansPath),
+                "archive checklist creates a persisted frozen plan");
+            var protectedPlanJson = File.ReadAllText(plansPath);
+            var readFailedField = typeof(MainWindow).GetField("_planReadFailed", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            readFailedField.SetValue(window, true);
+            Check(!(bool)Call("SaveStudyPlans")! && File.ReadAllText(plansPath) == protectedPlanJson,
+                "plan read-failure guard protects the original JSON from overwrite");
+            readFailedField.SetValue(window, false); Call("SetStatus", "计划已创建。");
+            await Snapshot("plans-manager-light");
+            C<ComboBox>("SettingsThemeCombo").SelectedIndex = 1;
+            window.Width = 840; window.Height = 600; await Snapshot("plans-manager-dark-840");
+            Check(C<Button>("ArchivePlanCreateBtn").IsEffectivelyVisible && C<StackPanel>("ArchivePlanRows").Bounds.Width > 100,
+                "plan manager actions and list remain usable at 840x600 dark theme");
+            C<ComboBox>("SettingsThemeCombo").SelectedIndex = 0; window.Width = 1000; window.Height = 780;
+            C<CheckBox>("ReduceMotionBox").IsChecked = true;
+            Click("PlanStartBtn"); await Task.Delay(100);
+            var archiveRound = Field<StudyRound<string>>("_focusRound");
+            Check(Field<bool>("_wordFocusActive") && C<TextBlock>("ResultWordText").Text == "planfixture"
+                && C<Button>("FocusStartRecallBtn").IsEffectivelyVisible && !C<Grid>("PageStudyPlan").IsVisible,
+                "plan starts the shared immersive first-learn card");
+            await Snapshot("plans-flashcards");
+            Check(!C<Button>("FocusSaveBtn").IsEffectivelyVisible && !C<Button>("FocusMasterBtn").IsEffectivelyVisible,
+                "plan cards hide archive-save and master actions");
+            KeyPress(Key.C); KeyPress(Key.Delete); await InvokeAsync("MasterFocusAsync");
+            Check(ReviewState() == reviewBeforePlan && archiveRound.Completed == 0,
+                "plan save and master shortcuts cannot modify SQLite or bypass plan recall");
+            await InvokeAsync("CompleteFocusLearnAsync");
+            await InvokeAsync("RateFocusedWordAsync", StudyRating.Forgot);
+            Check(archiveRound.Forgot == 1 && ReviewState() == reviewBeforePlan,
+                "plan forgotten rating records local recall progress without SQLite review writes");
+            await InvokeAsync("AdvanceFocusAsync"); await InvokeAsync("CompleteFocusLearnAsync");
+            for (var known = 1; known <= 3; known++)
+            {
+                KeyPress(Key.Q); KeyPress(Key.Q, true); await Task.Delay(60);
+                Check(archiveRound.Known == known && archiveRound.Completed == (known == 3 ? 1 : 0)
+                    && ReviewState() == reviewBeforePlan, "plan Q recognition requires three known rounds and leaves SQLite untouched: " + known);
+                if (known < 3) await InvokeAsync("AdvanceFocusAsync");
+            }
+            await InvokeAsync("AdvanceFocusAsync");
+            Check(C<Border>("PlanSpellingOverlay").IsVisible && C<Grid>("PageStudyPlan").IsVisible
+                && new DailyStudyPlanStore(plansPath).Load().Single(p => p.Name == "Archive fixture").Status == DailyStudyPlanStatus.Completed,
+                "completed plan returns to manager and offers optional spelling");
+            await Snapshot("plans-spelling-prompt");
+            Click("PlanSpellingSkipBtn");
+
+            Click("IeltsPlanCreateBtn");
+            Check(C<ComboBox>("PlanBookInput").ItemCount == 4 && C<ComboBox>("PlanUnitInput").ItemCount == 23
+                && C<ComboBox>("PlanUnitInput").SelectedIndex == 1 && C<TextBlock>("PlanSourceSummary").Text!.Contains("已选"),
+                "IELTS plan defaults to the current chapter and offers the whole book");
+            for (var book = 0; book < 4; book++)
+            {
+                C<ComboBox>("PlanBookInput").SelectedIndex = book;
+                C<ComboBox>("PlanUnitInput").SelectedIndex = 0;
+                Check(((LearningSection)C<ComboBox>("PlanUnitInput").SelectedItem!).Title.Contains("整本词书")
+                    && Field<List<DailyStudyPlanWord>>("_planCandidates").Count > 0,
+                    "IELTS plan book selector supplies its complete frozen book: " + book);
+            }
+            C<ComboBox>("PlanBookInput").SelectedIndex = 0; C<ComboBox>("PlanUnitInput").SelectedIndex = 1;
+            Click("PlanClearSelectionBtn"); C<TextBox>("PlanWordSearch").Text = "atmosphere"; Click("PlanSelectAllBtn");
+            Check(C<TextBlock>("PlanSourceSummary").Text!.Contains("已选 1 词"), "plan select-all applies to the searched subset");
+            await SelectPlanWords("atmosphere", "hydrosphere");
+            Check(C<TextBlock>("PlanSourceSummary").Text!.Contains("已选 2 词"), "IELTS checklist summary identifies the selected subset");
+            var selectedBeforeLanguage = new HashSet<string>(Field<HashSet<string>>("_planSelectedIds"));
+            window.SetUiLanguage("en");
+            Check(C<Button>("NavPlans").Content?.ToString() == "Study plans"
+                && C<Button>("PlanSelectAllBtn").Content?.ToString() == "Select all"
+                && C<ComboBox>("PlanBookInput").SelectedItem?.ToString() == "IELTS vocabulary"
+                && ((IEnumerable<LearningSection>)C<ComboBox>("PlanUnitInput").ItemsSource!).First().Title == "Entire book"
+                && Field<HashSet<string>>("_planSelectedIds").SetEquals(selectedBeforeLanguage),
+                "open plan dialog translates navigation, selectors and whole-book label while preserving chosen words");
+            window.SetUiLanguage("zh");
+            Check(C<ComboBox>("PlanBookInput").SelectedItem?.ToString() == "词汇真经"
+                && ((IEnumerable<LearningSection>)C<ComboBox>("PlanUnitInput").ItemsSource!).First().Title == "整本词书"
+                && Field<HashSet<string>>("_planSelectedIds").SetEquals(selectedBeforeLanguage),
+                "plan dialog restores Chinese labels without resetting its selected subset");
+            C<TextBox>("PlanNameInput").Text = "IELTS fixture"; C<NumericUpDown>("PlanDailyCountInput").Value = 2;
+            await Snapshot("plans-create-dialog");
+            Check(C<TextBlock>("PlanEstimate").IsEffectivelyVisible && C<TextBlock>("PlanEstimate").Text!.Contains("预计 1 天")
+                && C<ScrollViewer>("PlanDialogScroll").VerticalScrollBarVisibility == Avalonia.Controls.Primitives.ScrollBarVisibility.Hidden,
+                "create dialog keeps estimated days visible with its scrollbar hidden");
+            Click("PlanCreateConfirmBtn");
+            var storedPlans = new DailyStudyPlanStore(plansPath).Load();
+            Check(storedPlans.Count == 2 && storedPlans.Single(p => p.Name == "IELTS fixture").Words.Select(w => w.Word).SequenceEqual(["atmosphere", "hydrosphere"]),
+                "IELTS plan freezes only checklist words independently of the archive plan");
+            Click("IeltsPlanCreateBtn"); await SelectPlanWords("atmosphere"); C<TextBox>("PlanNameInput").Text = "IELTS overlap fixture";
+            Click("PlanCreateConfirmBtn");
+            Check(C<StackPanel>("PlanOverlapActions").IsVisible && C<TextBlock>("PlanDialogError").Text!.Contains("IELTS fixture")
+                && C<TextBlock>("PlanDialogError").Text!.Contains("atmosphere"), "same-source overlap names its active plan and word");
+            Click("PlanContinueOverlapBtn");
+            Check(new DailyStudyPlanStore(plansPath).Load().Count == 3, "explicit continue creates overlapping plan");
+            Click("IeltsPlanCreateBtn"); await SelectPlanWords("atmosphere"); C<TextBox>("PlanNameInput").Text = "cancelled overlap";
+            Click("PlanCreateConfirmBtn"); Click("PlanCancelOverlapBtn");
+            Check(new DailyStudyPlanStore(plansPath).Load().Count == 3, "cancel overlap leaves persisted plans unchanged");
+            var liveIelts = Field<List<DailyStudyPlan>>("_studyPlans").Single(p => p.Name == "IELTS fixture");
+            var errorsBeforePlan = new HashSet<string>(Field<LearningProgress>("_learningProgress").Errors);
+            var archiveCountBeforePlan = planArchive.GetAllWords().Count;
+            Call("StartStudyPlan", liveIelts); await Task.Delay(80);
+            var ieltsPlanRound = Field<StudyRound<string>>("_focusRound");
+            while (ieltsPlanRound.CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
+            await InvokeAsync("RateFocusedWordAsync", StudyRating.Known);
+            await InvokeAsync("ReclassifyFocusAsync");
+            Check(liveIelts.ForgotWordIds.Count == 1 && ieltsPlanRound.Known == 0 && ieltsPlanRound.Forgot == 1,
+                "plan answer reclassification rolls back known and records forgotten word locally");
+            await InvokeAsync("AdvanceFocusAsync");
+            if (ieltsPlanRound.CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
+            await InvokeAsync("RateFocusedWordAsync", StudyRating.Unsure); await InvokeAsync("AdvanceFocusAsync");
+            if (ieltsPlanRound.CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
+            var blocked = Path.Combine(folder, "blocked-plan-path"); File.WriteAllText(blocked, "block directory creation");
+            var storeField = typeof(MainWindow).GetField("_studyPlanStore", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var originalPlanStore = storeField.GetValue(window);
+            storeField.SetValue(window, new DailyStudyPlanStore(Path.Combine(blocked, "daily-study-plans.json")));
+            var persistedBeforeFailure = File.ReadAllText(plansPath);
+            var cardBeforeFailure = C<TextBlock>("ResultWordText").Text;
+            var knownBeforeFailure = ieltsPlanRound.Known; var forgotBeforeFailure = ieltsPlanRound.Forgot;
+            var forgotIdsBeforeFailure = new HashSet<string>(liveIelts.ForgotWordIds);
+            await InvokeAsync("RateFocusedWordAsync", StudyRating.Forgot);
+            Check(liveIelts.CompletedWordIds.Count == 0 && liveIelts.Status == DailyStudyPlanStatus.Active
+                && ieltsPlanRound.Known == knownBeforeFailure && ieltsPlanRound.Forgot == forgotBeforeFailure
+                && liveIelts.ForgotWordIds.SetEquals(forgotIdsBeforeFailure) && C<TextBlock>("ResultWordText").Text == cardBeforeFailure
+                && File.ReadAllText(plansPath) == persistedBeforeFailure,
+                "failed plan rating save rolls back card, streak and forgotten set");
+            Call("StopStudyPlan", liveIelts);
+            Check(liveIelts.Status == DailyStudyPlanStatus.Active, "failed stop save keeps plan active");
+            storeField.SetValue(window, originalPlanStore);
+            for (var guard = 0; guard < 40 && liveIelts.CompletedWordIds.Count == 0; guard++)
+            {
+                if (ieltsPlanRound.CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
+                else { await InvokeAsync("RateFocusedWordAsync", StudyRating.Known); await InvokeAsync("AdvanceFocusAsync"); }
+            }
+            Check(liveIelts.CompletedWordIds.Count == 1
+                && new DailyStudyPlanStore(plansPath).Load().Single(p => p.Id == liveIelts.Id).CompletedWordIds.Count == 1,
+                "partial plan progress persists after the first completed word");
+            var completedBeforeResume = liveIelts.CompletedWordIds.Single(); Call("ExitWordFocus");
+            Call("StartStudyPlan", liveIelts); await Task.Delay(80);
+            var resumedPlanRound = Field<StudyRound<string>>("_focusRound");
+            Check(resumedPlanRound.Total == 1 && resumedPlanRound.Current != completedBeforeResume
+                && liveIelts.CurrentBatchWordIds.Count == 2, "partial resume excludes completed cards and preserves the complete daily batch");
+            await FinishPlanRound(); await InvokeAsync("AdvanceFocusAsync");
+            Check(C<Border>("PlanSpellingOverlay").IsVisible && planArchive.GetAllWords().Count == archiveCountBeforePlan
+                && Field<LearningProgress>("_learningProgress").Errors.SetEquals(errorsBeforePlan) && ReviewState() == reviewBeforePlan,
+                "IELTS plan ratings and completion leave archive state and IELTS errors unchanged");
+            C<NumericUpDown>("TypingCount").Value = 1; C<CheckBox>("TypingAll").IsChecked = false;
+            C<NumericUpDown>("IeltsCount").Value = 1; C<CheckBox>("IeltsAll").IsChecked = false;
+            C<ComboBox>("PlanSpellingScope").SelectedIndex = 0; C<ComboBox>("PlanSpellingMode").SelectedIndex = 0;
+            Click("PlanSpellingStartBtn"); await Task.Delay(80);
+            var allPlanTyping = Field<TypingSession>("_typingSession");
+            var typingWordsField = typeof(TypingSession).GetField("_words", BindingFlags.Instance | BindingFlags.NonPublic)!;
+            var allPlanTypingWords = (List<LearningWord>)typingWordsField.GetValue(allPlanTyping)!;
+            Check(allPlanTyping.Count == 2 && allPlanTyping.Hints && allPlanTypingWords.Select(w => w.Word).ToHashSet().SetEquals(["atmosphere", "hydrosphere"]),
+                "plan full-batch hinted spelling uses every frozen batch word without global downsampling");
+            var planTypingJsonBeforeNavigation = File.ReadAllText(plansPath);
+            var typedBeforeNavigation = new HashSet<string>(Field<LearningProgress>("_learningProgress").Typed);
+            Call("ShowPage", "settings"); Click("NavTyping");
+            Check(C<Grid>("PageTyping").IsVisible && Field<Grid>("_typingSetupView").IsVisible
+                && !Field<bool>("_typingPlaying") && !Field<bool>("_planTypingActive")
+                && File.ReadAllText(plansPath) == planTypingJsonBeforeNavigation
+                && Field<LearningProgress>("_learningProgress").Errors.SetEquals(errorsBeforePlan)
+                && Field<LearningProgress>("_learningProgress").Typed.SetEquals(typedBeforeNavigation)
+                && planArchive.GetAllWords().Count == archiveCountBeforePlan && ReviewState() == reviewBeforePlan,
+                "leaving plan spelling then navigating back shows inactive setup without writing the frozen deck to global progress");
+            Call("StartStudyPlan", liveIelts);
+            Check(C<Border>("PlanSpellingOverlay").IsVisible, "completed plan can reopen its optional spelling prompt");
+            C<ComboBox>("PlanSpellingScope").SelectedIndex = 1; C<ComboBox>("PlanSpellingMode").SelectedIndex = 1;
+            Click("PlanSpellingStartBtn"); await Task.Delay(80);
+            var forgotPlanTyping = Field<TypingSession>("_typingSession");
+            var forgotPlanTypingWords = (List<LearningWord>)typingWordsField.GetValue(forgotPlanTyping)!;
+            var forgottenBatchWords = liveIelts.Words.Where(w => liveIelts.CurrentBatchWordIds.Contains(w.Id) && liveIelts.ForgotWordIds.Contains(w.Id)).Select(w => w.Word).ToHashSet();
+            Check(forgotPlanTyping.Count == forgottenBatchWords.Count && !forgotPlanTyping.Hints
+                && forgotPlanTypingWords.Select(w => w.Word).ToHashSet().SetEquals(forgottenBatchWords),
+                "plan forgotten-only dictation uses exactly the forgotten words in its daily batch");
+            Click("TypingExitBtn"); C<CheckBox>("ReduceMotionBox").IsChecked = false;
+
+            // Lifecycle actions are transactional and remain isolated from global learning progress.
+            {
+                var lifecycleErrors = new HashSet<string>(Field<LearningProgress>("_learningProgress").Errors);
+                var lifecycleTyped = new HashSet<string>(Field<LearningProgress>("_learningProgress").Typed);
+                var lifecycleArchiveCount = planArchive.GetAllWords().Count;
+                string ArchiveLearningState()
+                {
+                    var rows = new List<object?[]>();
+                    foreach (var query in new[] { "SELECT * FROM words ORDER BY id", "SELECT * FROM review_logs ORDER BY id", "SELECT * FROM review_snapshots ORDER BY log_id" })
+                    {
+                        using var command = planSql.CreateCommand(); command.CommandText = query;
+                        using var reader = command.ExecuteReader();
+                        while (reader.Read()) rows.Add(Enumerable.Range(0, reader.FieldCount)
+                            .Select(i => reader.IsDBNull(i) ? null : reader.GetValue(i)).ToArray());
+                    }
+                    return System.Text.Json.JsonSerializer.Serialize(rows);
+                }
+                var lifecycleReview = ArchiveLearningState();
+                var lifecycleDate = DateOnly.FromDateTime(DateTime.Now);
+                var lifecycleWords = new[] { "oxygen", "wood", "apple", "water" }.Select((word, i) =>
+                    new DailyStudyPlanWord { Id = "lifecycle:" + i, Word = word, Phonetic = "/fixture/",
+                        Meaning = "冻结词义 " + i, Definition = "frozen definition " + i,
+                        Example = "Frozen example " + i, AudioPath = "fixture-audio-" + i }).ToList();
+                var lifecycle = DailyStudyPlanRules.Create("Lifecycle fixture", DailyStudyPlanSource.Ielts,
+                    "Frozen lifecycle source", lifecycleWords, 2, false, 701);
+                _ = new DailyStudyPlanSession(lifecycle, lifecycleDate.AddDays(-1));
+                Check(DailyStudyPlanRules.CompleteWord(lifecycle, lifecycleWords[0].Id, lifecycleDate.AddDays(-1))
+                    && DailyStudyPlanRules.CompleteWord(lifecycle, lifecycleWords[1].Id, lifecycleDate.AddDays(-1)),
+                    "lifecycle fixture persists a previous completed daily batch");
+                _ = new DailyStudyPlanSession(lifecycle, lifecycleDate);
+                Check(DailyStudyPlanRules.CompleteWord(lifecycle, lifecycleWords[2].Id, lifecycleDate),
+                    "lifecycle fixture has a partly completed current batch");
+                lifecycle.ForgotWordIds.Add(lifecycleWords[3].Id);
+                var otherSource = DailyStudyPlanRules.Create("Cross-source lifecycle fixture", DailyStudyPlanSource.Archive,
+                    "Archive lifecycle source", lifecycleWords, 2, false, 702);
+                Field<List<DailyStudyPlan>>("_studyPlans").AddRange([lifecycle, otherSource]);
+                Check((bool)Call("SaveStudyPlans")!, "lifecycle fixtures are persisted before manager actions");
+                Call("RenderStudyPlanLists"); Click("NavPlans");
+                DailyStudyPlan Lifecycle() => Field<List<DailyStudyPlan>>("_studyPlans").Single(p => p.Id == lifecycle.Id);
+                DailyStudyPlan PersistedLifecycle() => new DailyStudyPlanStore(plansPath).Load().Single(p => p.Id == lifecycle.Id);
+                Border PlanCard(string name) => C<Grid>("PageStudyPlan").GetLogicalDescendants().OfType<TextBlock>()
+                    .Single(t => t.Text == name).GetLogicalAncestors().OfType<Border>().First();
+                Button CardButton(string name, string button) => PlanCard(name).GetLogicalDescendants().OfType<Button>().Single(b => b.Name == button);
+                void ClickCard(string name, string button) => CardButton(name, button).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                void ExpandPlanHistory()
+                {
+                    foreach (var history in C<Grid>("PageStudyPlan").GetLogicalDescendants().OfType<Expander>()) history.IsExpanded = true;
+                }
+                string FrozenState(DailyStudyPlan plan) => System.Text.Json.JsonSerializer.Serialize(new
+                {
+                    plan.Id, plan.Source, plan.SourceLabel, plan.CreatedAt, plan.OriginalWordIds,
+                    Words = plan.Words.OrderBy(w => w.Id, StringComparer.Ordinal),
+                    Completed = plan.CompletedWordIds.OrderBy(id => id, StringComparer.Ordinal),
+                    plan.CurrentBatchWordIds, plan.CurrentBatchRandomOrder,
+                    Forgot = plan.ForgotWordIds.OrderBy(id => id, StringComparer.Ordinal), plan.LastBatchCompletedDate
+                });
+                var frozenLifecycle = FrozenState(Lifecycle());
+                var originalWordOrder = Lifecycle().Words.Select(w => w.Id).ToList();
+                var originalSeed = Lifecycle().ShuffleSeed;
+                ClickCard(lifecycle.Name, "PlanAdjustBtn");
+                Check(C<Border>("PlanDialogOverlay").IsVisible && C<TextBlock>("PlanDialogTitle").Text == "调整学习计划"
+                    && C<Button>("PlanCreateConfirmBtn").Content?.ToString() == "保存调整"
+                    && !C<StackPanel>("PlanWordScope").IsVisible
+                    && C<TextBox>("PlanNameInput").Text == lifecycle.Name
+                    && C<NumericUpDown>("PlanDailyCountInput").Value == 2 && C<CheckBox>("PlanRandomInput").IsChecked == false,
+                    "active plan adjustment exposes only its current name, daily count and order");
+                var beforeAdjustmentNavigation = File.ReadAllText(plansPath);
+                Click("NavSettings");
+                Check(Field<string>("_currentPage") == "plans" && C<Grid>("PageStudyPlan").IsVisible
+                    && !C<ScrollViewer>("PageSettings").IsVisible && C<Border>("PlanDialogOverlay").IsVisible
+                    && File.ReadAllText(plansPath) == beforeAdjustmentNavigation,
+                    "background settings navigation cannot leave the plan manager while adjustment is open");
+                C<TextBox>("PlanNameInput").Text = "Lifecycle adjusted"; C<NumericUpDown>("PlanDailyCountInput").Value = 1;
+                await Snapshot("plans-adjust-dialog");
+                Check(C<Border>("PlanDialogCard").Bounds.Height <= 440 && C<Button>("PlanCreateConfirmBtn").IsEffectivelyVisible,
+                    "adjustment dialog stays compact with its save action visible");
+                Click("PlanCreateConfirmBtn");
+                Check(!C<Border>("PlanDialogOverlay").IsVisible && Lifecycle().Name == "Lifecycle adjusted" && Lifecycle().DailyWordCount == 1
+                    && FrozenState(Lifecycle()) == frozenLifecycle && FrozenState(PersistedLifecycle()) == frozenLifecycle
+                    && Lifecycle().Words.Select(w => w.Id).SequenceEqual(originalWordOrder) && Lifecycle().ShuffleSeed == originalSeed,
+                    "name and count adjustment preserves frozen order, seed, batch, completed, forgotten and last date in memory and JSON");
+                var adjustedJson = File.ReadAllText(plansPath);
+                ClickCard(Lifecycle().Name, "PlanAdjustBtn"); C<TextBox>("PlanNameInput").Text = "Cancelled adjustment";
+                Click("PlanCancelBtn");
+                Check(Lifecycle().Name == "Lifecycle adjusted" && File.ReadAllText(plansPath) == adjustedJson,
+                    "cancelling adjustment leaves both live and persisted plans unchanged");
+                ClickCard(Lifecycle().Name, "PlanAdjustBtn"); C<TextBox>("PlanNameInput").Text = ""; Click("PlanCreateConfirmBtn");
+                Check(C<Border>("PlanDialogOverlay").IsVisible && !string.IsNullOrWhiteSpace(C<TextBlock>("PlanDialogError").Text)
+                    && File.ReadAllText(plansPath) == adjustedJson && FrozenState(Lifecycle()) == frozenLifecycle,
+                    "invalid adjustment keeps the dialog open without changing frozen progress or JSON");
+                C<TextBox>("PlanNameInput").Text = "Lifecycle random"; C<CheckBox>("PlanRandomInput").IsChecked = true;
+                storeField.SetValue(window, new DailyStudyPlanStore(Path.Combine(blocked, "daily-study-plans.json")));
+                try
+                {
+                    Click("PlanCreateConfirmBtn");
+                    Check(C<Border>("PlanDialogOverlay").IsVisible && C<TextBlock>("PlanDialogError").Text!.Contains("保存失败")
+                        && Lifecycle().Name == "Lifecycle adjusted" && !Lifecycle().RandomOrder
+                        && FrozenState(Lifecycle()) == frozenLifecycle && Lifecycle().ShuffleSeed == originalSeed
+                        && Lifecycle().Words.Select(w => w.Id).SequenceEqual(originalWordOrder) && File.ReadAllText(plansPath) == adjustedJson,
+                        "failed adjustment rolls back every live field and preserves the original JSON");
+                }
+                finally { storeField.SetValue(window, originalPlanStore); }
+                Click("PlanCreateConfirmBtn");
+                Check(Lifecycle().Name == "Lifecycle random" && Lifecycle().RandomOrder && PersistedLifecycle().RandomOrder
+                    && FrozenState(Lifecycle()) == frozenLifecycle && FrozenState(PersistedLifecycle()) == frozenLifecycle,
+                    "order adjustment preserves all frozen word content and the existing batch order and progress");
+                ClickCard(Lifecycle().Name, "PlanStopBtn"); ExpandPlanHistory();
+                Check(Lifecycle().Status == DailyStudyPlanStatus.Stopped
+                    && CardButton(Lifecycle().Name, "PlanResumeBtn").IsEffectivelyVisible
+                    && CardButton(Lifecycle().Name, "PlanDeleteBtn").IsEffectivelyVisible
+                    && !PlanCard(Lifecycle().Name).GetLogicalDescendants().OfType<Button>().Any(b => b.Name == "PlanAdjustBtn"),
+                    "stopped history cards expose resume and delete while active-only adjustment is absent");
+                await Snapshot("plans-stopped-history");
+                var stoppedJson = File.ReadAllText(plansPath);
+                storeField.SetValue(window, new DailyStudyPlanStore(Path.Combine(blocked, "daily-study-plans.json")));
+                try
+                {
+                    ClickCard(Lifecycle().Name, "PlanResumeBtn");
+                    Check(Lifecycle().Status == DailyStudyPlanStatus.Stopped && File.ReadAllText(plansPath) == stoppedJson
+                        && FrozenState(Lifecycle()) == frozenLifecycle,
+                        "failed direct resume keeps stopped status, frozen batch and original JSON");
+                }
+                finally { storeField.SetValue(window, originalPlanStore); }
+                Call("RenderStudyPlanLists"); ExpandPlanHistory(); ClickCard(Lifecycle().Name, "PlanResumeBtn");
+                Check(!C<Border>("PlanActionOverlay").IsVisible && Lifecycle().Status == DailyStudyPlanStatus.Active
+                    && PersistedLifecycle().Status == DailyStudyPlanStatus.Active
+                    && FrozenState(Lifecycle()) == frozenLifecycle && FrozenState(PersistedLifecycle()) == frozenLifecycle,
+                    "cross-source matching words allow direct resume while preserving batch, completed, forgotten and last date");
+                Call("StartStudyPlan", Lifecycle()); await Task.Delay(80);
+                Check(Field<StudyRound<string>>("_focusRound").Total == 1
+                    && Field<StudyRound<string>>("_focusRound").Current == lifecycleWords[3].Id
+                    && FrozenState(Lifecycle()) == frozenLifecycle,
+                    "resumed plan continues only the unfinished word from its original current batch after daily-count adjustment");
+                Call("ExitWordFocus"); Click("NavPlans"); Call("StopStudyPlan", Lifecycle());
+                var sameSource = DailyStudyPlanRules.Create("Same-source lifecycle fixture", DailyStudyPlanSource.Ielts,
+                    "Other IELTS lifecycle source", [lifecycleWords[3]], 1, false, 703);
+                Field<List<DailyStudyPlan>>("_studyPlans").Add(sameSource);
+                Check((bool)Call("SaveStudyPlans")!, "same-source overlap fixture is persisted");
+                Call("RenderStudyPlanLists"); ExpandPlanHistory();
+                var overlapJson = File.ReadAllText(plansPath);
+                ClickCard(Lifecycle().Name, "PlanResumeBtn");
+                Check(C<Border>("PlanActionOverlay").IsVisible
+                    && C<TextBlock>("PlanActionMessage").Text!.Contains(sameSource.Name)
+                    && C<TextBlock>("PlanActionMessage").Text!.Contains(lifecycleWords[3].Word)
+                    && !C<TextBlock>("PlanActionMessage").Text!.Contains(otherSource.Name)
+                    && Lifecycle().Status == DailyStudyPlanStatus.Stopped && File.ReadAllText(plansPath) == overlapJson,
+                    "resume overlap warning names only same-source active plans and their overlapping words before writing");
+                Click("PlanActionCancelBtn");
+                Check(!C<Border>("PlanActionOverlay").IsVisible && Lifecycle().Status == DailyStudyPlanStatus.Stopped
+                    && File.ReadAllText(plansPath) == overlapJson && FrozenState(Lifecycle()) == frozenLifecycle,
+                    "cancelling overlap resume leaves stopped progress and original JSON unchanged");
+                ClickCard(Lifecycle().Name, "PlanResumeBtn");
+                storeField.SetValue(window, new DailyStudyPlanStore(Path.Combine(blocked, "daily-study-plans.json")));
+                try
+                {
+                    Click("PlanActionConfirmBtn");
+                    Check(C<Border>("PlanActionOverlay").IsVisible && C<TextBlock>("PlanActionError").Text!.Contains("保存失败")
+                        && Lifecycle().Status == DailyStudyPlanStatus.Stopped && FrozenState(Lifecycle()) == frozenLifecycle
+                        && File.ReadAllText(plansPath) == overlapJson,
+                        "failed confirmed overlap resume keeps the warning open and rolls back status and JSON");
+                }
+                finally { storeField.SetValue(window, originalPlanStore); }
+                Click("PlanActionConfirmBtn");
+                Check(!C<Border>("PlanActionOverlay").IsVisible && Lifecycle().Status == DailyStudyPlanStatus.Active
+                    && PersistedLifecycle().Status == DailyStudyPlanStatus.Active && FrozenState(Lifecycle()) == frozenLifecycle,
+                    "explicit overlap continue resumes the existing plan without resetting progress");
+                var activeJson = File.ReadAllText(plansPath);
+                Call("DeleteStudyPlan", Lifecycle()); Call("DeleteStudyPlan", Field<List<DailyStudyPlan>>("_studyPlans").Single(p => p.Name == "Archive fixture"));
+                Check(!C<Border>("PlanActionOverlay").IsVisible && File.ReadAllText(plansPath) == activeJson
+                    && Field<List<DailyStudyPlan>>("_studyPlans").Any(p => p.Id == lifecycle.Id),
+                    "delete protects active and completed plans without opening a confirmation");
+                Call("StopStudyPlan", Lifecycle()); ExpandPlanHistory();
+                var beforeDeleteJson = File.ReadAllText(plansPath);
+                var retainedPlanIds = Field<List<DailyStudyPlan>>("_studyPlans").Where(p => p.Id != lifecycle.Id).Select(p => p.Id).ToHashSet();
+                ClickCard(Lifecycle().Name, "PlanDeleteBtn");
+                Check(C<Border>("PlanActionOverlay").IsVisible && C<TextBlock>("PlanActionMessage").Text!.Contains(Lifecycle().Name)
+                    && File.ReadAllText(plansPath) == beforeDeleteJson,
+                    "stopped deletion opens a named confirmation before changing data");
+                Click("NavVocab");
+                Check(Field<string>("_currentPage") == "plans" && C<Grid>("PageStudyPlan").IsVisible
+                    && !C<Grid>("PageVocab").IsVisible && C<Border>("PlanActionOverlay").IsVisible
+                    && File.ReadAllText(plansPath) == beforeDeleteJson && FrozenState(Lifecycle()) == frozenLifecycle,
+                    "background archive navigation cannot bypass stopped-plan deletion confirmation or write progress");
+                Click("PlanActionCancelBtn");
+                Check(!C<Border>("PlanActionOverlay").IsVisible && File.ReadAllText(plansPath) == beforeDeleteJson
+                    && FrozenState(Lifecycle()) == frozenLifecycle, "cancelled deletion preserves the stopped plan and its JSON");
+                ClickCard(Lifecycle().Name, "PlanDeleteBtn");
+                storeField.SetValue(window, new DailyStudyPlanStore(Path.Combine(blocked, "daily-study-plans.json")));
+                try
+                {
+                    Click("PlanActionConfirmBtn");
+                    Check(C<Border>("PlanActionOverlay").IsVisible && C<TextBlock>("PlanActionError").Text!.Contains("保存失败")
+                        && Lifecycle().Status == DailyStudyPlanStatus.Stopped && FrozenState(Lifecycle()) == frozenLifecycle
+                        && File.ReadAllText(plansPath) == beforeDeleteJson,
+                        "failed confirmed deletion keeps the plan, frozen progress, JSON and retry confirmation intact");
+                }
+                finally { storeField.SetValue(window, originalPlanStore); }
+                Click("PlanActionConfirmBtn");
+                Check(!C<Border>("PlanActionOverlay").IsVisible
+                    && Field<List<DailyStudyPlan>>("_studyPlans").Select(p => p.Id).ToHashSet().SetEquals(retainedPlanIds)
+                    && new DailyStudyPlanStore(plansPath).Load().Select(p => p.Id).ToHashSet().SetEquals(retainedPlanIds),
+                    "confirmed stopped deletion removes exactly that plan from memory and persisted JSON");
+                Check(Field<LearningProgress>("_learningProgress").Errors.SetEquals(lifecycleErrors)
+                    && Field<LearningProgress>("_learningProgress").Typed.SetEquals(lifecycleTyped)
+                    && planArchive.GetAllWords().Count == lifecycleArchiveCount && ArchiveLearningState() == lifecycleReview,
+                    "adjust, stop, resume and delete leave global Errors, Typed and every archive SQLite word and review record unchanged");
+            }
+            Click("NavIelts");
             await Snapshot("ielts-vocabulary-light");
             Click("IeltsChapterAudioBtn"); Check(Audio.Calls.Last().Path?.EndsWith("01_自然地理.mp3") == true, "chapter audio uses bundled recording");
             Click("ChapterPauseBtn"); Check(!Audio.IsPlaying, "chapter pause control pauses player");

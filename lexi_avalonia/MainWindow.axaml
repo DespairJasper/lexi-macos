@@ -49,7 +49,7 @@
       <Grid Name="WindowBodyGrid" Grid.Row="1" ColumnDefinitions="216,*">
         <!-- Sidebar Navigation -->
         <Border Name="SidebarShell" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0" Padding="12,18,12,14" Background="Transparent">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,*,Auto,Auto">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto">
             <Button Name="NavLookup" Classes="nav active">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -89,8 +89,10 @@
             <Button Name="NavIelts" Grid.Row="3" Classes="nav" Content="IELTS 专题" FontSize="13" />
             <Button Name="NavTyping" Grid.Row="4" Classes="nav" Content="打字练习" FontSize="13" />
 
+            <Button Name="NavPlans" Grid.Row="5" Classes="nav" Content="学习计划" FontSize="13" />
+
             <!-- Bottom Offline Notice & Settings -->
-            <StackPanel Grid.Row="6" Spacing="4" Margin="6,0,6,16">
+            <StackPanel Grid.Row="7" Spacing="4" Margin="6,0,6,16">
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}"/>
                 <TextBlock Text="{DynamicResource Ui_14}" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource PrimaryGreen}"/>
@@ -98,7 +100,7 @@
               <TextBlock Text="{DynamicResource Ui_15}" Classes="muted" FontSize="10" Margin="13,0,0,0"/>
             </StackPanel>
 
-            <Button Name="NavSettings" Grid.Row="7" Classes="nav">
+            <Button Name="NavSettings" Grid.Row="8" Classes="nav">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                   <Path Data="M 9,3.5 L 10,5.5 L 12,5 L 12.5,7 L 14.5,7.5 L 13.5,9.5 L 14.5,11.5 L 12.5,12 L 12,14 L 10,13.5 L 9,15.5 L 8,13.5 L 6,14 L 5.5,12 L 3.5,11.5 L 4.5,9.5 L 3.5,7.5 L 5.5,7 L 6,5 L 8,5.5 Z M 9,7.5 A 2,2 0 1 0 9,11.5 A 2,2 0 1 0 9,7.5"
@@ -647,7 +649,7 @@
       <Border Name="WindowStatusBar" Grid.Row="2" Background="{DynamicResource TintBrush}" Padding="20,0">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Name="GlobalStatusText" Text="{DynamicResource Ui_132}" VerticalAlignment="Center" FontSize="11"/>
-          <TextBlock Grid.Column="1" Text="lexi 3.0.3" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+          <TextBlock Grid.Column="1" Text="lexi 3.0.4" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
         </Grid>
       </Border>
     </Grid>
@@ -731,6 +733,46 @@
             <Button Name="DialogDeleteConfirmBtn" Classes="primary" Background="{DynamicResource DangerBrush}" Foreground="White" Content="{DynamicResource Ui_165}"/>
           </StackPanel>
         </StackPanel>
+      </Border>
+    </Border>
+    <Border Name="PlanDialogOverlay" Background="{DynamicResource OverlayBrush}" IsVisible="False">
+      <Border Name="PlanDialogCard" Classes="card" KeyboardNavigation.TabNavigation="Cycle" MaxWidth="620" MinWidth="460" Margin="20" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <Grid RowDefinitions="Auto,Auto,Auto" RowSpacing="14">
+          <TextBlock Name="PlanDialogTitle" FontWeight="Medium" FontSize="18" Text="创建每日学习计划"/>
+          <ScrollViewer Name="PlanDialogScroll" Grid.Row="1" MaxHeight="500" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden">
+            <StackPanel Spacing="10">
+              <StackPanel Name="PlanWordScope" Spacing="10">
+              <Grid Name="PlanIeltsSelectors" ColumnDefinitions="*,*" ColumnSpacing="10">
+                <ComboBox Name="PlanBookInput" HorizontalAlignment="Stretch"/>
+                <ComboBox Name="PlanUnitInput" Grid.Column="1" HorizontalAlignment="Stretch"/>
+              </Grid>
+              <TextBox Name="PlanWordSearch" Watermark="搜索计划词条"/>
+              <StackPanel Orientation="Horizontal" Spacing="8">
+                <Button Name="PlanSelectAllBtn" Classes="ghost" Content="全选"/>
+                <Button Name="PlanClearSelectionBtn" Classes="ghost" Content="清空选择"/>
+              </StackPanel>
+              <ScrollViewer Height="160" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Hidden"><StackPanel Name="PlanWordChoices" Spacing="4"/></ScrollViewer>
+              </StackPanel>
+              <TextBlock Name="PlanSourceSummary" Classes="muted" TextWrapping="Wrap"/>
+              <TextBox Name="PlanNameInput" Watermark="计划名称"/>
+              <TextBlock Name="PlanDailyCountLabel" Text="每日学习词数"/>
+              <NumericUpDown Name="PlanDailyCountInput" Minimum="1" Maximum="10000" Value="20"/>
+              <CheckBox Name="PlanRandomInput" Content="随机顺序"/>
+              <TextBlock Name="PlanDialogError" TextWrapping="Wrap"/>
+            </StackPanel>
+          </ScrollViewer>
+          <StackPanel Grid.Row="2" Spacing="8">
+            <TextBlock Name="PlanEstimate" Classes="muted" TextWrapping="Wrap"/>
+            <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Right">
+              <Button Name="PlanCancelBtn" Classes="ghost" Content="取消"/>
+              <Button Name="PlanCreateConfirmBtn" Classes="primary" Content="创建计划"/>
+            </StackPanel>
+            <StackPanel Name="PlanOverlapActions" Orientation="Horizontal" HorizontalAlignment="Right" Spacing="8" IsVisible="False">
+              <Button Name="PlanContinueOverlapBtn" Classes="primary" Content="继续创建"/>
+              <Button Name="PlanCancelOverlapBtn" Classes="ghost" Content="取消"/>
+            </StackPanel>
+          </StackPanel>
+        </Grid>
       </Border>
     </Border>
   </Grid>
