@@ -62,7 +62,7 @@ def main():
     version=ET.parse(source/'Lexi.csproj').getroot().findtext('./PropertyGroup/Version')
     import plistlib
     with (ROOT_DIR/'packaging/macOS/Info.plist').open('rb') as file: plist=plistlib.load(file)
-    expected_version='3.0.4'
+    expected_version='3.1.1'
     ui=(source/'MainWindow.axaml').read_text()
     ai=(source/'Services/AiService.cs').read_text()
     dmg=(ROOT_DIR/'scripts/package_dmg.sh').read_text()
@@ -73,7 +73,8 @@ def main():
         'status bar version':f'Text="lexi {expected_version}"' in ui,
         'AI User-Agent version':f'Lexi/{expected_version}' in ai,
         'DMG name and version gate':f'Lexi-{expected_version}-macOS-arm64.dmg' in dmg and f'== "{expected_version}"' in dmg,
-        'README current source version':f'当前源码与已发布版本为 **{expected_version}**' in readme,
+        'README current source version':f'当前源码版本为 **{expected_version}**' in readme,
+        'README 3.1.1 history':re.search(r'^\| 第三代 · 3\.1\.1 \|.*FSRS.*\|$',readme,re.M) is not None,
         'README 3.0.4 history':re.search(r'^\| 第三代 · 3\.0\.4 \|.*每日学习计划.*\|$',readme,re.M) is not None,
         'README 3.0.3 history':re.search(r'^\| 第三代 · 3\.0\.3 \|.*英文打字完成反馈修复.*\|$',readme,re.M) is not None,
         'README 3.0.3 release link':'https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3' in readme,

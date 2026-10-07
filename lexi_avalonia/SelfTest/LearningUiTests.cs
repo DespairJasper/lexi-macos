@@ -243,15 +243,33 @@ public static class LearningUiTests
             var originalPlanStore = storeField.GetValue(window);
             storeField.SetValue(window, new DailyStudyPlanStore(Path.Combine(blocked, "daily-study-plans.json")));
             var persistedBeforeFailure = File.ReadAllText(plansPath);
+            // 评分路径的计划 JSON 现在由跨存储 journal 落盘，不再经过 _studyPlanStore：
+            // 必须把**真实目标文件**占成目录才能真的注入交付失败（换 store 已经拦不住它）。
+            var parkedPlans = plansPath + ".parked";
+            File.Move(plansPath, parkedPlans, overwrite: true);
+            Directory.CreateDirectory(plansPath);
             var cardBeforeFailure = C<TextBlock>("ResultWordText").Text;
             var knownBeforeFailure = ieltsPlanRound.Known; var forgotBeforeFailure = ieltsPlanRound.Forgot;
             var forgotIdsBeforeFailure = new HashSet<string>(liveIelts.ForgotWordIds);
             await InvokeAsync("RateFocusedWordAsync", StudyRating.Forgot);
             Check(liveIelts.CompletedWordIds.Count == 0 && liveIelts.Status == DailyStudyPlanStatus.Active
                 && ieltsPlanRound.Known == knownBeforeFailure && ieltsPlanRound.Forgot == forgotBeforeFailure
-                && liveIelts.ForgotWordIds.SetEquals(forgotIdsBeforeFailure) && C<TextBlock>("ResultWordText").Text == cardBeforeFailure
-                && File.ReadAllText(plansPath) == persistedBeforeFailure,
+                && liveIelts.ForgotWordIds.SetEquals(forgotIdsBeforeFailure) && C<TextBlock>("ResultWordText").Text == cardBeforeFailure,
                 "failed plan rating save rolls back card, streak and forgotten set");
+            // 真实不变量：交付失败必须把目标状态留在 outbox 里供重放（"文件没被动过"在这里不可观测：
+            // 路径被占成目录，任何写入都不可能发生，只比较 parked 副本等于复述那次 File.Move）。
+            using (var outbox = new SqliteConnection(new SqliteConnectionStringBuilder
+                { DataSource = planArchive.DatabasePath, Pooling = false }.ToString()))
+            {
+                outbox.Open();
+                using var command = outbox.CreateCommand();
+                command.CommandText = "SELECT COUNT(*) FROM mutation_outbox WHERE applied_at_utc IS NULL";
+                Check(Convert.ToInt32(command.ExecuteScalar()) > 0,
+                    "failed plan delivery keeps a replayable pending target in the outbox");
+            }
+            Directory.Delete(plansPath); File.Move(parkedPlans, plansPath);
+            // 那次失败留下的待办目标按设计保留；恢复可写后先排空它，后续保存再写入最新状态。
+            Call("MemoryReplayJournal");
             Call("StopStudyPlan", liveIelts);
             Check(liveIelts.Status == DailyStudyPlanStatus.Active, "failed stop save keeps plan active");
             storeField.SetValue(window, originalPlanStore);
@@ -575,7 +593,20 @@ public static class LearningUiTests
             C<TextBox>("TypingInput").Text = "a"; await Task.Delay(60);
             Check(!C<TextBlock>("TypingFeedback").IsVisible && C<TextBox>("TypingInput").Text == "a", "first retry letter dismisses error comparison and starts same word");
             var stops = Audio.Stops; Click("NavIelts"); C<NumericUpDown>("IeltsCount").Value = 3; Check(Audio.Stops > stops, "navigation stops playback and cancels typing advance");
+            // IELTS 单词卡入口会连续初始化两次（先查词页进卡片、再按词表重开一轮），
+            // 必须只开一个学习会话，否则长期层会把一次进入记成两轮。
+            var ieltsSessionArchive = (IVocabularyArchive)typeof(MainWindow).GetField("_vocabService", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+            int FirstLearnSessions()
+            {
+                using var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = ieltsSessionArchive.DatabasePath, Pooling = false }.ToString());
+                db.Open();
+                using var command = db.CreateCommand();
+                command.CommandText = "SELECT COUNT(*) FROM learning_sessions WHERE mode='FirstLearn'";
+                return Convert.ToInt32(command.ExecuteScalar());
+            }
+            var sessionsBeforeCards = FirstLearnSessions();
             await (Task)Call("StartIeltsCardsAsync", new List<LearningWord> { new() { Id = "test:atmosphere", Words = ["atmosphere"] }, new() { Id = "test:hydrosphere", Words = ["hydrosphere"] }, new() { Id = "test:oxygen", Words = ["oxygen"] }, new() { Id = "test:wood", Words = ["wood"] } })!;
+            Check(FirstLearnSessions() == sessionsBeforeCards + 1, "one word-card entry opens exactly one learning session");
             Check(Audio.Calls.Last().Text == "atmosphere", "word-card entry automatically pronounces current word");
             Check(((List<string>)typeof(MainWindow).GetField("_focusDeck", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!).Count == 3, "recognition uses the same selected round count");
             Check(C<Button>("FocusStartRecallBtn").IsEffectivelyVisible && !C<Button>("FocusKnownBtn").IsEffectivelyVisible,

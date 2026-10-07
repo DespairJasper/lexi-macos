@@ -259,11 +259,14 @@ public partial class MainWindow
         if (!FocusCanNavigate || _currentPage != "lookup" || navigationVersion != _learningNavigationVersion
             || lookupVersion != _lookupVersion || !LookupResultCard.IsVisible
             || !string.Equals(ResultWordText.Text, words[0].Word, StringComparison.OrdinalIgnoreCase)) return;
-        EnterWordFocus(snapshot);
+        _memoryDeferFocusInitialization = true;
+        try { EnterWordFocus(snapshot); }
+        finally { _memoryDeferFocusInitialization = false; }
         StartFocusRound(words.SelectMany(w => w.Words).Distinct(StringComparer.OrdinalIgnoreCase).ToList());
     }
     private void SaveLearningProgress()
     {
+        if (!MemoryDrainPendingBeforeJsonEdit()) return;
         try { _learningProgress.Save(LearningProgressPath); _writingDirty = false; }
         catch (Exception ex) { SetStatus(T("学习记录保存失败：") + ex.Message); }
     }

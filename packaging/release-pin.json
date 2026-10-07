@@ -1,0 +1,6 @@
+{
+  "bundle_id": "com.lexi.app",
+  "designated_requirement": "identifier \"com.lexi.app\" and certificate leaf = H\"c886a7632869a41e7dcf9aca9e1afd93b334c81e\"",
+  "helper_relpath": "Contents/MacOS/fsrs-optimizer",
+  "note": "发布身份固定值。DR 必须在包内验收与安装前逐字核对：本地证书换过一次就不再匹配的话，安装会与既有权限映射脱钩。"
+}

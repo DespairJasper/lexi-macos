@@ -46,7 +46,7 @@ public static class Program
 
         try { Console.OutputEncoding = System.Text.Encoding.UTF8; } catch { }
 
-        if (args.Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test") && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LEXI_DATA_DIR"))) return 2;
+        if (args.Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test" or "--recovery-restart-a" or "--recovery-restart-b") && string.IsNullOrWhiteSpace(Environment.GetEnvironmentVariable("LEXI_DATA_DIR"))) return 2;
         // 2. Single instance enforcement using Mutex + Named Pipe
         using var singleInstance = new SingleInstanceService();
         var maintenance = args.Any(a => a is "--database-check" or "--backup-database" or "--restore-backup");

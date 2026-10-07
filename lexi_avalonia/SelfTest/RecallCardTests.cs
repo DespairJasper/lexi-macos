@@ -186,11 +186,20 @@ public static class RecallCardTests
 
             // 同日重复评价：batch_review 保持幂等；显式重新安排到今日后再次可用。
             Press(Key.Q); await Task.Delay(40);
+            // 裁定 O-1（findings.md §P）：`today` 是显式手动覆盖，会把已建 FSRS 卡的词重新推回今日队列。
             store.ExecuteBatch([beforeUndo.Id], "today");
             Call("RefreshWords"); Click("NavLookup"); Click("NavReview");
+            // 非空转前置条件：队列真的被重建过（否则下面看到的 ReviewWordText 只是上一张卡残留的文本，
+            // 空队列时 OnReviewRatingAsync 会直接 return，后面两条断言都会假绿）。
+            check(Round().HasCurrent && Round().Current.Word == "recall-one" && C<Grid>("ReviewRatingBar").IsVisible,
+                "explicit reschedule really rebuilt a non-empty front card (not a stale label)");
             check(C<TextBlock>("ReviewWordText").Text == "recall-one", "same-date explicit reschedule invalidates handled revision");
             var reviewedStage = Stored("recall-one").Stage;
             Press(Key.Q); await Task.Delay(40);
+            // 非空转前置条件：这次评价确实在轮内结算了（首评「认识」对复习词即出队），
+            // 而旧列的 stage 仍被 batch_review 的同日去重挡住 —— 幂等才是有内容的幂等。
+            check(Round().Completed == 1 && C<Border>("ReviewAnswer").IsVisible,
+                "the same-day rating really executed on the deck (not an empty-queue no-op)");
             check(Stored("recall-one").Stage == reviewedStage, "same-day rating preserves scheduling idempotence");
 
             // 页面切换取消未完成的动画后，重新打开不能留下半透明的卡。
@@ -210,6 +219,22 @@ public static class RecallCardTests
             var saved = store.LoadSettings();
             check(saved.HighContrast && saved.OpaqueMaterial && saved.ReduceMotion && w.TransparencyLevelHint.SequenceEqual(new[] { WindowTransparencyLevel.None }), "accessibility preferences persist and disable transparency");
             Click("NavSettings"); await Snapshot("settings-high-contrast");
+
+            // 裁定 O-1 的 master 条款：掌握只把旧列置为 stage=5 / status='mastered'，**不碰** fsrs_cards。
+            // 先做对照组证明这张卡此刻确实是「到期」的，再证明它照样进不了今日队列 ——
+            // 排除来自 status（并集口径只认 status == 'learning'），不是来自「卡没到期」。
+            store.ExecuteBatch([beforeUndo.Id], "master");
+            Call("RefreshWords");
+            var masteredKey = "archive:" + Stored("recall-one").Archive.Uuid;
+            check(((ILearningMemoryStore)store).QueryDue(DateTime.UtcNow, int.MaxValue).Any(card => card.WordKey == masteredKey),
+                "control: the mastered word still has a genuinely due FSRS card");
+            // MemoryPendingReviewWords 是并集口径本身（未过 _reviewHandled），GetPendingReviewWords 是实际卡组。
+            var unionDue = ((System.Collections.IEnumerable)Call("MemoryPendingReviewWords")!).Cast<WordItem>().ToList();
+            var deckDue = ((System.Collections.IEnumerable)Call("GetPendingReviewWords")!).Cast<WordItem>().ToList();
+            check(Stored("recall-one").Status == "mastered"
+                && !unionDue.Any(word => word.Word == "recall-one")
+                && !deckDue.Any(word => word.Word == "recall-one"),
+                "master keeps a word out of today's deck even while its FSRS card is due");
         }
         finally
         {

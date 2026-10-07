@@ -82,6 +82,13 @@ public partial class MainWindow
         var snapshot = CaptureFocusSnapshot() with { Page = "plans" };
         _planLearningSession = session; _planCardActive = true;
         ++_focusEpoch; _focusUndo.Clear(); _focusDeck = session.BatchWords.Select(w => w.Id).ToList();
+        // 开轮（规格书 §1）：计划卡整轮按「首次学习」记录（§9.2）；定稿由计划会话在保存成功后回调（§3）。
+        MemoryBeginSession(StudyMode.FirstLearn,
+            plan.Source == DailyStudyPlanSource.Archive ? WordSource.Archive : WordSource.Ielts,
+            plan.Id, session.BatchWords.Count);
+        session.OnWordCompleted = MemoryCommitPlanCard;
+        session.OnRatingApplied = (id, rating, result) => MemoryRated(MemorySurface.Plan, id, rating,
+            _planRatingRecognitionBefore, result.Streak, result.Completed ? StudyMode.FirstLearn : null);
         RenderPlanFocusWord(session.Round.Current);
         EnterWordFocus(snapshot);
         if (!_wordFocusActive) { EndPlanCardFocus(); return; }
@@ -105,6 +112,7 @@ public partial class MainWindow
         if (!string.IsNullOrWhiteSpace(word.Example)) _currentExpansion.Examples.Add(new ExampleItem(word.Example, ""));
         LookupResultCard.IsVisible = true; LookupEmptyCard.IsVisible = LookupNotFoundCard.IsVisible = false;
         AiDrawerToggleBtn.IsVisible = false;
+        MemoryPresentPlanCard(_activeStudyPlan, id);
     }
 
     private Task LoadPlanFocusWordAsync()
@@ -141,13 +149,32 @@ public partial class MainWindow
 
     private Task RatePlanFocusedWordAsync(StudyRating rating)
     {
+        if (MemoryTryCompletePending()) return Task.CompletedTask;
         if (_planLearningSession == null) return Task.CompletedTask;
         _focusRatingBusy = true;
         try
         {
             var word = _focusRound.Current;
-            if (_planLearningSession.Rate(rating, SaveStudyPlans) is { } result) ShowPlanRating(rating, word, result);
+            // StudyRound 要到 Commit() 之后才更新连击：作答前的连击必须在 Rate 之前取（规格书 §2）。
+            var recognitionBefore = _focusRound.CurrentStreak;
+            _planRatingRecognitionBefore = recognitionBefore;
+            if (_planLearningSession.Rate(rating, MemorySavePlanProgress) is { } result)
+            {
+                // 定稿（CommitWord）由 DailyStudyPlanSession 在计划 JSON 保存成功之后回调；这里只记录本次作答。
+                MemorySaveRound();
+                ShowPlanRating(rating, word, result);
+            }
             else SetStatus(T("学习计划进度保存失败，请重试。"));
+        }
+        catch (PendingLearningWriteException pending)
+        {
+            _memoryPendingCompletion = () =>
+            {
+                ShowPlanRating(rating, pending.WordId, pending.Result);
+                MemorySaveRound();
+                SetStatus(T("已记下这次重逢。"));
+            };
+            SetStatus(T("学习计划进度保存失败，请重试。"));
         }
         finally { _focusRatingBusy = false; RefreshFocusLearningLabels(); }
         return Task.CompletedTask;
@@ -160,9 +187,16 @@ public partial class MainWindow
         try
         {
             if (_planLearningSession.ReclassifyAsForgot(SaveStudyPlans) is { } result)
+            {
+                // 改判：同一 presentation 追加修正事件，presentationId 不变（规格书 §2）。
+                MemoryRevised(MemorySurface.Plan, _focusRatedWord, _focusLastRating, StudyRating.Forgot);
                 ShowPlanRating(StudyRating.Forgot, _focusRatedWord!, result);
+            }
             else SetStatus(T("学习计划进度保存失败，请重试。"));
         }
+        // 长期层失败必须可见：之前这里只有 finally，MemoryRevised 抛出会变成无人处理的异常，
+        // 界面既没有报错、也看不出改判到底有没有生效。
+        catch (Exception ex) { SetStatus(T("改判失败：") + ex.Message); }
         finally { _focusRatingBusy = false; RefreshFocusLearningLabels(); }
         return Task.CompletedTask;
     }
@@ -173,9 +207,19 @@ public partial class MainWindow
         _focusRatingBusy = true;
         try
         {
-            if (_planLearningSession.Undo(SaveStudyPlans)) { RenderStudyPlanLists(); await LoadPlanFocusWordAsync(); }
+            if (_planLearningSession.Undo(SaveStudyPlans))
+            {
+                // 撤销：追加 Undone 事件；该词若已在本会话定稿，再失效它的 canonical（规格书 §2 / §4）。
+                // 计划 JSON 的撤销必须先做（MemoryUndone 要用撤销后的当前计划词），所以这里无法像
+                // Review/Focus 那样把长期层当提交点；但失败同样绝不显示撤销成功——不渲染完成状态，
+                // 只报失败，长期层保持原样。
+                var undoneId = _focusRound.HasCurrent ? _focusRound.Current : null;
+                MemoryUndone(MemorySurface.Plan, undoneId);
+                RenderStudyPlanLists(); await LoadPlanFocusWordAsync();
+            }
             else SetStatus(T("学习计划进度保存失败，请重试。"));
         }
+        catch (Exception ex) { SetStatus(T("撤销失败：") + ex.Message); }
         finally { _focusRatingBusy = false; RefreshFocusLearningLabels(); }
     }
 

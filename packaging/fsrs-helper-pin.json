@@ -1,0 +1,16 @@
+{
+  "path": "native/fsrs-optimizer/bin/fsrs-optimizer",
+  "bytes": 1775904,
+  "sha256": "7944ce00030f89b94acf49fefb66c26cfecf37acc56e6d317650bfb21d4d7ce3",
+  "architecture": "arm64",
+  "protocol": "fsrs-optimizer-v1",
+  "algorithm": "FSRS-6",
+  "parameter_count": 21,
+  "fsrs_version": "5.2.0",
+  "upstream_sha": "aca2838bfbdc6f15ca3f7a0c96a99fae466c9e9c",
+  "compatibility_id": "fsrs6-hard-floor-2-v1",
+  "patch_sha256": "4c52a7583e4c939a93641b1655872acc026186a9b5a5524afd7b83a5d1eed5bb",
+  "license": "BSD-3-Clause (fsrs crate)",
+  "built_by": "scripts/build_fsrs_optimizer.sh",
+  "note": "已审计的出厂可执行体。helper 不在 source-index / recovery-copies / source-invariants 任一面内，因此这里做逐字节绑定；重新构建后 helper 会变，必须重新审计并显式更新本 pin，否则 package_app.sh 直接拒绝打包。"
+}

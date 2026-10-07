@@ -1,0 +1,19 @@
+{
+  "fsrs_optimizer_txt": {
+    "path": "lexi_avalonia/Notices/FSRS-OPTIMIZER.txt",
+    "bytes": 11238,
+    "sha256": "d87ca35d1d33d426be96cde4a6e0265e604bfeefd6fbe03c451d00fbfa4bd559"
+  },
+  "license_dir": "lexi_avalonia/Notices/FSRS-Licenses",
+  "license_file_count": 175,
+  "source_dir": "lexi_avalonia/Notices/FSRS-Sources",
+  "source_archive_count": 3,
+  "generator": "scripts/generate_fsrs_notices.py",
+  "note": "成品许可证闭环的绑定值。只数顶层条目会被\"清空子目录、只留目录名\"绕过，因此同时绑定顶层条目数与真实文件数，并覆盖 MacOS / Resources 两侧。FSRS-OPTIMIZER.txt 曾在独立审计之后被改写（审计时 1940aafb…，当前 d87ca35d…），必须按**当前** hash 重新独立复核。",
+  "license_real_file_count": 335,
+  "source_archive_names": [
+    "colored-3.1.1.crate",
+    "option-ext-0.2.0.crate",
+    "priority-queue-2.5.0.crate"
+  ]
+}

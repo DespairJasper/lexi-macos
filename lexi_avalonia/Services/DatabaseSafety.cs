@@ -39,7 +39,7 @@ public static class DatabaseSafety
         {
             while (reader.Read())
             {
-                if (reader.IsDBNull(0) || reader.GetInt32(0) != 1) throw new InvalidDataException("词库版本不受支持，请使用匹配版本打开。");
+                if (reader.IsDBNull(0) || reader.GetInt32(0) is not (1 or 2)) throw new InvalidDataException("词库版本不受支持，请使用匹配版本打开。");
                 hasCurrent = true;
             }
         }

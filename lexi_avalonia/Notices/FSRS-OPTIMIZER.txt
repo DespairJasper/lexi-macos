@@ -1,0 +1,233 @@
+FSRS-rs Optimizer (FSRS-6 21-Parameter Helper)
+================================================================================
+Upstream Project: https://github.com/open-spaced-repetition/fsrs-rs
+Crate: fsrs
+Pinned Upstream Version: 5.2.0
+Pinned Upstream Commit SHA: aca2838bfbdc6f15ca3f7a0c96a99fae466c9e9c
+Pinned Upstream Crate Checksum (SHA-256):
+  cab5f80c16d1d07e492a6828478ecb9f379f142ba6f19fa3b7955edd180ddc2e
+Primary License: BSD-3-Clause
+
+Compatibility Revision & Minimal Patch:
+  Compatibility ID: fsrs6-hard-floor-2-v1
+  Helper Version: 0.2.0
+  Patch File: native/fsrs-optimizer/patches/fsrs-5.2.0-hard-floor-2.patch
+  Patch SHA-256: 4c52a7583e4c939a93641b1655872acc026186a9b5a5524afd7b83a5d1eed5bb
+  Official Specification Basis:
+    https://github.com/open-spaced-repetition/awesome-fsrs/wiki/The-Algorithm
+    FSRS-6 Section: "In practice, we should ensure that SInc >= 1 when G >= 2."
+  Scope:
+    Minimal 1-line compatibility patch applied in vendored model (`src/model.rs:114`):
+    clamps short-term stability floor for ratings >= 2 (Hard, Good, Easy) so same-day
+    Hard reviews do not decrease stability.
+    Upstream crates.io registry cache remains untouched.
+
+Description:
+  Lexi incorporates a standalone native helper binary built from the vendored
+  open-spaced-repetition/fsrs-rs library (version 5.2.0 with minimal compatibility
+  patch fsrs6-hard-floor-2-v1) to perform local, offline optimization of personal
+  FSRS-6 memory parameters (21 parameters). The helper operates strictly locally
+  on macOS Apple Silicon (arm64) with zero cloud transmission, zero Python/Node
+  runtime dependencies, and adheres strictly to the FSRS-6 specification
+  (S_MIN = 0.001, DECAY = -0.1542, fixed seed = 2023, max sequence length = 64).
+
+
+Third-party dependency notices
+================================================================================
+Exact versions, original complete license texts, copyright notices and SHA-256 mappings
+are in FSRS-Licenses/index.json and its per-crate directories. Files with identical
+license names may have different copyright notices; preserve all directories.
+Scope normal denotes target normal dependencies; proc-macro/macro-only denotes
+build-time generation dependencies included conservatively, not runtime libraries.
+Unenabled backend and development-only dependency branches are excluded.
+SPDX OR alternatives retain their upstream texts; priority-queue is distributed
+under the MPL-2.0 alternative. Other MPL packages use MPL-2.0.
+
+MPL source availability
+The exact unmodified published source for colored 3.1.1, option-ext 0.2.0 and
+priority-queue 2.5.0 is supplied next to this notice in FSRS-Sources/*.crate.
+Each .crate is a gzip-compressed tar archive, readable with tar -xzf or an
+archive utility. Source hashes and upstream download URLs appear in index.json.
+Covered source is available under MPL-2.0; its original notices remain intact.
+The MPL text is included in the corresponding FSRS-Licenses directories.
+This source availability is independent of the license of the larger Lexi work.
+
+Reproduce/validate: python3 scripts/generate_fsrs_notices.py [--check]
+with the existing CARGO_HOME/RUSTUP_HOME and locked offline registry cache.
+A nonzero --check exit blocks publication: missing/changed licenses, sources,
+lockfile or target dependency selection require regeneration and review.
+
+adler2 2.0.1 | 0BSD OR MIT OR Apache-2.0 | normal
+ahash 0.8.12 | MIT OR Apache-2.0 | normal
+aho-corasick 1.1.5 | Unlicense OR MIT | macro-only
+allocator-api2 0.2.21 | MIT OR Apache-2.0 | normal
+async-channel 2.5.0 | Apache-2.0 OR MIT | normal
+atomic_float 1.1.0 | Apache-2.0 OR MIT OR Unlicense | normal
+bincode 2.0.1 | MIT | normal
+bitflags 2.13.2 | MIT OR Apache-2.0 | normal
+burn 0.17.1 | MIT OR Apache-2.0 | normal
+burn-autodiff 0.17.1 | MIT OR Apache-2.0 | normal
+burn-common 0.17.1 | MIT OR Apache-2.0 | normal
+burn-core 0.17.1 | MIT OR Apache-2.0 | normal
+burn-dataset 0.17.1 | MIT OR Apache-2.0 | normal
+burn-derive 0.17.1 | MIT OR Apache-2.0 | proc-macro
+burn-ir 0.17.1 | MIT OR Apache-2.0 | normal
+burn-ndarray 0.17.1 | MIT OR Apache-2.0 | normal
+burn-tensor 0.17.1 | MIT OR Apache-2.0 | normal
+burn-train 0.17.1 | MIT OR Apache-2.0 | normal
+bytemuck 1.25.2 | Zlib OR Apache-2.0 OR MIT | normal
+bytemuck_derive 1.12.1 | Zlib OR Apache-2.0 OR MIT | proc-macro
+bytesize 1.3.3 | Apache-2.0 | normal
+cfg-if 1.0.5 | MIT OR Apache-2.0 | normal
+colored 3.1.1 | MPL-2.0 | normal
+concurrent-queue 2.5.0 | Apache-2.0 OR MIT | normal
+core-foundation-sys 0.8.7 | MIT OR Apache-2.0 | normal
+crc32fast 1.5.2 | MIT OR Apache-2.0 | normal
+crossbeam-channel 0.5.17 | MIT OR Apache-2.0 | normal
+crossbeam-deque 0.8.8 | MIT OR Apache-2.0 | normal
+crossbeam-epoch 0.9.21 | MIT OR Apache-2.0 | normal
+crossbeam-utils 0.8.23 | MIT OR Apache-2.0 | normal
+csv 1.4.0 | Unlicense/MIT | normal
+csv-core 0.1.13 | Unlicense/MIT | normal
+cubecl-common 0.5.0 | MIT OR Apache-2.0 | normal
+darling 0.20.11 | MIT | macro-only
+darling_core 0.20.11 | MIT | macro-only
+darling_macro 0.20.11 | MIT | proc-macro
+data-encoding 2.11.1 | MIT | normal
+deranged 0.5.8 | MIT OR Apache-2.0 | normal
+derive-new 0.6.0 | MIT | proc-macro
+derive-new 0.7.0 | MIT | proc-macro
+derive_more 1.0.0 | MIT | normal
+derive_more-impl 1.0.0 | MIT | proc-macro
+dirs 6.0.0 | MIT OR Apache-2.0 | normal
+dirs-sys 0.5.0 | MIT OR Apache-2.0 | normal
+either 1.19.0 | MIT OR Apache-2.0 | normal
+embassy-futures 0.1.2 | MIT OR Apache-2.0 | normal
+equivalent 1.0.2 | Apache-2.0 OR MIT | normal
+errno 0.3.14 | MIT OR Apache-2.0 | normal
+event-listener 5.4.2 | Apache-2.0 OR MIT | normal
+event-listener-strategy 0.5.4 | Apache-2.0 OR MIT | normal
+fastrand 2.5.0 | Apache-2.0 OR MIT | normal
+flate2 1.1.10 | MIT OR Apache-2.0 | normal
+fnv 1.0.7 | Apache-2.0 / MIT | macro-only
+foldhash 0.1.5 | Zlib | normal
+fsrs 5.2.0 | BSD-3-Clause | normal
+futures-core 0.3.34 | MIT OR Apache-2.0 | normal
+futures-io 0.3.34 | MIT OR Apache-2.0 | normal
+futures-lite 2.6.1 | Apache-2.0 OR MIT | normal
+futures-macro 0.3.34 | MIT OR Apache-2.0 | proc-macro
+futures-task 0.3.34 | MIT OR Apache-2.0 | normal
+futures-timer 3.0.4 | MIT/Apache-2.0 | normal
+futures-util 0.3.34 | MIT OR Apache-2.0 | normal
+getrandom 0.3.4 | MIT OR Apache-2.0 | normal
+getrandom 0.4.3 | MIT OR Apache-2.0 | normal
+glob 0.3.4 | MIT OR Apache-2.0 | macro-only
+half 2.7.1 | MIT OR Apache-2.0 | normal
+hashbrown 0.15.5 | MIT OR Apache-2.0 | normal
+hashbrown 0.17.1 | MIT OR Apache-2.0 | normal
+heck 0.5.0 | MIT OR Apache-2.0 | macro-only
+ident_case 1.0.1 | MIT/Apache-2.0 | macro-only
+indexmap 2.14.2 | Apache-2.0 OR MIT | normal
+itertools 0.14.0 | MIT OR Apache-2.0 | normal
+itoa 1.0.18 | MIT OR Apache-2.0 | normal
+lazy_static 1.5.1 | MIT OR Apache-2.0 | normal
+libc 0.2.190 | MIT OR Apache-2.0 | normal
+libloading 0.8.9 | ISC | normal
+libm 0.2.16 | MIT | normal
+lock_api 0.4.14 | MIT OR Apache-2.0 | normal
+log 0.4.34 | MIT OR Apache-2.0 | normal
+macerator 0.2.10 | MIT OR Apache-2.0 | normal
+macerator-macros 0.1.5 | MIT OR Apache-2.0 | proc-macro
+mach2 0.6.0 | BSD-2-Clause OR MIT OR Apache-2.0 | normal
+matrixmultiply 0.3.11 | MIT/Apache-2.0 | normal
+memchr 2.8.3 | Unlicense OR MIT | normal
+miniz_oxide 0.9.1 | MIT OR Zlib OR Apache-2.0 | normal
+moddef 0.3.0 | MIT | normal
+ndarray 0.16.1 | MIT OR Apache-2.0 | normal
+nu-ansi-term 0.50.3 | MIT | normal
+num-complex 0.4.6 | MIT OR Apache-2.0 | normal
+num-conv 0.2.2 | MIT OR Apache-2.0 | normal
+num-integer 0.1.47 | MIT OR Apache-2.0 | normal
+num-traits 0.2.19 | MIT OR Apache-2.0 | normal
+num_cpus 1.17.0 | MIT OR Apache-2.0 | normal
+nvml-wrapper 0.10.0 | MIT OR Apache-2.0 | normal
+nvml-wrapper-sys 0.8.0 | MIT OR Apache-2.0 | normal
+once_cell 1.21.4 | MIT OR Apache-2.0 | normal
+option-ext 0.2.0 | MPL-2.0 | normal
+parking 2.2.1 | Apache-2.0 OR MIT | normal
+paste 1.0.15 | MIT OR Apache-2.0 | proc-macro
+pin-project-lite 0.2.17 | Apache-2.0 OR MIT | normal
+portable-atomic 1.15.0 | Apache-2.0 OR MIT | normal
+powerfmt 0.2.1 | MIT OR Apache-2.0 | normal
+ppv-lite86 0.2.21 | MIT OR Apache-2.0 | normal
+priority-queue 2.5.0 | LGPL-3.0-or-later OR MPL-2.0 | normal
+proc-macro-crate 3.5.0 | MIT OR Apache-2.0 | macro-only
+proc-macro2 1.0.107 | MIT OR Apache-2.0 | macro-only
+quote 1.0.47 | MIT OR Apache-2.0 | macro-only
+rand 0.9.5 | MIT OR Apache-2.0 | normal
+rand_chacha 0.9.0 | MIT OR Apache-2.0 | normal
+rand_core 0.9.5 | MIT OR Apache-2.0 | normal
+rand_distr 0.5.1 | MIT OR Apache-2.0 | normal
+rawpointer 0.2.1 | MIT/Apache-2.0 | normal
+rayon 1.12.0 | MIT OR Apache-2.0 | normal
+rayon-core 1.13.0 | MIT OR Apache-2.0 | normal
+regex 1.13.1 | MIT OR Apache-2.0 | normal
+regex-automata 0.4.18 | MIT OR Apache-2.0 | normal
+regex-syntax 0.8.11 | MIT OR Apache-2.0 | normal
+relative-path 1.9.3 | MIT OR Apache-2.0 | macro-only
+rmp 0.8.15 | MIT | normal
+rmp-serde 1.3.1 | MIT | normal
+rstest 0.25.0 | MIT OR Apache-2.0 | normal
+rstest_macros 0.25.0 | MIT OR Apache-2.0 | proc-macro
+rustix 1.1.5 | Apache-2.0 WITH LLVM-exception OR Apache-2.0 OR MIT | normal
+ryu 1.0.23 | Apache-2.0 OR BSL-1.0 | normal
+sanitize-filename 0.6.0 | MIT | normal
+scopeguard 1.2.0 | MIT OR Apache-2.0 | normal
+seq-macro 0.3.6 | MIT OR Apache-2.0 | proc-macro
+serde 1.0.229 | MIT OR Apache-2.0 | normal
+serde_bytes 0.11.19 | MIT OR Apache-2.0 | normal
+serde_core 1.0.229 | MIT OR Apache-2.0 | normal
+serde_derive 1.0.229 | MIT OR Apache-2.0 | proc-macro
+serde_json 1.0.151 | MIT OR Apache-2.0 | normal
+sharded-slab 0.1.7 | MIT | normal
+simd-adler32 0.3.10 | MIT | normal
+slab 0.4.12 | MIT | normal
+smallvec 1.16.2 | MIT OR Apache-2.0 | normal
+snafu 0.8.9 | MIT OR Apache-2.0 | normal
+snafu-derive 0.8.9 | MIT OR Apache-2.0 | proc-macro
+spin 0.10.1 | MIT | normal
+spin 0.9.9 | MIT | normal
+static_assertions 1.1.0 | MIT OR Apache-2.0 | normal
+strsim 0.11.1 | MIT | macro-only
+strum 0.27.2 | MIT | normal
+strum_macros 0.27.2 | MIT | proc-macro
+symlink 0.1.0 | MIT/Apache-2.0 | normal
+syn 2.0.119 | MIT OR Apache-2.0 | macro-only
+syn 3.0.6 | MIT OR Apache-2.0 | macro-only
+sysinfo 0.33.1 | MIT | normal
+systemstat 0.2.7 | Unlicense | normal
+tempfile 3.27.0 | MIT OR Apache-2.0 | normal
+thiserror 1.0.69 | MIT OR Apache-2.0 | normal
+thiserror 2.0.21 | MIT OR Apache-2.0 | normal
+thiserror-impl 1.0.69 | MIT OR Apache-2.0 | proc-macro
+thiserror-impl 2.0.21 | MIT OR Apache-2.0 | proc-macro
+thread-tree 0.3.3 | MIT OR Apache-2.0 | normal
+thread_local 1.1.10 | MIT OR Apache-2.0 | normal
+time 0.3.55 | MIT OR Apache-2.0 | normal
+time-core 0.1.9 | MIT OR Apache-2.0 | normal
+toml_datetime 1.1.1+spec-1.1.0 | MIT OR Apache-2.0 | macro-only
+toml_edit 0.25.15+spec-1.1.0 | MIT OR Apache-2.0 | macro-only
+toml_parser 1.1.3+spec-1.1.0 | MIT OR Apache-2.0 | macro-only
+tracing-appender 0.2.5 | MIT | normal
+tracing-core 0.1.36 | MIT | normal
+tracing-log 0.2.0 | MIT | normal
+tracing-subscriber 0.3.23 | MIT | normal
+unicode-ident 1.0.26 | (MIT OR Apache-2.0) AND Unicode-3.0 | macro-only
+unicode-xid 0.2.6 | MIT OR Apache-2.0 | macro-only
+unty 0.0.4 | MIT OR Apache-2.0 | normal
+uuid 1.27.0 | Apache-2.0 OR MIT | normal
+winnow 1.0.4 | MIT | macro-only
+wrapcenum-derive 0.4.1 | MIT/Apache-2.0 | proc-macro
+zerocopy 0.8.60 | BSD-2-Clause OR Apache-2.0 OR MIT | normal
+zerocopy-derive 0.8.60 | BSD-2-Clause OR Apache-2.0 OR MIT | proc-macro
+zmij 1.0.23 | MIT | normal

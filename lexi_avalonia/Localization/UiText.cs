@@ -58,11 +58,13 @@ internal static class UiText
         if (kind == "encounters") return Format($"遇见 {value} 次 · AI 辅助内容可在编辑档案中修改");
         if (kind == "created") return Format($"录入于 {value}");
         var text = value?.ToString() ?? "";
+        // Legacy stage is only a persistence projection, never a five-step learning promise.
         // Only domain-generated stage/status fields use this converter; user meaning/notes do not.
         var stage = Regex.Match(text, "^阶段 (\\d+) / 5$");
-        if (stage.Success) return Format($"阶段 {stage.Groups[1].Value} / 5");
+        if (stage.Success) return Text("待复习");
         stage = Regex.Match(text, "^第 (\\d+) 阶段 \\(共 5 阶段\\)$");
-        if (stage.Success) return Format($"第 {stage.Groups[1].Value} 阶段 (共 5 阶段)");
+        if (stage.Success) return Text("待复习");
+        if (text == "全部完成") return Text("已暂停复习");
         return Redisplay(text);
     }
 }

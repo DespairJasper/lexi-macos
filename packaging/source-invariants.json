@@ -34,7 +34,17 @@
     "lexi_avalonia/Notices/DOTNET-ThirdPartyNotices.txt": "1271701f435f7fe4aa81dc7e273ca80b6391b73580ee20b35a956052c95de4cf",
     "lexi_avalonia/Notices/SkiaSharp-2.88.9-THIRD-PARTY-NOTICES.txt": "21504c46c4c58aa64c1055bd2dcbc5f9a136b4b8c412ed3cc6740e22c5b127f5",
     "lexi_avalonia/Assets/dictionary.sqlite3": "d5117799b83cb0fc147ff736a91dc53dd843b4ddc3deb03d0ad2fd5b55b43117",
-    "lexi_avalonia/Styles/README.md": "287a08ce1da8b3f0b173c77048b2c87ee2e310e9ae8f1d5f6141150172d6b65b"
+    "lexi_avalonia/Styles/README.md": "287a08ce1da8b3f0b173c77048b2c87ee2e310e9ae8f1d5f6141150172d6b65b",
+    "packaging/fsrs-helper-pin.json": "bf81aa9505690659c3c323e8a55fbb2be3ff5c792e2e90ac0fc57ffba534c816",
+    "packaging/fsrs-notices-pin.json": "f8d2ba76cd60932efa97b793f2312ac0755a1ca839ca8915912dedb5ef05e834",
+    "packaging/release-pin.json": "22293463b61ec138f956ad874dfe3e8013bb50259274b3df1b4c204ed5965427",
+    "scripts/package_app.sh": "d23a0c65cc35a142f752492df723f2e50ac1b360230c76bc467894282399b4e3",
+    "scripts/package_dmg.sh": "fa9fa7890555096c7b2d054e74a25b13b3734d2568dfb6b8d250bf4a7b27fa9b",
+    "scripts/release.sh": "c28485e3e6159722ab43cd38575834151c4bd73b35ffc8125359fc21e942205f",
+    "scripts/release_proof.py": "c13b2038a8672a922198a533fdff7dc367ff2ce7895534239044f81cc817c5d6",
+    "scripts/verify_packaged_app.sh": "23edcc35090465bc1ad67a332d4a1c1d22cf8ec51c67ab6864687ca87b2c217e",
+    "scripts/backup_user_data.sh": "7242e0d661db9332e1def483455897350154abf0a8f36211be3d005dbc6d2fe2",
+    "scripts/install_app.py": "3ef81fa3f866d1276de696d726771410a6956655f350e71cdcf344c40566f20e"
   },
   "named_controls": {
     "RootWindowBorder": "{https://github.com/avaloniaui}Border",
@@ -534,5 +544,6 @@
       "OnRelatedWordClick",
       2
     ]
-  ]
+  ],
+  "protected_note": "发布门禁与 pin 文件也纳入不变量：任何对 pin / 打包 / 安装 / 备份链的改写都会让 run_tests.sh 的 integrity 组立即变红，迫使改动显式化。"
 }

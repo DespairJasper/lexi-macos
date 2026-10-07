@@ -265,6 +265,9 @@ public partial class MainWindow
     private bool SaveStudyPlans()
     {
         if (_planReadFailed) { SetStatus(T("学习计划读取失败，已暂停写入以保护原文件。")); return false; }
+        // 计划 JSON 的**任何一次新编辑之前**都必须先排空待办：撤销 / 改判 / 计划列表编辑都走这里。
+        // 否则更早的未交付快照会在之后被重放，把这次新编辑覆盖掉（CrossStoreJournal 的契约）。
+        if (!MemoryDrainPendingBeforeJsonEdit()) return false;
         try { _studyPlanStore.Save(_studyPlans); return true; }
         catch (Exception ex) { SetStatus(T("学习计划保存失败：") + ex.Message); return false; }
     }

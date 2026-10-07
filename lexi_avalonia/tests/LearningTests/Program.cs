@@ -426,4 +426,738 @@ try
 }
 finally { Directory.Delete(Path.GetDirectoryName(invalidOrderPath)!, recursive: true); }
 
+
+// ══ TrajectoryAndCanonicalTests：轨迹归约 + 词身份解析（WS-A）══
+{
+    var memT0 = new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc);
+    const string memWordA = "archive:uuid-a";
+    const string memWordB = "archive:uuid-b";
+
+    // 造一条轨迹：每个元素 = 一次呈现（是否 Learn 卡 / 初判 / 改判）。
+    List<LearningInteractionEvent> MemTrack(string wordKey, string sessionId,
+        params (bool IsRecall, StudyRating? Rating, StudyRating? Revised)[] cards)
+    {
+        var list = new List<LearningInteractionEvent>();
+        var at = memT0;
+        for (var i = 0; i < cards.Length; i++)
+        {
+            var presentationId = $"p{i + 1}";
+            var isRecall = cards[i].IsRecall;
+            var appearance = i + 1;
+            void Add(InteractionEventKind kind, StudyRating? response)
+                => list.Add(new LearningInteractionEvent
+                {
+                    EventId = Guid.NewGuid().ToString("N"), SessionId = sessionId, WordKey = wordKey,
+                    PresentationId = presentationId, OccurredAtUtc = at, Kind = kind, Response = response,
+                    IsRecall = isRecall, SessionAppearanceIndex = appearance,
+                    IsFirstAppearanceForWord = i == 0,
+                });
+            at = at.AddMinutes(1);
+            Add(InteractionEventKind.Presented, null);
+            if (cards[i].Rating is { } rated) { at = at.AddSeconds(5); Add(InteractionEventKind.Rated, rated); }
+            if (cards[i].Revised is { } revised) { at = at.AddSeconds(5); Add(InteractionEventKind.Revised, revised); }
+        }
+        return list;
+    }
+
+    LearningInteractionEvent MemRaw(string eventId, string wordKey, string sessionId, string presentationId,
+        DateTime at, InteractionEventKind kind, StudyRating? response, bool isRecall = true, string? supersedes = null)
+        => new()
+        {
+            EventId = eventId, SessionId = sessionId, WordKey = wordKey, PresentationId = presentationId,
+            OccurredAtUtc = at, Kind = kind, Response = response, IsRecall = isRecall, SupersedesEventId = supersedes,
+        };
+
+    // 由事件流得到 (summary, canonical)，与 UI/持久化层的调用顺序一致。
+    (WordSessionSummary Summary, CanonicalReview? Canonical) MemReduce(string wordKey, string sessionId,
+        LearningMode mode, List<LearningInteractionEvent> events, DateTime completedAtUtc)
+    {
+        var presentations = TrajectoryReducer.ProjectPresentations(events);
+        var summary = TrajectoryReducer.BuildSummary(wordKey, sessionId, presentations, completedAtUtc);
+        var canonical = TrajectoryReducer.ResolveCanonical(wordKey, sessionId, mode, presentations, summary, completedAtUtc);
+        return (summary, canonical);
+    }
+
+    string MemFingerprint(WordSessionSummary s) => string.Join("|", s.TotalPresentations, s.FinalKnownCount,
+        s.FinalFuzzyCount, s.FinalForgottenCount, s.ResetCount, s.ResponseRevisionCount, s.KnownToFuzzy,
+        s.KnownToForgotten, s.FuzzyToForgotten, s.HadFuzzy, s.HadForgotten, s.HadResponseRevision, s.MaxKnownStreak);
+
+    // —— 对照轨迹 A/B/C/D：summary 与 canonical 必须可区分 ——
+    var memA = MemReduce(memWordA, "sA", LearningMode.Review,
+        MemTrack(memWordA, "sA", (true, StudyRating.Known, null)), memT0.AddMinutes(10));
+    Check(memA.Canonical!.Rating == StudyRating.Known && memA.Canonical.Origin == CanonicalOrigin.FirstRetrieval &&
+        memA.Canonical.SourcePresentationId == "p1" && memA.Summary.ResponseRevisionCount == 0 &&
+        memA.Summary.ResetCount == 0 && memA.Summary.FinalKnownCount == 1 && memA.Summary.MaxKnownStreak == 1 &&
+        !memA.Summary.HadResponseRevision, "轨迹A：一次认识 → canonical=Known，无修正无清零");
+
+    var memB = MemReduce(memWordB, "sB", LearningMode.Review,
+        MemTrack(memWordB, "sB", (true, StudyRating.Known, StudyRating.Forgot)), memT0.AddMinutes(10));
+    Check(memB.Summary.KnownToForgotten == 1 && memB.Summary.HadResponseRevision && memB.Summary.ResponseRevisionCount == 1 &&
+        memB.Canonical!.Rating == StudyRating.Forgot && memB.Canonical.SourcePresentationId == "p1",
+        "轨迹B：认识后改判忘记 → KnownToForgotten=1，canonical 取终判 Forgot");
+
+    var memC = MemReduce("archive:uuid-c", "sC", LearningMode.Review, MemTrack("archive:uuid-c", "sC",
+        (true, StudyRating.Unsure, null), (true, StudyRating.Known, null), (true, StudyRating.Unsure, null),
+        (true, StudyRating.Known, null), (true, StudyRating.Known, null), (true, StudyRating.Known, null)),
+        memT0.AddMinutes(20));
+    Check(memC.Summary.FinalFuzzyCount >= 2 && memC.Summary.HadFuzzy && memC.Summary.ResetCount == 0 &&
+        memC.Canonical!.Rating == StudyRating.Unsure && memC.Summary.MaxKnownStreak == 3,
+        "轨迹C：模糊/认识交替 → HadFuzzy，canonical 取首次真实 retrieval 的终判 Unsure");
+
+    var memD = MemReduce("archive:uuid-d", "sD", LearningMode.Review, MemTrack("archive:uuid-d", "sD",
+        (true, StudyRating.Forgot, null), (true, StudyRating.Known, null), (true, StudyRating.Unsure, null),
+        (true, StudyRating.Forgot, null), (true, StudyRating.Known, null), (true, StudyRating.Known, null),
+        (true, StudyRating.Known, null)), memT0.AddMinutes(20));
+    Check(memD.Summary.ResetCount == 2 && memD.Summary.HadForgotten && memD.Canonical!.Rating == StudyRating.Forgot &&
+        memD.Summary.FinalForgottenCount == 2 && memD.Summary.MaxKnownStreak == 3,
+        "轨迹D：两次忘记清零 → ResetCount=2，canonical=Forgot");
+
+    var memFingerprints = new[] { MemFingerprint(memA.Summary), MemFingerprint(memB.Summary),
+        MemFingerprint(memC.Summary), MemFingerprint(memD.Summary) };
+    Check(memFingerprints.Distinct(StringComparer.Ordinal).Count() == 4, "轨迹A/B/C/D 的 summary 两两可区分");
+
+    // —— 首答不被后续强化成功覆盖 ——
+    var memHardFirst = MemReduce("archive:uuid-e", "sE", LearningMode.Review, MemTrack("archive:uuid-e", "sE",
+        (true, StudyRating.Unsure, null), (true, StudyRating.Known, null), (true, StudyRating.Known, null),
+        (true, StudyRating.Known, null)), memT0.AddMinutes(20));
+    Check(memHardFirst.Canonical!.Rating == StudyRating.Unsure && memHardFirst.Summary.FinalKnownCount == 3 &&
+        memHardFirst.Summary.FirstInitialResponse == StudyRating.Unsure, "复习首答模糊，后续连对不覆盖 canonical");
+
+    var memAgainFirst = MemReduce("archive:uuid-f", "sF", LearningMode.Review, MemTrack("archive:uuid-f", "sF",
+        (true, StudyRating.Forgot, null), (true, StudyRating.Known, null), (true, StudyRating.Known, null)),
+        memT0.AddMinutes(20));
+    Check(memAgainFirst.Canonical!.Rating == StudyRating.Forgot && memAgainFirst.Summary.FirstValidatedResponse == StudyRating.Forgot,
+        "复习首答忘记，后续连对不覆盖 canonical");
+
+    // —— Learn 卡只看答案，不构成 retrieval ——
+    var memLearnEvents = MemTrack("archive:uuid-g", "sG",
+        (false, null, null), (true, StudyRating.Known, null), (true, StudyRating.Known, null), (true, StudyRating.Known, null));
+    var memLearnPresentations = TrajectoryReducer.ProjectPresentations(memLearnEvents);
+    var memLearn = MemReduce("archive:uuid-g", "sG", LearningMode.FirstLearn, memLearnEvents, memT0.AddMinutes(30));
+    Check(memLearnPresentations.Count == 4 && !memLearnPresentations[0].IsRecall &&
+        memLearnPresentations[0].FinalValidatedResponse == null && memLearnPresentations[0].InitialResponse == null,
+        "Learn 卡被投影为 IsRecall=false 且没有有效判断");
+    Check(memLearn.Summary.TotalPresentations == 4 && memLearn.Summary.FinalKnownCount == 3 &&
+        memLearn.Summary.PresentationsToMastery == 4 && memLearn.Canonical!.Rating == StudyRating.Known &&
+        memLearn.Canonical.Origin == CanonicalOrigin.FirstLearnAggregate && memLearn.Canonical.SourcePresentationId == null,
+        "Learn 卡计入呈现总数但不计入 retrieval：canonical=Known、FinalKnownCount=3、PresentationsToMastery=4");
+    Check(memLearn.Summary.FirstInitialResponse == StudyRating.Known &&
+        memLearn.Summary.FirstPresentedAtUtc == memLearnPresentations[0].PresentedAtUtc &&
+        memLearn.Canonical.ReviewedAtUtc == memLearnPresentations[0].PresentedAtUtc,
+        "首次入参取第一张 Learn 卡的时刻，首答取第一个真实 retrieval");
+
+    var memLearnFuzzy = MemReduce("archive:uuid-h", "sH", LearningMode.FirstLearn,
+        MemTrack("archive:uuid-h", "sH", (false, null, null), (true, StudyRating.Unsure, null)), memT0.AddMinutes(5));
+    Check(memLearnFuzzy.Canonical!.Rating == StudyRating.Unsure, "首次学习聚合：仅模糊无忘记 → Unsure");
+
+    var memLearnForgot = MemReduce("archive:uuid-i", "sI", LearningMode.FirstLearn,
+        MemTrack("archive:uuid-i", "sI", (true, StudyRating.Known, null), (true, StudyRating.Known, null),
+            (true, StudyRating.Forgot, null)), memT0.AddMinutes(5));
+    Check(memLearnForgot.Canonical!.Rating == StudyRating.Forgot, "首次学习聚合：任一忘记 → Forgot");
+
+    // —— 未定稿时（completedAt=null）不产生 mastery 口径 ——
+    var memUnfinished = TrajectoryReducer.BuildSummaryFromEvents("archive:uuid-a", "sA",
+        MemTrack("archive:uuid-a", "sA", (true, StudyRating.Known, null)), null);
+    Check(memUnfinished.PresentationsToMastery == 0 && memUnfinished.TimeToMasteryMs == null &&
+        memUnfinished.CompletedAtUtc == null && memUnfinished.TotalPresentations == 1,
+        "未定稿：PresentationsToMastery=0 且 TimeToMasteryMs=null");
+    Check(memA.Summary.PresentationsToMastery == 1 && memA.Summary.TimeToMasteryMs == 540000 &&
+        memA.Summary.CompletedAtUtc == memT0.AddMinutes(10), "TimeToMasteryMs = 定稿时刻 − 首次呈现时刻");
+
+    // —— 一个 word × session 只产生一个 canonical ——
+    var memKeyA = memA.Canonical!.WordKey;
+    Check(memA.Canonical.CanonicalId == CanonicalReview.BuildId(memKeyA, "sA") &&
+        memA.Canonical.CanonicalId == CanonicalReview.BuildId(memKeyA, "sA") &&
+        memA.Canonical.CanonicalId != CanonicalReview.BuildId(memKeyA, "sA2") &&
+        memLearn.Canonical.CanonicalId == CanonicalReview.BuildId("archive:uuid-g", "sG") &&
+        memA.Canonical.CanonicalId != memLearn.Canonical.CanonicalId,
+        "canonical 幂等键对同一 (wordKey, sessionId) 稳定，不同 session 不同");
+    var memAReplay = MemReduce(memWordA, "sA", LearningMode.Review,
+        MemTrack(memWordA, "sA", (true, StudyRating.Known, null)), memT0.AddMinutes(10));
+    Check(memAReplay.Canonical!.CanonicalId == memA.Canonical.CanonicalId &&
+        memAReplay.Summary.FinalKnownCount == memA.Summary.FinalKnownCount &&
+        memAReplay.Canonical.Revision == 1 && !memAReplay.Canonical.Invalidated &&
+        memAReplay.Canonical.AggregationPolicyVersion == AggregationPolicy.Version &&
+        memAReplay.Canonical.CompletedAtUtc == memT0.AddMinutes(10),
+        "同一 (wordKey, sessionId) 重放得到同一个 canonical（幂等）");
+
+    // —— Undo 使 presentation 失效 ——
+    var memUndoOnly = new List<LearningInteractionEvent>
+    {
+        MemRaw("u1", memWordA, "sU", "p1", memT0, InteractionEventKind.Presented, null),
+        MemRaw("u2", memWordA, "sU", "p1", memT0.AddSeconds(3), InteractionEventKind.Rated, StudyRating.Known),
+        MemRaw("u3", memWordA, "sU", "p1", memT0.AddSeconds(9), InteractionEventKind.Undone, null, supersedes: "u2"),
+    };
+    var memUndoPresentations = TrajectoryReducer.ProjectPresentations(memUndoOnly);
+    var memUndoSummary = TrajectoryReducer.BuildSummaryFromEvents(memWordA, "sU", memUndoOnly, memT0.AddMinutes(5));
+    Check(memUndoPresentations.Count == 1 && memUndoPresentations[0].InitialResponse == StudyRating.Known &&
+        memUndoPresentations[0].FinalValidatedResponse == null && memUndoPresentations[0].RevisionPath.Count == 0 &&
+        !memUndoPresentations[0].HadResponseRevision,
+        "被 Undone 撤销后 FinalValidatedResponse=null 且 RevisionPath 清空");
+    Check(memUndoSummary.FinalKnownCount == 0 && memUndoSummary.ResetCount == 0 && memUndoSummary.MaxKnownStreak == 0,
+        "被撤销的判断不计入任何分布");
+    Check(TrajectoryReducer.ResolveCanonical(memWordA, "sU", LearningMode.Review, memUndoPresentations,
+        memUndoSummary, memT0.AddMinutes(5)) == null, "唯一真实 retrieval 被撤销 → canonical 为 null");
+
+    var memUndoFirstThenSecond = new List<LearningInteractionEvent>
+    {
+        MemRaw("v1", memWordB, "sV", "p1", memT0, InteractionEventKind.Presented, null),
+        MemRaw("v2", memWordB, "sV", "p1", memT0.AddSeconds(3), InteractionEventKind.Rated, StudyRating.Known),
+        MemRaw("v3", memWordB, "sV", "p1", memT0.AddSeconds(6), InteractionEventKind.Undone, null, supersedes: "v2"),
+        MemRaw("v4", memWordB, "sV", "p2", memT0.AddMinutes(1), InteractionEventKind.Presented, null),
+        MemRaw("v5", memWordB, "sV", "p2", memT0.AddMinutes(1).AddSeconds(4), InteractionEventKind.Rated, StudyRating.Unsure),
+    };
+    var memUndoFallback = MemReduce(memWordB, "sV", LearningMode.Review, memUndoFirstThenSecond, memT0.AddMinutes(5));
+    Check(memUndoFallback.Canonical!.Rating == StudyRating.Unsure && memUndoFallback.Canonical.SourcePresentationId == "p2" &&
+        memUndoFallback.Summary.TotalPresentations == 2 && memUndoFallback.Summary.FinalFuzzyCount == 1,
+        "第一张被撤销后 canonical 顺延到下一个有效 retrieval");
+    Check(memUndoFallback.Summary.FirstInitialResponse == StudyRating.Known &&
+        memUndoFallback.Summary.FirstValidatedResponse == null,
+        "summary 的首答仍取第一个真实 retrieval（即使它被撤销），与 canonical 的顺延口径不同");
+
+    // —— 组间按 PresentedAtUtc 排序（输入乱序也必须稳定归约） ——
+    var memShuffled = MemTrack(memWordA, "sW", (true, StudyRating.Unsure, null), (true, StudyRating.Known, null));
+    var memReversed = new List<LearningInteractionEvent>(memShuffled);
+    memReversed.Reverse();
+    Check(TrajectoryReducer.ProjectPresentations(memReversed).Select(p => p.PresentationId).SequenceEqual(["p1", "p2"]),
+        "ProjectPresentations 按 PresentedAtUtc 排序，与输入顺序无关");
+    Check(TrajectoryReducer.ProjectPresentations([]).Count == 0 &&
+        TrajectoryReducer.BuildSummaryFromEvents(memWordA, "sX", [], null).TotalPresentations == 0,
+        "空输入安全：无 presentation、无计数");
+
+    // —— WordKeyResolver ——
+    var memArchiveItem = new WordItem { Id = 7, Word = "apple" };
+    memArchiveItem.Archive.Uuid = "u-1";
+    var memIeltsWord = new LearningWord { Id = "c-9", Words = ["apple"] };
+    WordItem? MemFindArchive(string form) => form.Trim().ToLowerInvariant() == "apple" ? memArchiveItem : null;
+    LearningWord? MemFindIelts(string form) => form.Trim().ToLowerInvariant() == "apple" ? memIeltsWord : null;
+
+    Check(WordKeyResolver.FormC("  Ice   Cream  ") == "ice cream" && WordKeyResolver.FormC("ICE CREAM") == "ice cream" &&
+        WordKeyResolver.FormC("Apple") == "apple" && WordKeyResolver.FormC("苹果") == "苹果" &&
+        WordKeyResolver.FormC(" a\t\nb ") == "a b" && WordKeyResolver.FormC("apple") == "apple",
+        "FormC 归一化：Trim + 空白折叠 + 小写");
+
+    Check(WordKeyResolver.Resolve("apple", "ielts", MemFindArchive, MemFindIelts) == WordKey.Ielts("c-9") &&
+        WordKeyResolver.Resolve("apple", "review", MemFindArchive, MemFindIelts) == WordKey.Archive("u-1") &&
+        WordKeyResolver.Resolve("apple", null, _ => null, MemFindIelts) == WordKey.Ielts("c-9") &&
+        WordKeyResolver.Resolve("pear", "review", MemFindArchive, MemFindIelts) == WordKey.Form("pear") &&
+        WordKeyResolver.Resolve("  Ice   Cream ", "review", MemFindArchive, MemFindIelts) == WordKey.Form("ice cream") &&
+        WordKeyResolver.Resolve("apple", "ielts", MemFindArchive, _ => null) == WordKey.Archive("u-1"),
+        "Resolve 三种 fallback：查词页优先 IELTS、档案优先于目录、都不中退化为 form");
+
+    var memArchivePlan = new DailyStudyPlan { Id = "plan-1", Name = "档案计划", Source = DailyStudyPlanSource.Archive };
+    var memArchivePlanWord = new DailyStudyPlanWord { Id = "7", Word = "apple" };
+    var memIeltsPlan = new DailyStudyPlan { Id = "plan-2", Name = "目录计划", Source = DailyStudyPlanSource.Ielts };
+    var memIeltsPlanWord = new DailyStudyPlanWord { Id = "c-9", Word = "apple" };
+    var memPlanKey = WordKeyResolver.ResolvePlanWord(memArchivePlan, memArchivePlanWord, id => id == "7" ? memArchiveItem : null);
+    Check(memPlanKey == WordKey.Archive("u-1") &&
+        WordKeyResolver.ResolvePlanWord(memIeltsPlan, memIeltsPlanWord, _ => throw new Exception("IELTS 计划不应反查档案")) == WordKey.Ielts("c-9"),
+        "ResolvePlanWord：档案源反查 uuid、IELTS 源直接用目录 Id");
+    Check(memPlanKey == WordKeyResolver.Resolve("apple", "review", MemFindArchive, MemFindIelts),
+        "同词多入口（计划卡 / 复习页）落到同一个 WordKey，共享同一张长期记忆卡");
+    var memPlanMissing = false;
+    try { WordKeyResolver.ResolvePlanWord(memArchivePlan, memArchivePlanWord, _ => null); }
+    catch (InvalidOperationException) { memPlanMissing = true; }
+    Check(memPlanMissing, "计划词在档案中查不到时抛 InvalidOperationException 交给调用方降级");
+
+    Check(WordKeyResolver.FromArchive(memArchiveItem) == WordKey.Archive("u-1") &&
+        WordKeyResolver.FromArchiveUuid("u-1") == WordKey.Archive("u-1") &&
+        WordKeyResolver.FromIelts(memIeltsWord) == WordKey.Ielts("c-9") &&
+        WordKeyResolver.FromForm("  Ice   Cream ") == WordKey.Form("ice cream"),
+        "FromArchive / FromArchiveUuid / FromIelts / FromForm 直构口径正确");
+    Check(WordKey.Parse(WordKey.Archive("u-1").Key) == WordKey.Archive("u-1") &&
+        WordKey.Parse(WordKey.Ielts("c-9").Key) == WordKey.Ielts("c-9") &&
+        WordKey.Parse(WordKey.Form("ice cream").Key) == WordKey.Form("ice cream") &&
+        WordKey.Parse("archive:u-1").Key == "archive:u-1" && WordKey.Parse("form:ice cream").SourceId == "ice cream",
+        "WordKey.Parse(Key) 与构造往返一致");
+}
+
+// ══ Fsrs6CoreTests：FSRS-6 纯 C# 核心 + 官方 golden 逐点回归（WS-B）══
+{
+    var fsrsWeights = Fsrs6Weights.Defaults;
+    IReadOnlyList<double> fsrsW = fsrsWeights.Weights;
+    var goldenDir = Path.Combine(AppContext.BaseDirectory, "Fixtures");
+    var fsrsScheduler = new Fsrs6Scheduler(fsrsWeights);
+    string GoldenPath(string file) => Path.Combine(goldenDir, file);
+
+    // —— 常量锁定：decay / factor 必须与 audit §3.2 ① 的实算值一致 ——
+    Check(SchedulingConfig.Decay == -0.1542 &&
+        Math.Abs(SchedulingConfig.Factor - 0.9803464944134797) < 1e-15,
+        $"FSRS-6 派生常量正确（DECAY={SchedulingConfig.Decay:R}, FACTOR={SchedulingConfig.Factor:R}）");
+    Check(Math.Abs(Fsrs6Model.FactorOf(fsrsW) - SchedulingConfig.Factor) < 1e-15 &&
+        Fsrs6Model.DecayOf(fsrsW) == SchedulingConfig.Decay,
+        "默认权重派生的 decay/factor 与 SchedulingConfig 常量逐位一致");
+
+    // —— 任务 1：Fsrs6Weights 的默认值 / JSON 往返 / 合法性 ——
+    Check(fsrsWeights.Source == Fsrs6Weights.SourceDefaults && fsrsWeights.OptimizedAtUtc is null &&
+        Fsrs6Weights.Algorithm == "FSRS-6" && Fsrs6Weights.ParameterCount == 21 && Fsrs6Weights.ParameterVersion == 1,
+        "Fsrs6Weights 默认实例的 algorithm/parameterCount/parameterVersion/source 符合依赖决策");
+    Check(Fsrs6Weights.OfficialDefaults.SequenceEqual([
+            0.212, 1.2931, 2.3065, 8.2956, 6.4133, 0.8334, 3.0194, 0.001,
+            1.8722, 0.1666, 0.796, 1.4835, 0.0614, 0.2629, 1.6483, 0.6014,
+            1.8729, 0.5425, 0.0912, 0.0658, 0.1542]),
+        "21 个官方默认权重与 audit §3.1 逐项一致（含 w20=0.1542）");
+    Check(Fsrs6Weights.OfficialClipBounds.Length == 21 &&
+        Fsrs6Weights.OfficialClipBounds[0] == (0.001, 100.0) && Fsrs6Weights.OfficialClipBounds[4] == (1.0, 10.0) &&
+        Fsrs6Weights.OfficialClipBounds[15] == (0.0, 1.0) && Fsrs6Weights.OfficialClipBounds[16] == (1.0, 6.0) &&
+        Fsrs6Weights.OfficialClipBounds[20] == (0.1, 0.8) && Fsrs6Weights.TryValidate([.. Fsrs6Weights.OfficialDefaults], out _),
+        "21 项官方 clip 区间与 py-fsrs LOWER/UPPER_BOUNDS_PARAMETERS 一致且默认值全部在区间内");
+
+    var fsrsJson = fsrsWeights.ToJson();
+    Check(fsrsJson.Contains("\"algorithm\":\"FSRS-6\"") && fsrsJson.Contains("\"parameterCount\":21") &&
+        fsrsJson.Contains("\"parameterVersion\":1") && fsrsJson.Contains("\"source\":\"defaults\"") &&
+        fsrsJson.Contains("\"optimizedAtUtc\":null") && fsrsJson.Contains("\"weights\":"),
+        "参数持久化 JSON 形状与 dependency_decision.md §参数持久化格式 的字段名一致（camelCase）");
+    Check(Fsrs6Weights.TryLoad(fsrsJson, out var fsrsReloaded, out var fsrsLoadError) &&
+        fsrsReloaded!.ValueEquals(fsrsWeights) && fsrsReloaded.ToJson() == fsrsJson,
+        "Fsrs6Weights JSON 往返逐位一致（weights/source/optimizedAtUtc），错误=" + fsrsLoadError);
+    var fsrsOptimized = Fsrs6Weights.Create([.. Fsrs6Weights.OfficialDefaults], Fsrs6Weights.SourceOptimized,
+        new DateTime(2026, 10, 6, 12, 0, 0, DateTimeKind.Utc));
+    Check(Fsrs6Weights.TryLoad(fsrsOptimized.ToJson(), out var fsrsReloaded2, out _) &&
+        fsrsReloaded2!.ValueEquals(fsrsOptimized) &&
+        fsrsReloaded2.OptimizedAtUtc == new DateTime(2026, 10, 6, 12, 0, 0, DateTimeKind.Utc),
+        "带 optimizedAtUtc 的非默认 source 也能逐位往返");
+    var fsrsClone = fsrsWeights.Clone();
+    Check(fsrsClone.ValueEquals(fsrsWeights) && !ReferenceEquals(fsrsClone.ToArray(), fsrsWeights.ToArray()),
+        "Fsrs6Weights.Clone 深拷贝权重数组");
+
+    var fsrsInvalid = new (string Json, string Label)[]
+    {
+        (fsrsJson.Replace("\"parameterVersion\":1", "\"parameterVersion\":2"), "parameterVersion 不符"),
+        (fsrsJson.Replace("\"parameterCount\":21", "\"parameterCount\":19"), "parameterCount 不符"),
+        (fsrsJson.Replace("\"algorithm\":\"FSRS-6\"", "\"algorithm\":\"FSRS-5\""), "algorithm 不符"),
+        (fsrsJson.Replace("\"source\":\"defaults\"", "\"source\":\"guessed\""), "source 非法"),
+        (fsrsJson.Replace("0.1542]", "0.1542, 0.2]"), "权重个数不是 21"),
+        (fsrsJson.Replace("0.212,", "\"NaN\","), "权重非有限值"),
+        (fsrsJson.Replace("0.1542]", "0.05]"), "w20 低于 clip 下界 0.1"),
+        ("not json at all", "不是 JSON"),
+        ("", "空字符串"),
+    };
+    var fsrsRejected = fsrsInvalid.Count(candidate => !Fsrs6Weights.TryLoad(candidate.Json, out _, out _));
+    Check(fsrsRejected == fsrsInvalid.Length,
+        $"非法参数 JSON 全部被 TryLoad 拒绝（{fsrsRejected}/{fsrsInvalid.Length}）");
+    Check(Fsrs6Weights.TryCreate([0.212, 1.2931], Fsrs6Weights.SourceDefaults, null, out _, out var fsrsShortError) == false &&
+        fsrsShortError.Contains("21"),
+        "TryCreate 对长度不符返回 false 并说明原因：" + fsrsShortError);
+
+    // —— 任务 4(a)：官方 golden 692 行逐点回归 ——
+    // 夹具来源 Overmiind/FSRS-Sharp Tests/Golden（见 Fixtures/PROVENANCE.md）。
+    // 生产路径（steps 为空）只需 Fsrs6Model：D/S 轨迹与 learning steps 无关（下方参考运行器一节实测印证）。
+    using var fsrsScenarioDoc = JsonDocument.Parse(File.ReadAllText(GoldenPath("scenarios.json")));
+    var fsrsStart = DateTimeOffset.Parse(fsrsScenarioDoc.RootElement.GetProperty("start").GetString()!,
+        System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.RoundtripKind).UtcDateTime;
+    var fsrsScenarios = fsrsScenarioDoc.RootElement.GetProperty("scenarios").EnumerateArray()
+        .Select(s => (
+            Name: s.GetProperty("name").GetString()!,
+            Steps: s.GetProperty("steps").EnumerateArray()
+                .Select(x => (Rating: x.GetProperty("rating").GetInt32(), Hours: x.GetProperty("offset_hours").GetDouble()))
+                .ToList()))
+        .ToList();
+
+    var fsrsExpected = new Dictionary<(string, int), (int State, int? Step, double Stability, double Difficulty, double IntervalSeconds)>();
+    foreach (var line in File.ReadAllLines(GoldenPath("expected.csv")))
+    {
+        if (string.IsNullOrWhiteSpace(line)) continue;
+        var f = line.Split(',');
+        fsrsExpected[(f[0], int.Parse(f[1], System.Globalization.CultureInfo.InvariantCulture))] = (
+            int.Parse(f[2], System.Globalization.CultureInfo.InvariantCulture),
+            f[3].Length == 0 ? null : int.Parse(f[3], System.Globalization.CultureInfo.InvariantCulture),
+            double.Parse(f[4], System.Globalization.CultureInfo.InvariantCulture),
+            double.Parse(f[5], System.Globalization.CultureInfo.InvariantCulture),
+            double.Parse(f[6], System.Globalization.CultureInfo.InvariantCulture));
+    }
+
+    Check(fsrsExpected.Count == 692 && fsrsScenarios.Count == 64 &&
+        fsrsScenarios.Sum(s => s.Steps.Count) == fsrsExpected.Count,
+        $"golden 夹具完整：64 个场景 / {fsrsExpected.Count} 行，scenarios.json 与 expected.csv 行数自洽");
+    Check(SchedulingConfig.MinimumIntervalAfterAgainDays == 1.0 &&
+        SchedulingConfig.MinimumIntervalAfterHardDays == 1.0 && SchedulingConfig.MinimumIntervalDays == 1.0,
+        "前提：三种评级的最小间隔下限都是 1 天，因此 golden 的 Easy 行可用 Known 口径比较 interval");
+
+    var fsrsFailures = new List<string>();
+    int fsrsRows = 0, fsrsSdHits = 0, fsrsReviewRows = 0, fsrsIntervalHits = 0;
+    double fsrsMaxStabDiff = 0, fsrsMaxDiffDiff = 0, fsrsMaxIntervalDaysDiff = 0;
+    foreach (var (name, steps) in fsrsScenarios)
+    {
+        var now = fsrsStart;
+        double? stability = null, difficulty = null;
+        DateTime? lastReview = null;
+        for (var i = 0; i < steps.Count; i++)
+        {
+            now = now.AddHours(steps[i].Hours);
+            var rating = steps[i].Rating;
+            double nextStability, nextDifficulty;
+            if (stability is null)
+            {
+                nextStability = Fsrs6Model.ClampStability(fsrsW[rating - 1]);
+                nextDifficulty = Fsrs6Model.InitialDifficulty(fsrsW, rating);
+            }
+            else
+            {
+                var elapsedDays = Fsrs6Model.ElapsedWholeDays(lastReview!.Value, now);
+                var retrievability = Fsrs6Model.Retrievability(stability.Value, elapsedDays);
+                nextStability = elapsedDays == 0
+                    ? Fsrs6Model.ShortTermStability(fsrsW, stability.Value, rating)
+                    : rating == Fsrs6Model.RatingAgain
+                        ? Fsrs6Model.NextStabilityFailure(fsrsW, difficulty!.Value, stability.Value, retrievability)
+                        : Fsrs6Model.NextStabilitySuccess(fsrsW, difficulty!.Value, stability.Value, retrievability, rating);
+                nextStability = Fsrs6Model.ClampStability(nextStability);
+                nextDifficulty = Fsrs6Model.NextDifficulty(fsrsW, difficulty!.Value, rating);
+            }
+            stability = nextStability;
+            difficulty = nextDifficulty;
+            lastReview = now;
+
+            if (!fsrsExpected.TryGetValue((name, i), out var want)) continue;
+            fsrsRows++;
+            var stabilityDiff = Math.Abs(stability.Value - want.Stability);
+            var difficultyDiff = Math.Abs(difficulty.Value - want.Difficulty);
+            fsrsMaxStabDiff = Math.Max(fsrsMaxStabDiff, stabilityDiff);
+            fsrsMaxDiffDiff = Math.Max(fsrsMaxDiffDiff, difficultyDiff);
+            var tolerance = 1e-6 * Math.Max(1.0, Math.Abs(want.Stability));
+            if (stabilityDiff <= tolerance && difficultyDiff <= 1e-6 * Math.Max(1.0, Math.Abs(want.Difficulty)))
+            {
+                fsrsSdHits++;
+            }
+            else if (fsrsFailures.Count < 12)
+            {
+                fsrsFailures.Add($"{name}[{i}] rating={rating} S={stability.Value:R} want {want.Stability:R} (Δ={stabilityDiff:E3}); " +
+                    $"D={difficulty.Value:R} want {want.Difficulty:R} (Δ={difficultyDiff:E3})");
+            }
+
+            // interval 只在 golden 的 Review 态行上比较：其余行排的是 learning/relearning step（60s/600s），
+            // 属于生产路径明确不接管的轮内强化（用户需求 §6），不做静默跳过——计数在下方一并打印。
+            if (want.State == Fsrs6ReferenceCard.StateReview)
+            {
+                fsrsReviewRows++;
+                var floorRating = rating switch
+                {
+                    Fsrs6Model.RatingAgain => StudyRating.Forgot,
+                    Fsrs6Model.RatingHard => StudyRating.Unsure,
+                    _ => StudyRating.Known,
+                };
+                var intervalDays = MemoryScheduler.ApplyMinimumInterval(
+                    Fsrs6Model.IntervalForRetention(stability.Value, SchedulingConfig.DesiredRetention),
+                    floorRating, false);
+                var wantDays = want.IntervalSeconds / 86400.0;
+                fsrsMaxIntervalDaysDiff = Math.Max(fsrsMaxIntervalDaysDiff, Math.Abs(intervalDays - wantDays));
+                if (Math.Abs(Math.Round(intervalDays) - wantDays) <= 1e-9) fsrsIntervalHits++;
+                else if (fsrsFailures.Count < 12)
+                {
+                    fsrsFailures.Add($"{name}[{i}] interval={intervalDays:R} → {Math.Round(intervalDays)} want {wantDays:R}");
+                }
+            }
+        }
+    }
+
+    foreach (var failure in fsrsFailures) Console.WriteLine("  golden 差异: " + failure);
+    Console.WriteLine($"INFO: golden S/D 命中 {fsrsSdHits}/{fsrsRows}；interval(Review 行) 命中 {fsrsIntervalHits}/{fsrsReviewRows}；" +
+        $"因依赖 learning/relearning steps 而跳过 interval 的行数 = {fsrsRows - fsrsReviewRows}（这些行的 S/D 仍然全部参与比较）；" +
+        $"maxStabDiff={fsrsMaxStabDiff:E3} maxDiffDiff={fsrsMaxDiffDiff:E3} maxIntervalDaysDiff={fsrsMaxIntervalDaysDiff:E3}");
+    Check(fsrsRows == 692 && fsrsSdHits == fsrsRows,
+        $"golden 692 行逐点回归：stability/difficulty 命中 {fsrsSdHits}/{fsrsRows}");
+    Check(fsrsIntervalHits == fsrsReviewRows && fsrsReviewRows == 399,
+        $"golden Review 态行的 interval 命中 {fsrsIntervalHits}/{fsrsReviewRows}（另 {fsrsRows - fsrsReviewRows} 行依赖 learning steps，已显式跳过）");
+
+    // —— 任务 4(a) 加强：官方参考状态机（learning_steps=[1min,10min]）逐列复现 692 行 ——
+    int refRows = 0, refFullHits = 0;
+    var refFailures = new List<string>();
+    foreach (var (name, steps) in fsrsScenarios)
+    {
+        var refCard = new Fsrs6ReferenceCard();
+        var refNow = fsrsStart;
+        for (var i = 0; i < steps.Count; i++)
+        {
+            refNow = refNow.AddHours(steps[i].Hours);
+            refCard = Fsrs6Reference.Review(fsrsW, refCard, steps[i].Rating, refNow,
+                Fsrs6Reference.OfficialLearningSteps, Fsrs6Reference.OfficialRelearningSteps);
+            if (!fsrsExpected.TryGetValue((name, i), out var want)) continue;
+            refRows++;
+            var intervalSeconds = (refCard.DueAtUtc - refNow).TotalSeconds;
+            var ok = refCard.State == want.State && refCard.Step == want.Step &&
+                Math.Abs(refCard.Stability!.Value - want.Stability) <= 1e-6 * Math.Max(1.0, Math.Abs(want.Stability)) &&
+                Math.Abs(refCard.Difficulty!.Value - want.Difficulty) <= 1e-6 * Math.Max(1.0, Math.Abs(want.Difficulty)) &&
+                Math.Abs(intervalSeconds - want.IntervalSeconds) <= 1e-3;
+            if (ok) refFullHits++;
+            else if (refFailures.Count < 12)
+            {
+                refFailures.Add($"{name}[{i}] state={refCard.State}/{want.State} step={refCard.Step?.ToString() ?? "-"}/{want.Step?.ToString() ?? "-"} " +
+                    $"S={refCard.Stability!.Value:R}/{want.Stability:R} D={refCard.Difficulty!.Value:R}/{want.Difficulty:R} ivl={intervalSeconds}/{want.IntervalSeconds}");
+            }
+        }
+    }
+    foreach (var failure in refFailures) Console.WriteLine("  参考状态机差异: " + failure);
+    Console.WriteLine($"INFO: 参考状态机全列命中 {refFullHits}/{refRows}（state + card_step + stability + difficulty + interval_seconds）");
+    Check(refFullHits == refRows && refRows == 692,
+        $"官方 py-fsrs 参考状态机（含 learning steps）在 692 行上 state/step/S/D/interval 五列全中：{refFullHits}/{refRows}");
+
+    // —— 任务 4(b)：py-fsrs test_basic 官方间隔向量 ——
+    // tests/test_basic.py::TestPyFSRS.test_review_card（v6.3.2, 9446cb06）；enable_fuzzing=False。
+    var officialRatings = new[] { 3, 3, 3, 3, 3, 3, 1, 1, 3, 3, 3, 3, 3 };
+    var officialCard = new Fsrs6ReferenceCard();
+    var officialAt = new DateTime(2022, 11, 29, 12, 30, 0, DateTimeKind.Utc);
+    var officialHistory = new List<int>();
+    foreach (var rating in officialRatings)
+    {
+        officialCard = Fsrs6Reference.Review(fsrsW, officialCard, rating, officialAt,
+            Fsrs6Reference.OfficialLearningSteps, Fsrs6Reference.OfficialRelearningSteps);
+        officialHistory.Add((int)Math.Floor((officialCard.DueAtUtc - officialAt).TotalDays));
+        officialAt = officialCard.DueAtUtc;
+    }
+    Check(officialHistory.SequenceEqual([0, 2, 11, 46, 163, 498, 0, 0, 2, 4, 7, 12, 21]),
+        "py-fsrs 官方向量 (Good×6, Again, Again, Good×5) 的 13 个间隔逐一相等：[" + string.Join(", ", officialHistory) + "]");
+
+    // —— 任务 4(c)：§10 硬性要求 3 ——同日 Hard 不得降低稳定性 ——
+    var hardLockOk = true;
+    var hardLockDetail = "";
+    foreach (var seed in new[] { 0.001, 0.01, 0.1, 0.212, 1.0, 2.3065, 10.0, 100.0, 1000.0, 36500.0 })
+    {
+        var hard = Fsrs6Model.ShortTermStability(fsrsW, seed, Fsrs6Model.RatingHard);
+        var good = Fsrs6Model.ShortTermStability(fsrsW, seed, Fsrs6Model.RatingGood);
+        var easy = Fsrs6Model.ShortTermStability(fsrsW, seed, Fsrs6Model.RatingEasy);
+        if (!(hard >= seed - 1e-12 && good >= seed - 1e-12 && easy >= seed - 1e-12))
+        {
+            hardLockOk = false;
+            hardLockDetail += $" S={seed:R}→Hard={hard:R}/Good={good:R}/Easy={easy:R};";
+        }
+    }
+    Check(hardLockOk, "同日 Hard/Good/Easy 都不会降低稳定性（max(SInc,1.0) 对 G∈{2,3,4} 全部生效）" + hardLockDetail);
+    Check(Fsrs6Model.ShortTermStability(fsrsW, 1.0, Fsrs6Model.RatingHard) == 1.0,
+        "同日 Hard 的下限确实被触发（S=1 时 SInc≈0.6109<1，被抬到 S′==1.0 而非降到 0.6109）");
+    Check(Fsrs6Model.ShortTermStability(fsrsW, 1.0, Fsrs6Model.RatingAgain) < 1.0,
+        "对照：同日 Again 不受下限保护，稳定性必须下降（S′=" + Fsrs6Model.ShortTermStability(fsrsW, 1.0, Fsrs6Model.RatingAgain).ToString("R") + "）");
+
+    var sameDayCard = new FsrsCardState
+    {
+        WordKey = "archive:same-day", Stability = 1.0, Difficulty = 5.0, State = FsrsState.Review,
+        LastReviewAtUtc = new DateTime(2026, 3, 1, 8, 0, 0, DateTimeKind.Utc),
+        NextReviewAtUtc = new DateTime(2026, 3, 2, 8, 0, 0, DateTimeKind.Utc), Reps = 1,
+    };
+    var sameDayOutcome = new Fsrs6Scheduler(fsrsWeights).Review(
+        sameDayCard, StudyRating.Unsure, new DateTime(2026, 3, 1, 20, 0, 0, DateTimeKind.Utc));
+    Check(sameDayOutcome.Card.Stability >= sameDayCard.Stability - 1e-12 &&
+        sameDayOutcome.Card.Stability == 1.0,
+        $"端到端同日 Hard（12h 后 Unsure）：S 不下降（{sameDayCard.Stability:R} → {sameDayOutcome.Card.Stability:R}）");
+
+    // —— 任务 4(d)：单调性与边界 ——
+    var monotonicOk = true;
+    foreach (var stability in new[] { 0.001, 0.5, 2.3065, 37.0, 1000.0, 36500.0 })
+    {
+        if (Fsrs6Model.Retrievability(stability, 0) != 1.0) monotonicOk = false;
+        var previous = 1.0;
+        for (var day = 1; day <= 400; day += 7)
+        {
+            var current = Fsrs6Model.Retrievability(stability, day);
+            if (!(current < previous)) { monotonicOk = false; break; }
+            previous = current;
+        }
+    }
+    Check(monotonicOk, "R(S,0)==1 且 R 随 elapsedDays 严格递减（S 覆盖 0.001..36500）");
+
+    var intervalMonotonicOk = true;
+    const double intervalStability = 12.5;
+    var previousInterval = double.PositiveInfinity;
+    for (var retention = 0.70; retention <= 0.99; retention += 0.01)
+    {
+        var interval = Fsrs6Model.IntervalForRetention(intervalStability, retention);
+        if (!(interval < previousInterval)) { intervalMonotonicOk = false; break; }
+        previousInterval = interval;
+    }
+    Check(intervalMonotonicOk, "IntervalForRetention 随 retention 严格递减");
+
+    // 只在「反解结果不会被 S_MAX=36500 上限截断」的区间内断言往返：
+    // fsrs-rs 的 next_interval_scalar 本身也 clamp 到 [0, S_MAX]，被截断时 R(I) > r 属预期边界（下一行单独锁定）。
+    var roundTripOk = true;
+    var roundTripDetail = "";
+    var roundTripCases = 0;
+    foreach (var retention in new[] { 0.75, 0.80, 0.85, 0.90, 0.95, 0.97 })
+    {
+        foreach (var stability in new[] { 0.001, 0.212, 2.3065, 37.0, 500.0 })
+        {
+            roundTripCases++;
+            var interval = Fsrs6Model.IntervalForRetention(stability, retention);
+            var back = Fsrs6Model.Retrievability(stability, interval);
+            if (Math.Abs(back - retention) > 1e-6)
+            {
+                roundTripOk = false;
+                roundTripDetail += $" S={stability:R},r={retention}: R(I)={back:R};";
+            }
+        }
+    }
+    Check(roundTripOk, $"R(S, I(S,r)) ≈ r（容差 1e-6，{roundTripCases} 组）" + roundTripDetail);
+    Check(Fsrs6Model.IntervalForRetention(36500.0, 0.75) == SchedulingConfig.StabilityMax &&
+        Fsrs6Model.Retrievability(36500.0, SchedulingConfig.StabilityMax) is > 0.899999 and < 0.900001,
+        "S=36500 且 r<0.9 时反解超上界，按 fsrs-rs next_interval_scalar 截断到 S_MAX（此时 R(I) > r，属预期边界）");
+    Check(Fsrs6Model.Retrievability(2.3065, Fsrs6Model.IntervalForRetention(2.3065, SchedulingConfig.DesiredRetention)) is > 0.899999 and < 0.900001,
+        "R(S, IntervalForRetention(S, 0.90)) ≈ 0.90（生产 DesiredRetention）");
+
+    // —— 任务 4(e)：合法性与 S0/D0 数值 ——
+    Check(Fsrs6Model.InitialStability(fsrsW).SequenceEqual([0.212, 1.2931, 2.3065, 8.2956]),
+        "S0(Again/Hard/Good/Easy) = [0.212, 1.2931, 2.3065, 8.2956]（audit §3.2 ③ 实测值）");
+    var fsrsD0 = new[] { 1, 2, 3, 4 }.Select(r => Fsrs6Model.InitialDifficulty(fsrsW, r)).ToArray();
+    Check(Math.Abs(fsrsD0[0] - 6.4133) < 1e-12 && Math.Abs(fsrsD0[1] - 5.112170705601055) < 1e-9 &&
+        Math.Abs(fsrsD0[2] - 2.118103970459015) < 1e-9 && fsrsD0[3] == 1.0,
+        "D0 对外值 = [6.4133, 5.112170705601055, 2.118103970459015, 1.0]（D0(4) 已 clamp）");
+    var fsrsD0Raw4 = Fsrs6Model.InitialDifficultyRaw(fsrsW, Fsrs6Model.RatingEasy);
+    Check(Math.Abs(fsrsD0Raw4 - (-4.771630703161737)) < 1e-9,
+        $"§10 硬性要求 1：D0(4) 未截断值 = {fsrsD0Raw4:R}（均值回归用它，对外才 clamp）");
+    var fsrsMeanReversion = Fsrs6Model.NextDifficulty(fsrsW, 5.0, Fsrs6Model.RatingGood);
+    var fsrsWithClampedTarget = fsrsW[7] * 1.0 + (1.0 - fsrsW[7]) * (5.0 + (10.0 - 5.0) * (-(fsrsW[6] * 0)) / 9.0);
+    Check(Math.Abs(fsrsMeanReversion - fsrsWithClampedTarget) > 1e-6,
+        $"均值回归确实使用未截断的 D0(4)（正确={fsrsMeanReversion:R}，若误用 clamp 后的 1.0 会得到 {fsrsWithClampedTarget:R}）");
+
+    var fsrsRangeOk = true;
+    var fsrsRangeDetail = "";
+    foreach (var rating in new[] { 1, 2, 3, 4 })
+    {
+        var s = Fsrs6Model.InitialStability(fsrsW)[rating - 1];
+        var d = Fsrs6Model.InitialDifficulty(fsrsW, rating);
+        for (var step = 0; step < 40; step++)
+        {
+            var r = Fsrs6Model.Retrievability(s, step % 5 == 0 ? 0 : 1 + step * 3);
+            var g = (step * 7 + rating) % 4 + 1;
+            var useShortTerm = step % 5 == 0;
+            s = useShortTerm ? Fsrs6Model.ShortTermStability(fsrsW, s, g)
+                : g == Fsrs6Model.RatingAgain ? Fsrs6Model.NextStabilityFailure(fsrsW, d, s, r)
+                : Fsrs6Model.NextStabilitySuccess(fsrsW, d, s, r, g);
+            s = Fsrs6Model.ClampStability(s);
+            d = Fsrs6Model.NextDifficulty(fsrsW, d, g);
+            if (!(MemoryScheduler.IsFinite(s) && s >= SchedulingConfig.StabilityMin && s <= SchedulingConfig.StabilityMax))
+            { fsrsRangeOk = false; fsrsRangeDetail += $" S={s:R}@rating{rating}/step{step};"; }
+            if (!(MemoryScheduler.IsFinite(d) && d is >= 1.0 and <= 10.0))
+            { fsrsRangeOk = false; fsrsRangeDetail += $" D={d:R}@rating{rating}/step{step};"; }
+        }
+    }
+    Check(fsrsRangeOk, "160 步混合推进后 S 恒在 [0.001, 36500]、D 恒在 [1,10]" + fsrsRangeDetail);
+
+    // —— 任务 4(f)：时间轴整数化（§6.2 记录的坑） ——
+    var fsrsAxisStart = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+    Check(Fsrs6Model.ElapsedWholeDays(fsrsAxisStart, fsrsAxisStart.AddDays(3.875)) == 3 &&
+        Fsrs6Model.ElapsedWholeDays(fsrsAxisStart, fsrsAxisStart.AddDays(10.58)) == 10 &&
+        Fsrs6Model.ElapsedWholeDays(fsrsAxisStart, fsrsAxisStart.AddMinutes(600)) == 0,
+        "小数日一律整天截断（3.875→3、10.58→10、600s→0），不四舍五入");
+    Check(Fsrs6Model.ElapsedWholeDays(fsrsAxisStart, fsrsAxisStart.AddTicks(3 * TimeSpan.TicksPerDay - 1)) == 2 &&
+        Fsrs6Model.ElapsedWholeDays(fsrsAxisStart, fsrsAxisStart.AddTicks(3 * TimeSpan.TicksPerDay)) == 3,
+        "整天边界按整数 ticks 判定：差 1 tick 即为 2 天，恰好 3 天即为 3 天");
+    var fsrsAccumulated = fsrsAxisStart;
+    for (var i = 0; i < 720; i++) fsrsAccumulated = fsrsAccumulated.AddHours(0.1);
+    double fsrsFloatDays = 0;
+    for (var i = 0; i < 720; i++) fsrsFloatDays += 0.1 / 24.0;
+    Console.WriteLine($"INFO: 720×0.1h 累加 → 整数 ticks 口径 {(fsrsAccumulated - fsrsAxisStart).Ticks / (double)TimeSpan.TicksPerDay:R} 天" +
+        $"（ElapsedWholeDays={Fsrs6Model.ElapsedWholeDays(fsrsAxisStart, fsrsAccumulated)}）；" +
+        $"同一条时间轴若按浮点「天」累加 = {fsrsFloatDays:R} 天（≠ 3）");
+    Check(Fsrs6Model.ElapsedWholeDays(fsrsAxisStart, fsrsAccumulated) == 3 && fsrsFloatDays != 3.0,
+        "720×0.1h 累加后整数 ticks 口径恰好得到 3 天，而浮点「天」累加已漂移（§6.2 的坑，故实现禁用浮点天累加）");
+
+    // 端到端：3.875 天的间隔必须按 3 天参与 R 计算（截断而非四舍五入、也不保留小数）
+    var fsrsTruncCard = new FsrsCardState
+    {
+        WordKey = "archive:truncate", Stability = 20.0, Difficulty = 5.0, Reps = 1, State = FsrsState.Review,
+        LastReviewAtUtc = fsrsAxisStart, NextReviewAtUtc = fsrsAxisStart.AddDays(20),
+    };
+    var fsrsTruncOutcome = fsrsScheduler.Review(fsrsTruncCard, StudyRating.Known, fsrsAxisStart.AddDays(3.875));
+    Check(fsrsTruncOutcome.BaselineRetrievability == Fsrs6Model.Retrievability(20.0, 3) &&
+        fsrsTruncOutcome.BaselineRetrievability != Fsrs6Model.Retrievability(20.0, 4) &&
+        fsrsTruncOutcome.BaselineRetrievability != Fsrs6Model.Retrievability(20.0, 3.875),
+        "端到端：3.875 天的间隔在排期器里按 3 整天参与 R 计算（既不四舍五入到 4，也不保留小数）");
+    var fsrsAxisScenario = fsrsScenarios.Single(s => s.Name == "learn_graduate_integral");
+    var fsrsAxisNow = fsrsStart;
+    DateTime? fsrsAxisLast = null;
+    var fsrsAxisElapsed = new List<long>();
+    foreach (var step in fsrsAxisScenario.Steps)
+    {
+        fsrsAxisNow = fsrsAxisNow.AddHours(step.Hours);
+        if (fsrsAxisLast is { } fsrsAxisPrevious) fsrsAxisElapsed.Add(Fsrs6Model.ElapsedWholeDays(fsrsAxisPrevious, fsrsAxisNow));
+        fsrsAxisLast = fsrsAxisNow;
+    }
+    Check(fsrsAxisElapsed.SequenceEqual([0L, 1L, 3L, 10L, 30L]),
+        "golden 场景 learn_graduate_integral 的整数天序列 = [0,1,3,10,30]（首行是初始化，无 elapsed）");
+
+    // —— 任务 4(g)：纯函数 / 不修改入参 / 结果可复现 ——
+    var fsrsPureCard = new FsrsCardState
+    {
+        WordKey = "archive:pure", Difficulty = 5.5, Stability = 9.0, Reps = 4, Lapses = 1,
+        State = FsrsState.Review, LastAppliedCanonicalSeq = 42,
+        LastReviewAtUtc = new DateTime(2026, 2, 1, 9, 0, 0, DateTimeKind.Utc),
+        NextReviewAtUtc = new DateTime(2026, 2, 10, 9, 0, 0, DateTimeKind.Utc),
+        LastCanonicalRating = StudyRating.Known,
+    };
+    var fsrsPureBefore = fsrsPureCard.Clone();
+    var fsrsPureAt = new DateTime(2026, 2, 12, 9, 0, 0, DateTimeKind.Utc);
+    var first = fsrsScheduler.Review(fsrsPureCard, StudyRating.Unsure, fsrsPureAt);
+    var second = fsrsScheduler.Review(fsrsPureCard, StudyRating.Unsure, fsrsPureAt);
+    Check(fsrsPureCard.Difficulty == fsrsPureBefore.Difficulty && fsrsPureCard.Stability == fsrsPureBefore.Stability &&
+        fsrsPureCard.Reps == fsrsPureBefore.Reps && fsrsPureCard.State == fsrsPureBefore.State &&
+        fsrsPureCard.NextReviewAtUtc == fsrsPureBefore.NextReviewAtUtc &&
+        fsrsPureCard.LastCanonicalRating == fsrsPureBefore.LastCanonicalRating,
+        "Review 不修改入参 card");
+    Check(!ReferenceEquals(first.Card, fsrsPureCard) && !ReferenceEquals(first.Card, second.Card),
+        "Review 返回全新卡片对象（不复用入参、不复用上一次结果）");
+    Check(first.Card.Stability == second.Card.Stability && first.Card.Difficulty == second.Card.Difficulty &&
+        first.Card.NextReviewAtUtc == second.Card.NextReviewAtUtc &&
+        first.BaselineIntervalDays == second.BaselineIntervalDays &&
+        first.BaselineRetrievability == second.BaselineRetrievability &&
+        first.BaselineDueAtUtc == second.BaselineDueAtUtc && first.Card.State == second.Card.State &&
+        first.Card.Reps == second.Card.Reps && first.Card.Lapses == second.Card.Lapses,
+        "同输入调两次逐字段完全一致（幂等/纯函数）");
+    Check(first.Card.WordKey == "archive:pure" && first.Card.LastAppliedCanonicalSeq == 42,
+        "Review 不改写 WordKey 与 LastAppliedCanonicalSeq（持久化层的身份与幂等水位）");
+
+    // —— 生产路径：初始化 / 状态映射 / 版本戳 / 最小间隔 / 时钟注入 ——
+    var fsrsNewAt = new DateTime(2026, 5, 1, 10, 0, 0, DateTimeKind.Utc);
+    var fsrsNewKnown = fsrsScheduler.Review(null, StudyRating.Known, fsrsNewAt);
+    Check(fsrsNewKnown.Card.State == FsrsState.Review && fsrsNewKnown.Card.Reps == 1 && fsrsNewKnown.Card.Lapses == 0 &&
+        fsrsNewKnown.Card.Stability == 2.3065 && Math.Abs(fsrsNewKnown.Card.Difficulty - 2.118103970459015) < 1e-9 &&
+        fsrsNewKnown.Card.WordKey == "",
+        "新卡 Known：State=Review、Reps=1、Lapses=0、S=S0(Good)=2.3065、D=D0(Good)");
+    Check(Math.Abs(fsrsNewKnown.BaselineIntervalDays - 2.3065) < 1e-12 &&
+        fsrsNewKnown.Card.NextReviewAtUtc == fsrsNewAt.AddDays(2.3065) &&
+        fsrsNewKnown.Card.NextReviewAtUtc!.Value.Kind == DateTimeKind.Utc &&
+        fsrsNewKnown.BaselineDueAtUtc == fsrsNewKnown.Card.NextReviewAtUtc,
+        "新卡 Known：基线间隔 = I(S0,0.90) = S0 = 2.3065 天，NextReviewAtUtc == BaselineDueAtUtc 且为 UTC");
+    Check(fsrsNewKnown.BaselineRetrievability == 1.0,
+        "初始化时 BaselineRetrievability 约定为 1.0（无上一次复习，R 不参与任何公式）");
+
+    var fsrsNewForgot = fsrsScheduler.Review(null, StudyRating.Forgot, fsrsNewAt);
+    var fsrsNewUnsure = fsrsScheduler.Review(null, StudyRating.Unsure, fsrsNewAt);
+    Check(fsrsNewForgot.Card.State == FsrsState.Relearning && fsrsNewForgot.Card.Lapses == 1 &&
+        fsrsNewUnsure.Card.State == FsrsState.Learning && fsrsNewUnsure.Card.Lapses == 0,
+        "新卡 Forgot→Relearning(Lapses=1)、Unsure→Learning(Lapses=0)");
+    Check(fsrsNewForgot.Card.Stability == 0.212 && fsrsNewForgot.BaselineIntervalDays == SchedulingConfig.MinimumIntervalDays,
+        "新卡 Forgot：S=S0(Again)=0.212，基线间隔被既有 ApplyMinimumInterval 抬到 1 天上限（0.212→1.0）");
+    Check(fsrsNewKnown.Card.FsrsAlgorithmVersion == SchedulingConfig.AlgorithmVersion &&
+        fsrsNewKnown.Card.FsrsLibraryVersion == SchedulingConfig.LibraryVersion &&
+        fsrsNewKnown.Card.FsrsParameterVersion == SchedulingConfig.ParameterVersion &&
+        fsrsNewKnown.Card.LastCanonicalRating == StudyRating.Known &&
+        fsrsNewKnown.Card.LastReviewAtUtc == fsrsNewAt,
+        "三个版本戳 + LastCanonicalRating + LastReviewAtUtc 全部写入");
+
+    var fsrsClock = new DateTime(2031, 7, 4, 6, 30, 0, DateTimeKind.Utc);
+    var fsrsClockScheduler = new Fsrs6Scheduler(fsrsWeights, () => fsrsClock);
+    var fsrsClockOutcome = fsrsClockScheduler.ReviewAtNow(null, StudyRating.Known);
+    Check(fsrsClockScheduler.UtcNow == fsrsClock && fsrsClockOutcome.Card.LastReviewAtUtc == fsrsClock &&
+        fsrsClockOutcome.Card.NextReviewAtUtc == fsrsClock.AddDays(2.3065),
+        "注入时钟生效：ReviewAtNow 以注入的 UTC 时刻为基准（Review 本身不读时钟）");
+
+    // —— 失败模式：非法卡片状态必须抛 InvalidOperationException，不静默返回垃圾值 ——
+    int fsrsThrew = 0;
+    foreach (var broken in new[]
+    {
+        new FsrsCardState { WordKey = "archive:x", State = FsrsState.Review, Stability = 0, Difficulty = 5 },
+        new FsrsCardState { WordKey = "archive:x", State = FsrsState.Review, Stability = double.NaN, Difficulty = 5 },
+        new FsrsCardState { WordKey = "archive:x", State = FsrsState.Review, Stability = 5, Difficulty = 0 },
+        new FsrsCardState { WordKey = "archive:x", State = FsrsState.Review, Stability = 5, Difficulty = 11 },
+    })
+    {
+        try { fsrsScheduler.Review(broken, StudyRating.Known, fsrsNewAt); }
+        catch (InvalidOperationException) { fsrsThrew++; }
+    }
+    Check(fsrsThrew == 4, $"4 种非法卡片状态（S=0/NaN、D=0/11）全部抛 InvalidOperationException（{fsrsThrew}/4）");
+
+    // —— 生产排期器的 R / I 接口与模型口径一致 ——
+    Check(fsrsScheduler.Retrievability(10.0, 10.0) is > 0.899999 and < 0.900001 &&
+        fsrsScheduler.IntervalForRetention(10.0, 0.9) is > 9.999999 and < 10.000001,
+        "IMemoryScheduler.Retrievability / IntervalForRetention 与 §3.2 ①② 公式一致（R(S,S)=0.9）");
+}
+
 Console.WriteLine("All learning tests passed.");

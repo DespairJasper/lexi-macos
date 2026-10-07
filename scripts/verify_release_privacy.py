@@ -3,7 +3,6 @@
 import argparse
 import ctypes
 import ctypes.util
-import json
 import os
 from pathlib import Path
 import socket
@@ -52,14 +51,18 @@ for setting in ("ComputerName", "LocalHostName"):
     result = subprocess.run(["/usr/sbin/scutil", "--get", setting], capture_output=True, text=True)
     if result.returncode == 0 and result.stdout.strip():
         local_values.add(result.stdout.strip())
-database = Path.home() / "Library/Application Support/Lexi/vocab.sqlite3"
+data_override = os.environ.get("LEXI_DATA_DIR")
+data_root = Path(data_override).expanduser() if data_override else Path.home() / "Library/Application Support/Lexi"
+database = data_root / "vocab.sqlite3"
 if database.exists():
     with sqlite3.connect(f"file:{database}?mode=ro", uri=True) as connection:
-        row = connection.execute("SELECT settings_json FROM app_settings WHERE id=1").fetchone()
+        row = connection.execute(
+            "SELECT json_extract(settings_json, '$.Provider'), "
+            "json_extract(settings_json, '$.BaseUrl') FROM app_settings WHERE id=1"
+        ).fetchone()
         if row:
-            settings = json.loads(row[0])
-            if settings.get("Provider") == "custom":
-                endpoint = settings.get("BaseUrl", "")
+            if row[0] == "custom":
+                endpoint = row[1] or ""
                 local_values.update(filter(None, (endpoint, urlsplit(endpoint).hostname)))
 patterns = [b"sk-relay-", b"-----BEGIN PRIVATE KEY-----", b"-----BEGIN RSA PRIVATE KEY-----"]
 for value in local_values:

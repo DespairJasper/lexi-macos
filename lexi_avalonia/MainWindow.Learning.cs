@@ -228,6 +228,15 @@ public partial class MainWindow
         ++_focusEpoch;
         _focusDeck = deck;
         _focusRound.Reset(deck, word => FindArchive(word) == null);
+        // 「本轮新词」必须在 Reset 的同一时刻捕获（规格书 §9.2）：轮中 AddCurrentWordToVocab 之后
+        // FindArchive 会返回非 null，事后重算会把新词误判成复习词。
+        _focusNewWords.Clear();
+        foreach (var word in deck)
+        {
+            // 词形一律先归一化（与 WordKeyResolver 的查表口径一致，评审 P1-5）。
+            var normalized = WordKeyResolver.FormC(word);
+            if (FindArchive(normalized) == null) _focusNewWords.Add(normalized);
+        }
         _focusUndo.Clear();
         ResetFocusAnswer();
         LookupPageHost.RowDefinitions = new RowDefinitions("Auto,*,Auto");
@@ -237,6 +246,7 @@ public partial class MainWindow
         PaintFocusStreak(_focusRound.CurrentStreak, _focusRound.CurrentTarget, animateNewest: false);
         if (_focusRound.HasCurrent && _focusRound.CurrentStep == StudyStep.Learn) ShowFocusLearnAnswer();
         else RefreshFocusLearningLabels();
+        MemoryPresentFocusCard();
         SpeakFocusedWord();
     }
 
@@ -349,6 +359,7 @@ public partial class MainWindow
             || _focusRound.CurrentStep != StudyStep.Learn) return Task.CompletedTask;
         if (_planCardActive) _planLearningSession!.CompleteLearn();
         else _focusRound.CompleteLearn();
+        MemorySaveRound();
         _focusRated = false;
         ResetFocusAnswer();
         return AdvanceFocusCardAsync();
@@ -372,9 +383,11 @@ public partial class MainWindow
             _focusRated = false;
             if (_focusRound.IsFinished)
             {
-                if (_planCardActive) { FinishPlanCardRound(); return; }
+                if (_planCardActive) { FinishPlanCardRound(); MemoryTryTrainContext("计划轮结束"); return; }
                 // 最后一个词评完仍保留释义与轮次统计，按「完成」才收起按钮。
                 StopLearningSpeech(); RefreshFocusLearningLabels();
+                // 一轮结束（T1 触发时机 ②）：只做一次资格检查，真正训练与否由冷却与样本门槛决定。
+                MemoryTryTrainContext("单词卡轮结束");
                 return;
             }
             var epoch = _focusEpoch;
@@ -416,6 +429,7 @@ public partial class MainWindow
     /// <summary>一次回忆评价：认识出队，模糊/忘记回到本轮队尾，忘记在首次学习里回到学习卡。</summary>
     private async Task RateFocusedWordAsync(StudyRating rating)
     {
+        if (MemoryTryCompletePending()) return;
         if (!_wordFocusActive || !FocusCanNavigate || _focusRatingBusy || _focusRated
             || !_focusRound.HasCurrent || _focusRound.CurrentStep != StudyStep.Recall) return;
         if (_planCardActive) { await RatePlanFocusedWordAsync(rating); return; }
@@ -423,15 +437,21 @@ public partial class MainWindow
         string? error = null;
         var word = _focusRound.Current;
         var step = _focusRound.CurrentStep;
+        // StudyRound 要到 Commit() 之后才更新连击：作答前的连击必须在提交前取（规格书 §2）。
+        var recognitionBefore = _focusRound.CurrentStreak;
+        var checkpoint = _focusRound.CaptureCheckpoint();
         var result = _focusRound.Commit(rating);
         try
         {
+            var focusIdentity = MemoryFocusIdentity(word);
+            MemoryRated(MemorySurface.Focus, focusIdentity, rating, recognitionBefore, result.Streak,
+                result.Completed ? MemoryFocusCommitMode(word) : null);
             var catalogWord = _wordFocusSnapshot?.Page == "ielts" ? _ieltsCatalog?.Find(word) : null;
             if (FindArchive(word) == null && catalogWord != null)
             {
                 // 只在词表里认词时不自动建立个人档案；模糊/忘记记入错词本。
                 if (rating != StudyRating.Known) _learningProgress.Errors.Add(catalogWord.Id);
-                SaveLearningProgress();
+                // JSON materializes only after the response / canonical journal is durable.
             }
             else
             {
@@ -444,6 +464,12 @@ public partial class MainWindow
                 if (_allWords.Single(x => x.Id == item.Id).Archive.Revision != previousRevision)
                     _focusUndo.Push((item.Id, rating, step));
             }
+            var jsonMutations = catalogWord is not null && FindArchive(word) is null
+                ? new[] { MemoryIeltsSnapshot() } : Array.Empty<PendingMutation>();
+            if (result.Completed) MemoryCommitCard(MemorySurface.Focus, focusIdentity, MemoryFocusCommitMode(word), jsonMutations);
+            else if (jsonMutations.Length > 0) _memoryStore!.EnqueueMutations(jsonMutations);
+            MemoryReplayJournal();
+            MemorySaveRound();
             _focusLastRating = rating;
             _focusRatedWord = word;
             _focusRated = true;
@@ -463,7 +489,27 @@ public partial class MainWindow
         }
         catch (Exception ex)
         {
-            _focusRound.UndoLast();
+            if (MemoryTryPresentedCard(MemorySurface.Focus, MemoryFocusIdentity(word), out var committedCard)
+                && _committedWordKeys.Contains(committedCard.Key.Key)
+                && _memoryStore!.LoadPendingMutations().Count > 0)
+            {
+                _memoryPendingCompletion = () =>
+                {
+                    _focusLastRating = rating; _focusRatedWord = word; _focusRated = true;
+                    _focusShownStreak = result.Streak; _focusShownTarget = result.Target; _focusShownCompleted = result.Completed;
+                    ShowFocusRecallAnswer(); MemorySaveRound(); SetStatus(T("已记下这次重逢。"));
+                };
+                error = T("本次复习未完成，请重试：") + ex.Message;
+                return;
+            }
+            checkpoint.Restore();
+            if (MemoryTryPresentedCard(MemorySurface.Focus, MemoryFocusIdentity(word), out var failedCard))
+                _memory?.OnUndone(failedCard.Key, failedCard.PresentationId);
+            if (_focusUndo.TryPeek(out var undo) && FindArchive(word)?.Id == undo.Id)
+            {
+                _vocabService.UndoLastLearningAction(undo.Id);
+                _focusUndo.Pop(); RefreshWords();
+            }
             error = T("本次复习未完成，请重试：") + ex.Message;
         }
         finally
@@ -475,6 +521,10 @@ public partial class MainWindow
         await Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 写旧列（兼容投影 + 既有界面显示，T4）：与 ApplyReviewRating 同一分工——
+    /// 评分路径保留旧列写入，排期的唯一来源是 fsrs_cards。
+    /// </summary>
     private void ApplyFocusRating(WordItem item, StudyRating rating, bool completed)
     {
         if (rating == StudyRating.Known)
@@ -523,6 +573,8 @@ public partial class MainWindow
                 _focusShownCompleted = false;
                 PaintFocusStreak(forgot.Streak, forgot.Target, animateNewest: true);
             }
+            // 改判：同一 presentation 追加修正事件，presentationId 不变（规格书 §2）。
+            MemoryRevised(MemorySurface.Focus, MemoryFocusIdentity(word), _focusLastRating, StudyRating.Forgot);
             _focusLastRating = StudyRating.Forgot;
             _focusRatedWord = word;
             ShowFocusRecallAnswer();
@@ -578,9 +630,19 @@ public partial class MainWindow
         try
         {
             var previous = _focusUndo.Peek();
-            if (!_vocabService.UndoLastLearningAction(previous.Id)) return;
-            _focusUndo.Pop();
+            var undoneWord = _allWords.FirstOrDefault(w => w.Id == previous.Id);
+            // 长期层是**提交点**（与 UndoReviewFromLearningPage 同一口径）：先撤销持久轨迹并失效
+            // 已定稿的 canonical（规格书 §2 / §4），成功后才改旧列与轮内撤销栈；失败则轮内状态原样回滚。
+            var checkpoint = _focusRound.CaptureCheckpoint();
             _focusRound.UndoLast();
+            if (undoneWord is not null)
+            {
+                try { MemoryUndone(MemorySurface.Focus, MemoryFocusIdentity(undoneWord.Word)); }
+                catch { checkpoint.Restore(); throw; }
+            }
+            _focusUndo.Pop();
+            if (!_vocabService.UndoLastLearningAction(previous.Id))
+                MemoryDiagnostic("撤销：旧列没有可回退的评分日志（id=" + previous.Id + "），长期层撤销已完成。");
             _focusRated = false;
             _focusRatedWord = null;
             RefreshWords(); UpdateReviewBadge();
@@ -608,6 +670,7 @@ public partial class MainWindow
         PaintFocusStreak(_focusRound.CurrentStreak, _focusRound.CurrentTarget, animateNewest: false);
         if (_focusRound.HasCurrent && _focusRound.CurrentStep == StudyStep.Learn) ShowFocusLearnAnswer();
         else RefreshFocusLearningLabels();
+        MemoryPresentFocusCard();
         _focusBackButton!.Focus();
         SpeakFocusedWord();
     }

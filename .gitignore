@@ -1,5 +1,5 @@
 # 本机 SDK、构建与发布产物
-.tools/
+.tools
 dist/
 **/bin/
 **/obj/
@@ -25,6 +25,18 @@ macOS版本历史.md
 *.pem
 signing.json
 vocab.sqlite3
+
+# 个人练习、记忆状态与本机备份；升级沿用应用包外的数据目录
+vocab.sqlite3-*
+vocab.sqlite3.*
+ielts-learning.json
+ielts-learning.json.*
+daily-study-plans.json
+daily-study-plans.json.*
+backups/
+upgrade-backups/
+private-practice-reset-backups/
+private-update-backup*/
 
 # Python 与临时审查缓存
 **/__pycache__/

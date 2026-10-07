@@ -75,17 +75,24 @@ public partial class MainWindow
     private void OpenReviewDeck()
     {
         ++_reviewEpoch;
-        _reviewRound.Reset(GetPendingReviewWords(), StudyMode.Review);
+        var words = GetPendingReviewWords();
+        _reviewRound.Reset(words, StudyMode.Review);
+        // 开轮（规格书 §1）：每个开轮点只开一次会话，随后装填本轮第一张卡。
+        MemoryBeginSession(StudyMode.Review, WordSource.Archive, "", words.Count);
+        MemoryPresentReviewCard();
         RenderReviewCard();
     }
 
     private List<WordItem> GetPendingReviewWords()
     {
         if (_reviewDay != DateTime.Today) { _reviewHandled.Clear(); _reviewDay = DateTime.Today; }
-        var today = DateTime.Today.ToString("yyyy-MM-dd");
-        return _allWords.Where(w => w.Status == "learning" && w.NextReviewDate != null
-            && string.CompareOrdinal(w.NextReviewDate, today) <= 0
-            && (!_reviewHandled.TryGetValue(w.Id, out var handledRevision) || handledRevision != w.Archive.Revision))
+        // 到期资格 = 规格书 §9.1 的并集口径（见 MemoryPendingReviewWords）
+        // + 非档案 source 到期卡（教材 / 词形，见 MemorySourceDueWords）。排序仍是 due 升序、再按 Id。
+        var due = MemoryPendingReviewWords();
+        var sourceDue = MemorySourceDueWords();
+        var queue = sourceDue.Count == 0 ? due : due.Concat(sourceDue).ToList();
+        return queue
+            .Where(w => !_reviewHandled.TryGetValue(w.Id, out var handledRevision) || handledRevision != w.Archive.Revision)
             .OrderBy(w => w.NextReviewDate).ThenBy(w => w.Id).ToList();
     }
 
@@ -209,6 +216,7 @@ public partial class MainWindow
 
     private Task OnReviewRatingAsync(StudyRating rating)
     {
+        if (MemoryTryCompletePending()) return Task.CompletedTask;
         if (_reviewWord == null || _reviewRevealed || _reviewBusy || _restoring || !_databaseAvailable || !FocusCanNavigate)
             return Task.CompletedTask;
         _reviewBusy = true;
@@ -216,9 +224,35 @@ public partial class MainWindow
         try
         {
             var word = _reviewWord;
+            // StudyRound 要到 Commit() 之后才更新连击：作答前的连击必须在提交前取（规格书 §2）。
+            var recognitionBefore = _reviewRound.CurrentStreak;
+            var checkpoint = _reviewRound.CaptureCheckpoint();
             var result = _reviewRound.Commit(rating);
+            try
+            {
             try { ApplyReviewRating(word, rating, result.Completed); }
             catch { _reviewRound.UndoLast(); throw; }
+            // 长期记忆层（旁路）：写在兼容投影之后；失败只降级，不改变上面的轮内状态与下面的提示文案。
+            var reviewIdentity = MemoryReviewIdentity(word);
+            MemoryRated(MemorySurface.Review, reviewIdentity, rating, recognitionBefore, result.Streak,
+                result.Completed ? StudyMode.Review : null);
+            if (result.Completed) MemoryCommitCard(MemorySurface.Review, reviewIdentity, StudyMode.Review);
+            }
+            catch
+            {
+                checkpoint.Restore();
+                if (_reviewUndoWordId == word.Id)
+                {
+                    if (MemoryIsArchiveWord(word)) _vocabService.UndoLastLearningAction(word.Id);
+                    _reviewUndoWordId = null;
+                    RefreshWords();
+                }
+                // Keep the rejected real click in raw history, but remove its standing outcome.
+                if (MemoryTryPresentedCard(MemorySurface.Review, MemoryReviewIdentity(word), out var failedCard))
+                    _memory?.OnUndone(failedCard.Key, failedCard.PresentationId);
+                throw;
+            }
+            MemorySaveRound();
             _reviewLastRating = rating;
             _reviewShownStreak = result.Streak;
             _reviewShownTarget = result.Target;
@@ -243,17 +277,27 @@ public partial class MainWindow
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// 写旧列：stage / status / next_review_date 是**兼容投影 + 既有界面显示**（T4）。
+    /// 评分路径保留这些调用——既有 UI 与既有 UI 测试都依赖它们；但排期的唯一来源是 fsrs_cards：
+    /// 一旦该词有了 FSRS 卡，旧列（含 MarkUnsure / MarkForgot / ExecuteBatch("review")）就不再决定 due。
+    /// </summary>
     private void ApplyReviewRating(WordItem word, StudyRating rating, bool completed)
     {
         _reviewUndoWordId = null;
-        if (rating == StudyRating.Known)
+        // 兼容投影只写档案词：教材/词形临时卡没有 words 行，负 id 打到档案上只会污染无关数据。
+        // 它们的排期完全由长期记忆层的 FSRS 卡承担（规格书 §5）。
+        if (MemoryIsArchiveWord(word))
         {
-            // 中间的认识只累计连击，只有本轮真正完成时才推进一次调度。
-            if (!completed) return;
-            _vocabService.ExecuteBatch([word.Id], "review");
+            if (rating == StudyRating.Known)
+            {
+                // 中间的认识只累计连击，只有本轮真正完成时才推进一次调度。
+                if (!completed) return;
+                _vocabService.ExecuteBatch([word.Id], "review");
+            }
+            else if (rating == StudyRating.Unsure) _vocabService.MarkUnsure(word.Id);
+            else _vocabService.MarkForgot(word.Id);
         }
-        else if (rating == StudyRating.Unsure) _vocabService.MarkUnsure(word.Id);
-        else _vocabService.MarkForgot(word.Id);
         _reviewUndoWordId = word.Id;
         RefreshWords();
         UpdateReviewBadge();
@@ -275,17 +319,20 @@ public partial class MainWindow
         {
             if (!ReduceMotionBox.IsChecked.GetValueOrDefault() && _currentPage == "review")
                 await MoveReviewCardAsync(epoch, 0, -14, entering: false);
-            if (epoch == _reviewEpoch && _currentPage == "review") RenderReviewCard();
+            if (epoch == _reviewEpoch && _currentPage == "review") { MemoryPresentReviewCard(); RenderReviewCard(); }
+            // 一轮结束（T1 触发时机 ②）：只做一次资格检查，真正训练与否由冷却与样本门槛决定。
+            MemoryTryTrainContext("复习轮结束");
             return;
         }
         if (!ReduceMotionBox.IsChecked.GetValueOrDefault() && _currentPage == "review")
         {
             if (!await MoveReviewCardAsync(epoch, 0, -14, entering: false)) return;
+            MemoryPresentReviewCard();
             RenderReviewCard(resetPose: false);
             if (!await MoveReviewCardAsync(epoch, 14, 0, entering: true)) return;
             SetReviewPose(0, 1);
         }
-        else if (epoch == _reviewEpoch) RenderReviewCard();
+        else if (epoch == _reviewEpoch) { MemoryPresentReviewCard(); RenderReviewCard(); }
     }
 
     private Task ReclassifyReviewAsync()
@@ -296,9 +343,12 @@ public partial class MainWindow
         try
         {
             var word = _reviewWord;
-            if (_reviewUndoWordId == word.Id && !_vocabService.UndoLastLearningAction(word.Id))
-                return Task.CompletedTask;
-            _vocabService.MarkForgot(word.Id);
+            if (MemoryIsArchiveWord(word))
+            {
+                if (_reviewUndoWordId == word.Id && !_vocabService.UndoLastLearningAction(word.Id))
+                    return Task.CompletedTask;
+                _vocabService.MarkForgot(word.Id);
+            }
             _reviewUndoWordId = word.Id;
             _reviewRound.UndoLast();
             if (_reviewRound.HasCurrent)
@@ -308,6 +358,8 @@ public partial class MainWindow
                 _reviewShownTarget = forgot.Target;
                 _reviewCompleted = false;
             }
+            // 改判：在同一 presentation 上追加一条修正事件，presentationId 保持不变（规格书 §2）。
+            MemoryRevised(MemorySurface.Review, MemoryReviewIdentity(word), _reviewLastRating, StudyRating.Forgot);
             _reviewLastRating = StudyRating.Forgot;
             RefreshWords();
             RevealReviewAnswer();
@@ -321,16 +373,36 @@ public partial class MainWindow
 
     private void UndoReviewFromLearningPage()
     {
-        if (_reviewBusy || !_reviewRound.CanUndo || !FocusCanNavigate) return;
+        // 必须"有明确的被撤销词"才动手：重启恢复出来的轮里 _reviewUndoWordId 是空的（它只在内存里），
+        // 而 _reviewRound.CanUndo 可能是 true；此时若继续，撤销会落到"当前显示的卡"上——
+        // 那可能根本不是刚被评分的那个词（按钮此时也是禁用的，键盘路径必须与它一致）。
+        if (_reviewBusy || _reviewUndoWordId is null || !_reviewRound.CanUndo || !FocusCanNavigate) return;
         try
         {
-            if (_reviewUndoWordId is { } id)
+            var undoId = _reviewUndoWordId;
+            // source 临时卡不在 _allWords 里，必须走登记表解析，否则撤销会静默跳过长期层。
+            var undoneWord = MemoryReviewWordByIdentity(undoId);
+            // 长期层是**提交点**：先撤销持久轨迹（Undone 事件）并失效已定稿的 canonical（规格书 §2 / §4），
+            // 它成功之后才改旧列与轮内撤销记录。顺序反过来的话，旧列和轮先变化而长期层写失败时，
+            // 界面已经"撤销成功"却没有失效 canonical；而且旧列的撤销快照已被消耗，重试只会静默什么都不做。
+            var checkpoint = _reviewRound.CaptureCheckpoint();
+            _reviewRound.UndoLast();
+            if (undoneWord is not null)
             {
-                if (!_vocabService.UndoLastLearningAction(id)) return;
+                try { MemoryUndone(MemorySurface.Review, MemoryReviewIdentity(undoneWord)); }
+                catch { checkpoint.Restore(); throw; }
+            }
+            if (undoId is { } id)
+            {
+                // 长期层已经撤销；旧列只是兼容投影。返回 false 表示没有可回退的评分日志（异常状态），
+                // 记诊断但不谎报撤销失败——canonical 已经按用户意图失效。
+                if (MemoryIsArchiveWord(undoneWord) && !_vocabService.UndoLastLearningAction(id))
+                    MemoryDiagnostic("撤销：旧列没有可回退的评分日志（id=" + id + "），长期层撤销已完成。");
                 _reviewHandled.Remove(id);
             }
             _reviewUndoWordId = null;
-            _reviewRound.UndoLast();
+            // 撤销后这张卡重新装填：作为一次新的呈现（旧的呈现已被 Undone 清空，不再产生 canonical）。
+            MemoryPresentReviewCard();
             RefreshWords(); RenderReviewCard();
         }
         catch (Exception ex) { ReviewHintText.Text = T("撤销失败：") + ex.Message; }
@@ -343,13 +415,17 @@ public partial class MainWindow
         try
         {
             var word = _reviewWord;
-            _vocabService.ExecuteBatch([word.Id], "master");
+            // source 临时卡没有档案行：只把这张卡在本轮出队（不出队就会立刻又被装填回来）。
+            if (MemoryIsArchiveWord(word)) _vocabService.ExecuteBatch([word.Id], "master");
             _reviewUndoWordId = word.Id;
             RefreshWords();
             var updated = _allWords.FirstOrDefault(w => w.Id == word.Id);
-            if (updated != null) _reviewHandled[word.Id] = updated.Archive.Revision;
+            _reviewHandled[word.Id] = (updated ?? word).Archive.Revision;
             if (!_reviewRevealed && _reviewRound.HasCurrent && _reviewRound.CurrentStep == StudyStep.Recall)
                 _reviewRound.CompleteCurrent();
+            // 出队改了轮内状态，必须立刻落盘：否则重启时持久 checkpoint 还描述着"掌握前"的轮，
+            // 会把已经掌握出队的卡又装回来。
+            MemorySaveRound();
             UpdateReviewBadge();
             await AdvanceReviewCoreAsync();
         }

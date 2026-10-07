@@ -52,7 +52,7 @@ public sealed partial class VocabularyService
             checkCmd.Transaction = tx;
             checkCmd.CommandText = "CREATE TABLE IF NOT EXISTS schema_migrations (version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL); SELECT COALESCE(MAX(version),0) FROM schema_migrations;";
             var version = Convert.ToInt32(checkCmd.ExecuteScalar());
-            if (version > 1) throw new InvalidDataException("词库来自更新版本，当前版本无法写入。");
+            if (version > 2) throw new InvalidDataException("词库来自更新版本，当前版本无法写入。");
             if (version == 1)
             {
                 InstallArchiveRevisionTrigger(tx);

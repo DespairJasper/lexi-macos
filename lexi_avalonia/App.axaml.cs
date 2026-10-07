@@ -43,7 +43,7 @@ public partial class App : Application
             {
                 if (!mainWindow.IsRestoring) mainWindow.PrepareForApplicationShutdown();
             };
-            if (Environment.GetCommandLineArgs().Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test"))
+            if (Environment.GetCommandLineArgs().Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test" or "--recovery-restart-a" or "--recovery-restart-b"))
             {
                 var started = false;
                 mainWindow.Opened += async (_, _) =>
@@ -56,6 +56,9 @@ public partial class App : Application
                     else if (Environment.GetCommandLineArgs().Contains("--focus-test")) await FocusUiTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--language-test")) await LanguageTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--visual-test")) await VisualAcceptanceTests.RunAsync(mainWindow);
+                    // 双进程重启恢复：A 写现场后进程退出，B 是另一次启动，只凭磁盘断言恢复结果。
+                    else if (Environment.GetCommandLineArgs().Contains("--recovery-restart-a")) await MemoryRestartTests.RunPhaseAAsync(mainWindow);
+                    else if (Environment.GetCommandLineArgs().Contains("--recovery-restart-b")) await MemoryRestartTests.RunPhaseBAsync(mainWindow);
                     else await UiSmokeTests.RunAsync(mainWindow);
                 };
             }
@@ -151,7 +154,7 @@ public partial class App : Application
 
     // Self-test, smoke and visual runs must never raise a system permission dialog.
     private static bool IsAutomatedTestRun() =>
-        Environment.GetCommandLineArgs().Any(a => a is "--self-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test" or "--media-test");
+        Environment.GetCommandLineArgs().Any(a => a is "--self-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test" or "--media-test" or "--recovery-restart-a" or "--recovery-restart-b");
 
     public void ToggleMainWindow()
     {

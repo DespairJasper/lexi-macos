@@ -72,6 +72,7 @@ public partial class MainWindow : Window
         ConfigureGlassAppearance();
         LoadSettingsToUi();
         ConfigureWordFocus();
+        ConfigureLearningMemory();
         RefreshWords();
         ConfigureLearningPages();
 
@@ -226,6 +227,8 @@ public partial class MainWindow : Window
     internal void PrepareForApplicationShutdown()
     {
         if (_isForceClose) return;
+        MemoryCancelParameters();
+        MemoryCancelContextTraining();
         StopLearningSpeech();
         _aiCts?.Cancel();
         _lookupAiCts?.Cancel();
@@ -302,6 +305,7 @@ public partial class MainWindow : Window
         var previousPage = _currentPage;
         _currentPage = page;
         _isReviewMode = false; // Review deck owns its queue; archive filters never change it.
+        if (!_wordFocusActive) MemoryFocusSurfaceExited(); // 离开卡片表面：下一次进入重新开学习会话
 
         NavLookup.Classes.Set("active", page == "lookup");
         NavVocab.Classes.Set("active", page == "vocab");
@@ -860,14 +864,15 @@ public partial class MainWindow : Window
         var statusIndex = VocabStatusFilter.SelectedIndex; // 0: 全部, 1: 学习中, 2: 已掌握
         var identity = $"{_isReviewMode}|{statusIndex}|{q}";
         if (identity != _filterIdentity) { _vocabPage = 0; _filterIdentity = identity; ResetVocabScroll(); }
-        var today = DateTime.Today.ToString("yyyy-MM-dd");
+        // 复习模式与复习页共用同一个到期集合（规格书 §9.1：两处必须成对改成同一口径）。
+        var reviewDueIds = _isReviewMode ? MemoryDueWordIds() : null;
 
         var filtered = _allWords.Where(w =>
         {
             if (_isReviewMode)
             {
-                // Review mode: only learning words due today or overdue
-                if (w.Status != "learning" || w.NextReviewDate == null || string.Compare(w.NextReviewDate, today) > 0)
+                // Review mode: the same due set as the review deck (FSRS due ∪ legacy-due words without a card)
+                if (reviewDueIds is null || !reviewDueIds.Contains(w.Id))
                 {
                     return false;
                 }
@@ -1001,6 +1006,9 @@ public partial class MainWindow : Window
         try
         {
             _vocabService.ExecuteBatch(ids, action, stage);
+            // 手动「完成本次复习」是显式覆盖：让已有 FSRS 卡的词也真的动起来。
+            // （§6 禁止的是**评分路径**覆盖 due，手动管理动作不受此限。）
+            if (action == "review") (_vocabService as VocabularyService)?.SyncManualReviewDue(ids);
             RefreshWords();
             SetStatus(TF($"已批量操作 {ids.Count} 个单词。"));
         }

@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Lexi</AssemblyName><RootNamespace>Lexi</RootNamespace>
-    <Version>3.0.4</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <Version>3.1.1</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
     <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <EnableDefaultItems>true</EnableDefaultItems>
@@ -23,7 +23,30 @@
     <Content Include="Assets/Typing/**" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Assets/dictionary.sqlite3" CopyToOutputDirectory="PreserveNewest" />
     <Content Include="Notices/**" CopyToOutputDirectory="PreserveNewest" />
-    <Compile Remove="publish/**;tests/**;Core/**;Domain/**;Application/**;Infrastructure/**;Models/**;Platform/**;Services/AiService.cs;Services/DictionaryService.cs;Services/VocabularyService.cs;Services/VocabularyService.Archive.cs;Services/VocabularyService.Quotes.cs;Services/DatabaseSafety.cs;Services/ExportService.cs;Services/QuoteExportService.cs;Services/ArchiveTransferService*.cs" />
+    <!--
+      个人 FSRS-6 参数训练用的**本地原生 helper**：随应用一起发布，运行时由
+      MainWindow.MemoryResolveOptimizerHelperPath() 按 AppContext.BaseDirectory 定位（与 Lexi.dll 同级），
+      再由 scripts/package_app.sh 复制进 .app/Contents/MacOS（stable_signing.py 会对该目录下的
+      任何 Mach-O 做 inside-out 嵌套签名）。
+
+      路径基准：MSBuild 的相对路径与 Exists() 都以**项目目录**（lexi_avalonia/）为基准，
+      而 native/ 在工作根下，所以必须写成 ../native/...。
+
+      只认 native/fsrs-optimizer/bin/fsrs-optimizer：那是构建脚本
+      （scripts/build_fsrs_optimizer.sh：锁定依赖、固定 aarch64-apple-darwin、完整路径 remap）
+      声明的**唯一交付产物**，也是它自己做过 /Users/<user> 泄漏检查的那一份。
+      刻意**不再**兜底 target/release/fsrs-optimizer：那只是 cargo 中间产物，
+      实测内嵌本地构建路径，且它的存在会让"到底发布了哪一份"取决于求值顺序。
+      产物缺失时构建照常成功（helper 是可选的本地能力），但打包会**硬失败**——
+      绝不产出"看起来有、实际永远不会训练"的缺 optimizer 伪完成包。
+    -->
+    <Content Include="../native/fsrs-optimizer/bin/fsrs-optimizer"
+             Condition="Exists('$(MSBuildProjectDirectory)/../native/fsrs-optimizer/bin/fsrs-optimizer')"
+             Link="fsrs-optimizer" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="native/fsrs-optimizer/bin/lexi-fsrs-optimizer"
+             Condition="Exists('native/fsrs-optimizer/bin/lexi-fsrs-optimizer')"
+             Link="lexi-fsrs-optimizer" CopyToOutputDirectory="PreserveNewest" />
+    <Compile Remove="publish/**;tests/**;Core/**;Domain/**;Application/**;Infrastructure/**;Models/**;Platform/**;Services/AiService.cs;Services/DictionaryService.cs;Services/VocabularyService.cs;Services/VocabularyService.Memory.cs;Services/VocabularyService.MemoryLegacyDue.cs;Services/VocabularyService.Archive.cs;Services/VocabularyService.Quotes.cs;Services/DatabaseSafety.cs;Services/ExportService.cs;Services/QuoteExportService.cs;Services/ArchiveTransferService*.cs" />
     <ProjectReference Include="Core/Lexi.Core.csproj" />
     <ProjectReference Include="Infrastructure/Lexi.Infrastructure.csproj" />
     <InternalsVisibleTo Include="MacPlatformTests" />

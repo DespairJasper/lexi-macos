@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -8,7 +9,7 @@ using Lexi.Core;
 
 namespace Lexi;
 
-public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
+public sealed partial class VocabularyService : IVocabularyArchive, ILearningMemoryStore, IDisposable
 {
     public static readonly int[] StageOffsets = ReviewSchedule.DefaultStageOffsets;
     public const int MaxStage = ReviewSchedule.DefaultMaxStage;
@@ -223,6 +224,7 @@ public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
 
         MigrateArchiveSchema();
         MigrateQuoteSchema();
+        MigrateMemorySchema();
     }
 
     public List<WordItem> GetAllWords()
@@ -559,7 +561,8 @@ public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
                 break;
 
             case "restart":
-                var restartNextReview = today.AddDays(StageOffsets[0]).ToString("yyyy-MM-dd");
+                var restartDue = today.AddDays(StageOffsets[0]);
+                var restartNextReview = restartDue.ToString("yyyy-MM-dd");
                 foreach (var item in wordRows)
                 {
                     using var updateCmd = _connection.CreateCommand();
@@ -592,10 +595,18 @@ public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
                     logCmd.Parameters.AddWithValue("$now", nowStr);
                     logCmd.Parameters.AddWithValue("$today", todayStr);
                     logCmd.ExecuteNonQuery();
+                    // 显式手动重排同样作用于已有 FSRS 卡（见 SyncCardDueToLocalDate）。
+                    SyncCardDueToLocalDate(tx, item.Id, restartDue);
                 }
                 break;
 
             case "today":
+                // 裁定 O-1（findings.md §P）的**显式手动覆盖**时间戳。
+                // 格式必须与 VocabularyService.Memory.cs 的 UtcText 逐字节一致（UTC ISO-8601 "O"，
+                // 定长 28 字符 + 尾缀 Z）：QueryDue 依赖定长字符串序比较，
+                // 格式不一致会静默查不到到期。DateTime.UtcNow 的 Kind 已是 Utc，
+                // UtcText 里的 ToUniversalTime() 对它是恒等变换，故二者输出相同。
+                var todayOverrideUtc = DateTime.UtcNow.ToString("O", CultureInfo.InvariantCulture);
                 foreach (var item in wordRows)
                 {
                     var phase = item.Stage >= MaxStage ? 0 : item.Stage;
@@ -633,6 +644,41 @@ public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
                     logCmd.Parameters.AddWithValue("$newStart", startDateStr);
                     logCmd.Parameters.AddWithValue("$now", nowStr);
                     logCmd.ExecuteNonQuery();
+
+                    // ---------------------------------------------------------------------------
+                    // 裁定 O-1（findings.md §P）：`today`（置入今日复习）是**用户主动发出的手动
+                    // 排期命令**，属于用户明文要求保留的「手动管理能力」，因此必须继续生效。
+                    //
+                    // 这是**显式手动覆盖（administrative override）**，与评分路径的自动写截然不同：
+                    // 评分路径（MarkUnsure / MarkForgot / ExecuteBatch("review")）**仍然不得**覆盖
+                    // next_review_at_utc —— 用户禁止的是**自动**评分路径静默改写 due，本条不受影响。
+                    //
+                    // 冻结口径：
+                    //  · 词身份 = "archive:" + word_archives.uuid，**不是** words.id
+                    //    （rowid 在恢复备份后会重排，uuid 才是稳定身份；见 WordKeyResolver.FromArchiveUuid
+                    //    与 MemoryModels.cs 的 WordKey.Archive(uuid)）。此处从 word_archives 反查 uuid。
+                    //  · next_review_at_utc 用 todayOverrideUtc（与 VocabularyService.Memory.cs 的
+                    //    UtcText 逐字节同一格式）。
+                    //  · 必须复用本 action 已开启的事务 tx：Microsoft.Data.Sqlite 对带事务的连接
+                    //    执行命令要求显式设置 cmd.Transaction，否则抛「命令需要事务」。
+                    //  · 该词没有档案行、或没有 fsrs_cards 行时，下面这条 UPDATE 匹配 0 行 ——
+                    //    不做任何额外操作，保持原行为（不建卡、不动卡）。
+                    // ---------------------------------------------------------------------------
+                    using var archiveKeyCmd = _connection.CreateCommand();
+                    archiveKeyCmd.Transaction = tx;
+                    archiveKeyCmd.CommandText = "SELECT uuid FROM word_archives WHERE word_id = $id";
+                    archiveKeyCmd.Parameters.AddWithValue("$id", item.Id);
+                    if (archiveKeyCmd.ExecuteScalar() is string archiveUuid && !string.IsNullOrWhiteSpace(archiveUuid))
+                    {
+                        using var cardOverrideCmd = _connection.CreateCommand();
+                        cardOverrideCmd.Transaction = tx;
+                        cardOverrideCmd.CommandText = @"
+                            UPDATE fsrs_cards SET next_review_at_utc = $nowUtc WHERE word_key = $wordKey
+                        ";
+                        cardOverrideCmd.Parameters.AddWithValue("$nowUtc", todayOverrideUtc);
+                        cardOverrideCmd.Parameters.AddWithValue("$wordKey", WordKey.Archive(archiveUuid).Key);
+                        cardOverrideCmd.ExecuteNonQuery();
+                    }
                 }
                 break;
 
@@ -672,7 +718,8 @@ public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
                     }
                     else
                     {
-                        var nextReview = today.AddDays(StageOffsets[stageVal]).ToString("yyyy-MM-dd");
+                        var nextReviewDate = today.AddDays(StageOffsets[stageVal]);
+                        var nextReview = nextReviewDate.ToString("yyyy-MM-dd");
 
                         using var updateCmd = _connection.CreateCommand();
                         updateCmd.Transaction = tx;
@@ -706,6 +753,8 @@ public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
                         logCmd.Parameters.AddWithValue("$now", nowStr);
                         logCmd.Parameters.AddWithValue("$today", todayStr);
                         logCmd.ExecuteNonQuery();
+                        // 显式手动调整阶段同样作用于已有 FSRS 卡（见 SyncCardDueToLocalDate）。
+                        SyncCardDueToLocalDate(tx, item.Id, nextReviewDate);
                     }
                 }
                 break;
@@ -723,12 +772,12 @@ public sealed partial class VocabularyService : IVocabularyArchive, IDisposable
                     checkCmd.Parameters.AddWithValue("$today", todayStr);
                     var alreadyReviewedToday = (long)checkCmd.ExecuteScalar()! != 0;
 
-                    if (alreadyReviewedToday || item.Status == "mastered" || item.Stage >= MaxStage)
+                    if (alreadyReviewedToday || item.Status == "mastered")
                     {
                         continue;
                     }
 
-                    var newStage = item.Stage + 1;
+                    var newStage = Math.Min(item.Stage + 1, MaxStage - 1);
                     var newReviewCount = item.ReviewCount + 1;
 
                     if (newStage >= MaxStage)

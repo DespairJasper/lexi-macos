@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Lexi;
 
 /// <summary>背词模式：复习（到期词）或首次学习（新词，先学后测）。</summary>
@@ -49,7 +51,7 @@ public sealed class StudyRound<T>
     private readonly List<Card> _current = [];
     private readonly List<Card> _next = [];
     private readonly Random _random;
-    private (Card Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated)? _last;
+    private (Card Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated, bool WasCompleted)? _last;
     private bool _shuffle = true;
     private T? _lastShown;
     private bool _hasLastShown;
@@ -169,7 +171,7 @@ public sealed class StudyRound<T>
                 _next.Add(card with { Step = card.IsNew ? StudyStep.Learn : StudyStep.Recall });
                 break;
         }
-        _last = (card, rating, prevStreak, prevFirstRated);
+        _last = (card, rating, prevStreak, prevFirstRated, completed);
         Showed(card.Word);
         PromoteIfNeeded();
         return new StudyCommitResult(completed, state.Streak, target);
@@ -188,7 +190,7 @@ public sealed class StudyRound<T>
         state.FirstRated = true;
         Completed++;
         Known++;
-        _last = (card, StudyRating.Known, prevStreak, prevFirstRated);
+        _last = (card, StudyRating.Known, prevStreak, prevFirstRated, true);
         Showed(card.Word);
         PromoteIfNeeded();
         return new StudyCommitResult(true, state.Streak, RequiredStreak);
@@ -205,7 +207,7 @@ public sealed class StudyRound<T>
         state.FirstRated = last.PrevFirstRated;
         switch (last.Rating)
         {
-            case StudyRating.Known: Completed--; Known--; break;
+            case StudyRating.Known: if (last.WasCompleted) Completed--; Known--; break;
             case StudyRating.Unsure: Unsure--; break;
             default: Forgot--; break;
         }
@@ -214,7 +216,7 @@ public sealed class StudyRound<T>
         return (last.Card.Word, last.Rating, last.Card.Step);
     }
 
-    private static StudyStep DeferredStep((Card Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated) last) =>
+    private static StudyStep DeferredStep((Card Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated, bool WasCompleted) last) =>
         last.Rating == StudyRating.Forgot && last.Card.IsNew ? StudyStep.Learn : last.Card.Step;
 
     /// <summary>保存事务检查点；保存失败时恢复队列、连击、统计与可撤销评价。</summary>
@@ -239,6 +241,79 @@ public sealed class StudyRound<T>
             _last = last; _lastShown = shown; _hasLastShown = hasShown;
             Completed = completed; Known = known; Unsure = unsure; Forgot = forgot;
         });
+    }
+
+    /// <summary>Versioned durable state. Identifiers are supplied by the surface; no word data is stored.</summary>
+    public sealed record PersistedCard(string WordId, StudyStep Step, bool IsNew);
+    public sealed record PersistedWord(string WordId, int Streak, bool FirstRated);
+    public sealed record PersistedUndo(PersistedCard Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated, bool WasCompleted);
+    public sealed record PersistedRound(int Version, StudyMode Mode, bool Shuffle, int Total,
+        int Completed, int Known, int Unsure, int Forgot, List<PersistedWord> States,
+        List<PersistedCard> Current, List<PersistedCard> Next, PersistedUndo? Last,
+        bool HasLastShown, string? LastShown);
+
+    public string CaptureJson(Func<T, string> wordId)
+    {
+        ArgumentNullException.ThrowIfNull(wordId);
+        PersistedCard CardOf(Card card) => new(wordId(card.Word), card.Step, card.IsNew);
+        return JsonSerializer.Serialize(new PersistedRound(1, Mode, _shuffle, Total, Completed,
+            Known, Unsure, Forgot,
+            _states.Select(p => new PersistedWord(wordId(p.Key), p.Value.Streak, p.Value.FirstRated)).ToList(),
+            _current.Select(CardOf).ToList(), _next.Select(CardOf).ToList(),
+            _last is { } last ? new PersistedUndo(CardOf(last.Card), last.Rating, last.PrevStreak, last.PrevFirstRated, last.WasCompleted) : null,
+            _hasLastShown, _hasLastShown ? wordId(_lastShown!) : null));
+    }
+
+    /// <summary>Validate and resolve the entire checkpoint before touching the live round.</summary>
+    public void RestoreJson(string json, Func<string, T> resolveWord)
+    {
+        ArgumentNullException.ThrowIfNull(resolveWord);
+        var data = JsonSerializer.Deserialize<PersistedRound>(json)
+            ?? throw new InvalidDataException("学习轮次检查点为空。");
+        if (data.Version != 1 || !Enum.IsDefined(data.Mode) || data.Total < 0
+            || data.Completed < 0 || data.Completed > data.Total
+            || data.Known < 0 || data.Unsure < 0 || data.Forgot < 0
+            || data.States is null || data.Current is null || data.Next is null
+            || data.States.Count != data.Total)
+            throw new InvalidDataException("学习轮次检查点版本或统计无效。");
+        var resolved = new Dictionary<string, T>(StringComparer.Ordinal);
+        var states = new List<(T Word, WordState State)>();
+        var seenWords = new HashSet<T>();
+        foreach (var item in data.States)
+        {
+            if (string.IsNullOrWhiteSpace(item.WordId) || item.Streak < 0 || resolved.ContainsKey(item.WordId))
+                throw new InvalidDataException("学习轮次词标识或连击无效。");
+            var word = resolveWord(item.WordId);
+            if (word is null || !seenWords.Add(word)) throw new InvalidDataException("检查点词条缺失或重复。");
+            resolved.Add(item.WordId, word);
+            states.Add((word, new WordState { Streak = item.Streak, FirstRated = item.FirstRated }));
+        }
+        Card Resolve(PersistedCard item)
+        {
+            if (item is null || !Enum.IsDefined(item.Step) || !resolved.TryGetValue(item.WordId, out var word))
+                throw new InvalidDataException("检查点队列引用无效。");
+            return new Card(word, item.Step, item.IsNew);
+        }
+        var current = data.Current.Select(Resolve).ToList();
+        var next = data.Next.Select(Resolve).ToList();
+        if (current.Concat(next).Select(c => c.Word).Distinct().Count() != current.Count + next.Count
+            || current.Count + next.Count != data.Total - data.Completed)
+            throw new InvalidDataException("检查点队列与完成数量不一致。");
+        (Card Card, StudyRating Rating, int PrevStreak, bool PrevFirstRated, bool WasCompleted)? last = null;
+        if (data.Last is { } undo)
+        {
+            if (!Enum.IsDefined(undo.Rating) || undo.PrevStreak < 0)
+                throw new InvalidDataException("检查点撤销记录无效。");
+            last = (Resolve(undo.Card), undo.Rating, undo.PrevStreak, undo.PrevFirstRated, undo.WasCompleted);
+        }
+        var shown = default(T);
+        if (data.HasLastShown && (data.LastShown is null || !resolved.TryGetValue(data.LastShown, out shown)))
+            throw new InvalidDataException("检查点上次显示的词条无效。");
+        _states.Clear(); foreach (var pair in states) _states.Add(pair.Word, pair.State);
+        _current.Clear(); _current.AddRange(current); _next.Clear(); _next.AddRange(next);
+        _last = last; _lastShown = shown; _hasLastShown = data.HasLastShown;
+        Mode = data.Mode; _shuffle = data.Shuffle; Total = data.Total; Completed = data.Completed;
+        Known = data.Known; Unsure = data.Unsure; Forgot = data.Forgot;
     }
 
     private int TargetFor(Card card)

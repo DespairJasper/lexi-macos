@@ -27,6 +27,13 @@ public sealed class DailyStudyPlanSession
             shuffle: plan.CurrentBatchRandomOrder ?? plan.RandomOrder);
     }
 
+    /// <summary>
+    /// 单词本轮定稿回调（长期记忆层的提交屏障，规格书 §3）。默认 null：
+    /// 直接构造本类型的纯逻辑使用方（含既有 UI 测试）完全不受影响。
+    /// </summary>
+    public Action<string>? OnWordCompleted { get; set; }
+    public Action<string, StudyRating, StudyCommitResult>? OnRatingApplied { get; set; }
+
     public StudyRound<string> Round { get; }
     public IReadOnlyList<DailyStudyPlanWord> BatchWords => _plan.CurrentBatchWordIds
         .Select(id => _plan.Words.Single(w => w.Id == id)).ToList();
@@ -52,8 +59,21 @@ public sealed class DailyStudyPlanSession
             RestoreProgress(progress);
             return null;
         }
-        if (!TrySave(save))
+        var finalized = false;
+        try
         {
+            // Persist the final real response before reducing it to a canonical.
+            OnRatingApplied?.Invoke(wordId, rating, result);
+            if (result.Completed && OnWordCompleted is not null) { OnWordCompleted(wordId); finalized = true; }
+            if (!TrySave(save)) throw new IOException("Plan progress could not be saved.");
+        }
+        catch (Exception error)
+        {
+            if (finalized)
+            {
+                _beforeLastRating = progress; _beforeLastRound = checkpoint;
+                throw new PendingLearningWriteException(wordId, result, error);
+            }
             checkpoint.Restore(); RestoreProgress(progress); _beforeLastRating = previousUndo;
             return null;
         }

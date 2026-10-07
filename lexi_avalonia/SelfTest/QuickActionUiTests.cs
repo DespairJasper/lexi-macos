@@ -60,7 +60,11 @@ public static class QuickActionUiTests
             QuickCardWindow CurrentCard()=>(QuickCardWindow)typeof(MainWindow).GetField("_quickCard",BindingFlags.NonPublic|BindingFlags.Instance)!.GetValue(main)!;
             var original="Evidence matters for every decision.";
             CurrentCard().Prepare(QuickAction.Lookup,original,source:"Test editor");
-            CurrentCard().Activate();await Task.Delay(100);
+            CurrentCard().Activate();
+            // 激活是异步的（macOS 还要等窗口成为 key window）：用有界轮询代替固定等待，
+            // 断言本身不变——拿不到焦点仍然失败。
+            for(var wait=0;wait<40&&!CurrentCard().IsActive;wait++)await Task.Delay(25);
+            
             Check(CurrentCard().IsActive,"selection card owns focus before shortcut correction");
             foreach(var action in new[]{QuickAction.Lookup,QuickAction.Translate,QuickAction.SaveQuote,QuickAction.Translate})
             {

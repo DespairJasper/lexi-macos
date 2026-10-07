@@ -79,7 +79,11 @@ public static class LanguageTests
             Check(C<StackPanel>("AiResultExamplesContainer").GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "My original example remains unchanged.") && C<StackPanel>("AiResultExamplesContainer").GetVisualDescendants().OfType<TextBlock>().Any(t => t.Text == "原始例句翻译保留。"), "bilingual AI example content stays exactly as written");
             Check(C<TextBlock>("SelectedCountText").Text == "0 selected", "dynamic selection count is English");
             Check(C<TextBlock>("VocabPageText").Text!.Contains("words"), "dynamic pagination is English");
-            Check(UiText.Value(item.StatusLabel) == "Stage 1 / 5" && UiText.Value("完成学习") == "Learning complete", "domain status converter localizes display without changing domain data");
+            // 旧五阶段文案已按规格书 §2 定向更新为"待复习 / To review"（stage 只作兼容投影，
+            // 不再承诺"五阶段学完"）。三条域内映射都要覆盖，且域数据本身由下一条断言保证不变。
+            Check(UiText.Value(item.StatusLabel) == "To review" && UiText.Value(item.StageDescription) == "To review"
+                && UiText.Value("全部完成") == "Reviews paused" && UiText.Value("完成学习") == "Learning complete",
+                "domain status converter localizes display without changing domain data");
             Check(item.Status == "learning" && item.StatusLabel == "阶段 1 / 5", "domain status values stay unchanged");
             using (var store = new VocabularyService()) Check(store.LoadSettings().UiLanguage == "en", "English persists independently of API settings");
             await Snapshot("language-en-editor");
