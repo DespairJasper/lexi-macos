@@ -123,17 +123,6 @@ bash scripts/package_dmg.sh --no-build
 - 修复点击 Dock 图标唤醒应用时强制返回首页的问题；切换应用、最小化和关闭窗口后重新打开均保留原页面与页面状态。
 - 快捷卡片的主动查词跳转及其余功能保持原行为。
 
-## 3.1.2 更新
-
-- **启动检查更新**：每次全新启动在后台查询本仓库的正式 Release，有更高版本时在状态栏给出可关闭提示，一键打开对应发布页。只提示与跳转，不自动下载、不自动安装、不强制升级。断网、超时、限流或响应异常一律静默跳过。
-- **更新保留全部数据**：更新或覆盖安装不触碰用户数据目录，词库、学习记录、金句、每日计划、IELTS 进度与全部内部记忆（FSRS 卡、个人参数、Context 校准、轨迹与断点）原样保留。
-- **卸载保留数据**：DMG 内随附 `卸载Lexi.command`，可选择“保留用户数据”（默认）或“删除用户数据”，删除前会列出具体路径并要求二次确认。
-- 版本号统一由单一来源派生：应用显示、安装包与发布门禁断言同一个版本。
-
-3.1.1 的 FSRS-6 长期排期、真实个人 optimizer、Context 校准与完整学习轨迹见 [v3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1)。
-
-每日计划、IELTS 专题、拼写反馈、跨应用卡片、金句与玻璃外观延续已有功能。[历史版本](https://github.com/DespairJasper/lexi-macos/releases) 保留各次发布内容。
-
 ## 版本沿革
 
 | 阶段 | 主要内容 |
@@ -149,8 +138,9 @@ bash scripts/package_dmg.sh --no-build
 | 第三代 · 3.0.4 | 每日学习计划：按词书、单元或词条创建，档案与 IELTS 分别记录进度，支持调整、停止与恢复 |
 | 第三代 · 3.1.1 | FSRS-6 长期排期、个人参数 optimizer、Context 校准、完整学习轨迹与模型恢复 |
 | 第三代 · 3.1.2 | 启动后台检查正式 Release 并提示更新、更新与覆盖安装完整保留用户数据与记忆、卸载可选保留数据 |
+| 第三代 · 3.1.3 | 修复 Dock 唤醒时强制返回首页，保留原页面与页面状态；快捷卡片主动查词保持原行为 |
 
-[3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
+[3.1.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.3) · [3.1.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.2) · [3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
 
 ## 许可与第三方内容
 
