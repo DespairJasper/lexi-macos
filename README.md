@@ -14,7 +14,7 @@ Apple Silicon · macOS 12+ · 中英文界面 · 离线词典
 
 Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用里。阅读时用快捷小卡片查词或翻译，想记住的词收入档案，再按自己的计划学习。复习由记忆模型安排，无需手动计算间隔。
 
-当前源码版本为 **3.1.1**，本机已安装。GitHub 最新公开发布为 **3.1.1**（[v3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1)），提供 `Lexi-3.1.1-macOS-arm64.dmg` 与配套 `.sha256` 校验文件。个人 FSRS optimizer 已实现，并随应用打包。
+当前源码版本为 **3.1.2**，安装包为 `Lexi-3.1.2-macOS-arm64.dmg`，配套 `.sha256` 校验文件随 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 提供。应用每次全新启动会在后台检查本仓库是否有更高的正式版本，有则提示并给出更新入口；更新与覆盖安装保留本机全部学习数据与记忆状态。个人 FSRS optimizer 已实现，并随应用打包。
 
 ## 从阅读到学习，操作自然衔接
 
@@ -63,19 +63,32 @@ Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用
 - 内置 **59,026 条离线词典记录**，查词不需要账号、网络或 API Key。
 - 个人词汇档案、学习记录、金句与记忆模型保存在本机，支持现有备份与恢复功能。
 - AI 翻译与词汇辅助需要自行配置服务地址、模型和 API Key。相关文本发送至你配置的服务，API Key 保存在 macOS 钥匙串。
+- 启动时的更新检查以匿名请求访问 GitHub 公开 API，只读取本仓库的正式发布信息；不携带 token，不上传学习记录、记忆状态或任何本机标识。检查失败或被限流时静默跳过，不影响使用。
 - 发布源码与安装包不携带个人练习记录、模型、密钥、私有服务地址或签名私钥。
 
 ## 安装与开始使用
 
 适用 **Apple Silicon（M 系列）Mac、macOS 12 或更新版本**。安装包包含 .NET 运行环境、离线词典与本地 optimizer，普通使用者无需安装开发工具。
 
-1. 在 [v3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) 下载 `Lexi-3.1.1-macOS-arm64.dmg` 与 `Lexi-3.1.1-macOS-arm64.dmg.sha256`。
-2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.1.1-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
-3. 打开 DMG，将 Lexi 拖入“应用程序”，推出磁盘映像后启动。
+1. 在 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 下载 `Lexi-3.1.2-macOS-arm64.dmg` 与 `Lexi-3.1.2-macOS-arm64.dmg.sha256`。
+2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.1.2-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
+3. 打开 DMG，将 Lexi 拖入“应用程序”，推出磁盘映像后启动。磁盘中另附 `卸载Lexi.command`，用法见下方“卸载与数据保留”。
 4. 使用跨应用选词时，在“系统设置 → 隐私与安全 → 设备控制和数据访问”中授权 Lexi；未授权时仍可手动输入。
 5. 按需配置 AI 服务，开始整理词汇和每日学习计划。
 
 当前分发签名使用固定本机证书，尚未采用 Apple Developer ID，也未经过 Apple 公证。首次运行若出现系统安全提示，请核对下载来源和校验文件，再按 macOS 提示操作。
+
+### 更新、卸载与数据保留
+
+用户数据存放在 `~/Library/Application Support/Lexi/`，**不在应用包内**。因此：
+
+- **更新 / 覆盖安装**：把新版 `Lexi.app` 拖入“应用程序”替换旧版即可。数据目录不会被安装过程触碰，词库、学习记录、金句、每日计划、IELTS 进度与全部内部记忆原样保留。
+- **卸载**：双击随 DMG 提供的 `卸载Lexi.command`。它默认**只移除应用并保留全部用户数据**；只有在交互中选择“删除用户数据”并键入 `DELETE` 确认后，才会删除本应用自己的数据目录与钥匙串中的 API Key，且删除前会列出具体路径。
+- 不提供“卸载时自动删除数据”的默认行为，也不会触碰数据目录以外的任何文件。
+
+命令行用法：`bash 卸载Lexi.command [--dry-run] [--keep-data|--delete-data] [--yes]`。
+
+**平台限制（如实说明）**：本项目以 DMG 拖拽方式分发，macOS 不提供安装器级的卸载选项，把 `Lexi.app` 拖入废纸篓本身也不会删除用户数据。上述选择由随附脚本提供，默认保留；应用内不包含任何“卸载时清空数据”的逻辑。辅助功能授权由系统管理，需要在“系统设置 → 隐私与安全性 → 辅助功能”中手动关闭。
 
 ## 从源码构建
 
@@ -105,13 +118,14 @@ bash scripts/package_dmg.sh --no-build
 
 `release.sh` 依次执行回归、签名打包、包内隔离验收、许可证与隐私检查，并生成绑定实际应用的合格证明；DMG 打包与安装均验证该证明。测试应使用隔离数据目录，避免向日常学习数据灌入模拟记录。
 
-## 3.1.1 更新
+## 3.1.2 更新
 
-- FSRS-6 长期排期：按单词状态与作答历史安排复习。
-- 真实个人 optimizer：自动积累、后台训练、时间外验证与安全启用。
-- Context 校准：收集、影子验证、启用与回退。
-- 完整学习轨迹：改判与撤销可追溯，强化练习与长期复习信号分离。
-- 模型换版、持久化、重启恢复与失败回退，配合发布验收门禁。
+- **启动检查更新**：每次全新启动在后台查询本仓库的正式 Release，有更高版本时在状态栏给出可关闭提示，一键打开对应发布页。只提示与跳转，不自动下载、不自动安装、不强制升级。断网、超时、限流或响应异常一律静默跳过。
+- **更新保留全部数据**：更新或覆盖安装不触碰用户数据目录，词库、学习记录、金句、每日计划、IELTS 进度与全部内部记忆（FSRS 卡、个人参数、Context 校准、轨迹与断点）原样保留。
+- **卸载保留数据**：DMG 内随附 `卸载Lexi.command`，可选择“保留用户数据”（默认）或“删除用户数据”，删除前会列出具体路径并要求二次确认。
+- 版本号统一由单一来源派生：应用显示、安装包与发布门禁断言同一个版本。
+
+3.1.1 的 FSRS-6 长期排期、真实个人 optimizer、Context 校准与完整学习轨迹见 [v3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1)。
 
 每日计划、IELTS 专题、拼写反馈、跨应用卡片、金句与玻璃外观延续已有功能。[历史版本](https://github.com/DespairJasper/lexi-macos/releases) 保留各次发布内容。
 
@@ -129,6 +143,7 @@ bash scripts/package_dmg.sh --no-build
 | 第三代 · 3.0.3 | 英文打字完成反馈修复、逐字反馈与音效、错误抖动、学习进度保护、退出行为修复 |
 | 第三代 · 3.0.4 | 每日学习计划：按词书、单元或词条创建，档案与 IELTS 分别记录进度，支持调整、停止与恢复 |
 | 第三代 · 3.1.1 | FSRS-6 长期排期、个人参数 optimizer、Context 校准、完整学习轨迹与模型恢复 |
+| 第三代 · 3.1.2 | 启动后台检查正式 Release 并提示更新、更新与覆盖安装完整保留用户数据与记忆、卸载可选保留数据 |
 
 [3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
 

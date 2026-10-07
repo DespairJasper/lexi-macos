@@ -639,6 +639,7 @@
               <Border Classes="card"><StackPanel Spacing="10">
                 <TextBlock Text="{DynamicResource Ui_130}" FontSize="16" FontWeight="Medium"/>
                 <TextBlock Name="DiagnosticsText" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Name="UpdateCheckText" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
               </StackPanel></Border>
             </StackPanel>
           </ScrollViewer>
@@ -649,7 +650,32 @@
       <Border Name="WindowStatusBar" Grid.Row="2" Background="{DynamicResource TintBrush}" Padding="20,0">
         <Grid ColumnDefinitions="*,Auto">
           <TextBlock Name="GlobalStatusText" Text="{DynamicResource Ui_132}" VerticalAlignment="Center" FontSize="11"/>
-          <TextBlock Grid.Column="1" Text="lexi 3.1.1" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+          <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <!-- 启动后台检查发现更高正式版本时的提示：真实布局行内的小胶囊，可关闭，不遮挡内容。
+                 只提示并打开 Release 页，绝不自动下载、安装或强制升级。 -->
+            <Border Name="UpdateNoticeBar" Classes="badge badge-accent" IsVisible="False"
+                    Height="20" Padding="8,0" HorizontalAlignment="Left" VerticalAlignment="Center">
+              <StackPanel Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                <TextBlock Name="UpdateNoticeText" Classes="badge-text badge-accent-text"
+                           HorizontalAlignment="Left" VerticalAlignment="Center"/>
+                <Button Name="UpdateNoticeOpenBtn" Classes="clear-btn" Focusable="False" Width="18" Height="18"
+                        ToolTip.Tip="{DynamicResource Ui_UpdateOpenTip}" VerticalAlignment="Center">
+                  <Path Data="M 2.5,9.5 L 9.5,2.5 M 5,2.5 L 9.5,2.5 L 9.5,7"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.3"
+                        StrokeLineCap="Round" StrokeJoin="Round"
+                        Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+                <Button Name="UpdateNoticeDismissBtn" Classes="clear-btn" Focusable="False" Width="18" Height="18"
+                        ToolTip.Tip="{DynamicResource Ui_UpdateDismissTip}" VerticalAlignment="Center">
+                  <Path Data="M 3,3 L 9,9 M 9,3 L 3,9"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.3"
+                        StrokeLineCap="Round"
+                        Width="12" Height="12" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Button>
+              </StackPanel>
+            </Border>
+            <TextBlock Text="lexi 3.1.2" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+          </StackPanel>
         </Grid>
       </Border>
     </Grid>

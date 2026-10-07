@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 DIST_DIR="$ROOT_DIR/dist"
 APP_BUNDLE="$DIST_DIR/Lexi.app"
-DMG_NAME="Lexi-3.1.1-macOS-arm64.dmg"
+DMG_NAME="Lexi-3.1.2-macOS-arm64.dmg"
 OUTPUT="$DIST_DIR/$DMG_NAME"
 PYTHON_VENV="$ROOT_DIR/.tools/dmg-python/venv"
 LAYOUT_SCRIPT="$ROOT_DIR/packaging/macOS/dmg-layout.py"
@@ -45,7 +45,7 @@ done
 /usr/bin/codesign --verify --deep --strict "$APP_BUNDLE"
 python3 "$SCRIPT_DIR/stable_signing.py" verify "$APP_BUNDLE"
 python3 "$SCRIPT_DIR/verify_release_privacy.py" "$APP_BUNDLE"
-[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Info.plist")" == "3.1.1" ]] || { echo "App version does not match DMG version 3.1.1." >&2; exit 1; }
+[[ "$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP_BUNDLE/Contents/Info.plist")" == "3.1.2" ]] || { echo "App version does not match DMG version 3.1.2." >&2; exit 1; }
 
 # Install only into this project's isolated environment; never alter the user's global Python.
 if [[ ! -x "$PYTHON_VENV/bin/python" ]]; then
@@ -88,6 +88,9 @@ STAGING="$WORK_DIR/volume"
 mkdir -p "$STAGING" "$MOUNT_DIR"
 /usr/bin/ditto "$APP_BUNDLE" "$STAGING/Lexi.app"
 ln -s /Applications "$STAGING/Applications"
+# 卸载工具随安装包一起提供：默认保留用户数据，只有明确选择才会删除本应用的数据目录。
+/usr/bin/ditto "$ROOT_DIR/卸载Lexi.command" "$STAGING/卸载Lexi.command"
+/bin/chmod 755 "$STAGING/卸载Lexi.command"
 cat > "$STAGING/安装说明 · Install.txt" <<'GUIDE'
 lexi · 安装 / Install
 
@@ -116,8 +119,13 @@ This build uses a persistent local signing certificate and has not been notarize
 If macOS blocks the first launch, confirm that you trust its source, then use
 the system's Privacy & Security instructions to allow opening the app.
 
-移除应用：退出 lexi，再将 Applications 中的 Lexi.app 移到废纸篓。
-To remove the app, quit lexi and move Lexi.app from Applications to Trash.
+卸载：退出 lexi，双击本磁盘中的“卸载Lexi.command”。
+默认只移除应用并「保留」全部用户数据（词库、学习记录、金句、
+每日计划、IELTS 进度与记忆状态），重新安装后即可继续使用；
+只有明确选择“删除用户数据”并再次确认时，才会删除本应用的数据目录。
+Uninstall: quit lexi, then double-click “卸载Lexi.command” on this disk.
+It removes the app and KEEPS all of your data by default; your data is
+deleted only if you explicitly choose to delete it and confirm again.
 GUIDE
 "$PYTHON_VENV/bin/python" "$LAYOUT_SCRIPT" "$STAGING"
 # Finder may rewrite staging metadata while observing the project directory.
@@ -130,7 +138,7 @@ REPORT="$WORK_DIR/validation.txt"
 echo "Creating a compressed read-only UDZO image / 正在生成只读压缩安装包…"
 /usr/bin/hdiutil create -volname 'lexi · Install' -srcfolder "$STAGING" -fs HFS+ -format UDZO -imagekey zlib-level=9 "$NEW_DMG"
 {
-    echo "Lexi 3.1.1 — Apple Silicon installer validation"
+    echo "Lexi 3.1.2 — Apple Silicon installer validation"
     /usr/bin/hdiutil verify "$NEW_DMG"
     /usr/bin/hdiutil imageinfo "$NEW_DMG" | /usr/bin/grep -E 'Format:|Class Name:|Checksum Type:|Size Information:' || true
 } > "$REPORT" 2>&1
@@ -146,6 +154,8 @@ MOUNT_ACTIVE=1
     [[ -s "$MOUNT_DIR/安装说明 · Install.txt" ]]
     [[ -f "$MOUNT_DIR/Lexi.app/Contents/Resources/Lexi.icns" ]]
     echo "PASS bilingual installation guide and approved app icon"
+    [[ -x "$MOUNT_DIR/卸载Lexi.command" ]]
+    echo "PASS executable uninstall helper is present on the mounted volume"
     file "$MOUNT_DIR/Lexi.app/Contents/MacOS/Lexi"
     [[ "$(/usr/bin/lipo -archs "$MOUNT_DIR/Lexi.app/Contents/MacOS/Lexi")" == "arm64" ]]
     /usr/bin/codesign --verify --deep --strict "$MOUNT_DIR/Lexi.app"

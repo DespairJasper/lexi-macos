@@ -125,10 +125,10 @@ done
 
 # --self-test 无头运行只作为附加信号（它自己会覆盖 LEXI_DATA_DIR，不承担隔离证据）
 if LEXI_DATA_DIR="$EVAL_DIR/selftest" "$APP/Contents/MacOS/Lexi" --self-test > "$EVAL_DIR/self-test.log" 2>&1 \
-   && grep -q '13/13' "$EVAL_DIR/self-test.log"; then
-    pass "包内 --self-test 13/13 通过"
+   && grep -q '15/15' "$EVAL_DIR/self-test.log"; then
+    pass "包内 --self-test 15/15 通过"
 else
-    fail "包内 --self-test 未达 13/13（见 $EVAL_DIR/self-test.log）"
+    fail "包内 --self-test 未达 15/15（见 $EVAL_DIR/self-test.log）"
 fi
 
 AFTER="$(snapshot_data_dir)"

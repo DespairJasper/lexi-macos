@@ -153,7 +153,7 @@ public partial class App : Application
     }
 
     // Self-test, smoke and visual runs must never raise a system permission dialog.
-    private static bool IsAutomatedTestRun() =>
+    internal static bool IsAutomatedTestRun() =>
         Environment.GetCommandLineArgs().Any(a => a is "--self-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test" or "--media-test" or "--recovery-restart-a" or "--recovery-restart-b");
 
     public void ToggleMainWindow()

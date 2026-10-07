@@ -75,6 +75,7 @@ public partial class MainWindow : Window
         ConfigureLearningMemory();
         RefreshWords();
         ConfigureLearningPages();
+        ConfigureUpdateCheck();
 
         ShowPage("lookup");
     }

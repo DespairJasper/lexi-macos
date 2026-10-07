@@ -20,7 +20,7 @@ public static class SelfTestRunner
         Console.WriteLine("=================================================");
 
         int passed = 0;
-        int total = 13;
+        int total = 15;
         string tempDir = Path.Combine(Path.GetTempPath(), "Lexi_SelfTest_" + Guid.NewGuid().ToString("N"));
         Directory.CreateDirectory(tempDir);
 
@@ -82,6 +82,10 @@ public static class SelfTestRunner
             FoundationCredentialTests.Run();
             passed++;
             FoundationFinalRegressionTests.Run();
+            passed++;
+            await UpdateCheckTests.RunAsync();
+            passed++;
+            UpgradePreservationTests.Run();
             passed++;
             Console.WriteLine("=================================================");
             Console.WriteLine($"所有自检项目执行完毕: {passed}/{total} 项通过！退出码: 0");

@@ -513,6 +513,16 @@ internal static class UiCatalog
         ["已掌握 (暂停复习)"] = "Mastered (pause reviews)",
         ["待复习"] = "To review",
         ["已暂停复习"] = "Reviews paused",
+        ["打开更新页面"] = "Open the release page",
+        ["关闭更新提示"] = "Dismiss the update notice",
+        ["有新版本 {0} · 当前 {1}"] = "Version {0} is available · you have {1}",
+        ["未能打开更新页面："] = "Could not open the release page: ",
+        ["更新检查：发现新版本 {0}"] = "Update check: version {0} available",
+        ["更新检查：已是最新版本"] = "Update check: up to date",
+        ["更新检查：网络不可用，未完成"] = "Update check: network unavailable, not completed",
+        ["更新检查：请求过于频繁，未完成"] = "Update check: too many requests, not completed",
+        ["更新检查：未完成"] = "Update check: not completed",
+        ["更新检查：未完成（{0}）"] = "Update check: not completed ({0})",
     };
     internal static readonly Dictionary<string, string> Resources = new(StringComparer.Ordinal)
     {
@@ -689,5 +699,7 @@ internal static class UiCatalog
         ["Ui_VocabEyebrow"] = "你的词汇收藏",
         ["Ui_ReviewEyebrow"] = "一次，记住一个词",
         ["Ui_SettingsEyebrow"] = "你的偏好",
+        ["Ui_UpdateOpenTip"] = "打开更新页面",
+        ["Ui_UpdateDismissTip"] = "关闭更新提示",
     };
 }

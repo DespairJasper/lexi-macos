@@ -1,6 +1,6 @@
 #!/bin/bash
 # ==============================================================================
-# build_fsrs_optimizer.sh - 构建 Lexi 3.1.1 独立的 FSRS-6 参数优化器 Native Helper
+# build_fsrs_optimizer.sh - 构建 Lexi 3.1.2 独立的 FSRS-6 参数优化器 Native Helper
 # 目标架构: macOS arm64 (aarch64-apple-darwin, Apple Silicon)
 # 工具链: 优先使用项目隔离目录下的 Rust 工具链 (rustc/cargo 1.99.0)，不污染全局环境
 # 运行时: 无需 Rust / Python / Node / 外部动态库依赖

@@ -33,6 +33,10 @@ public static class Program
     {
         if (args.Contains("--media-test")) return NativeAudioTests.Run();
 
+        // 更新检查的独立入口：真实发起一次 GitHub Release 检查并打印结果，不启动 UI、不读用户数据。
+        // 正式启动路径上的检查不阻塞启动且失败静默，因此需要这个入口来验证真实网络路径。
+        if (args.Contains("--update-check")) return UpdateCheckCommand.RunAsync().GetAwaiter().GetResult();
+
         // 1. Check if invoked in self-test mode
         if (args.Any(a => a.Equals("--self-test", StringComparison.OrdinalIgnoreCase)))
         {

@@ -171,5 +171,7 @@
   "Ui_ResultEyebrow": "释义",
   "Ui_VocabEyebrow": "你的词汇收藏",
   "Ui_ReviewEyebrow": "一次，记住一个词",
-  "Ui_SettingsEyebrow": "你的偏好"
+  "Ui_SettingsEyebrow": "你的偏好",
+  "Ui_UpdateOpenTip": "打开更新页面",
+  "Ui_UpdateDismissTip": "关闭更新提示"
 }

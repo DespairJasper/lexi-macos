@@ -63,7 +63,7 @@ require_ui_evidence() {
     # 因此额外要求进度文件里出现关键阶段标记，否则"把记忆层那几组从 runner 里删掉"也能算绿。
     if [ "$mode" = "ui-smoke" ]; then
         local progress="$RESULTS/$mode/ui-smoke-progress.txt"
-        for marker in foundation-ui-done recall-done final-regression-done; do
+        for marker in foundation-ui-done recall-done update-notice-done final-regression-done; do
             if ! grep -q "$marker" "$progress" 2>/dev/null; then
                 echo "UI mode $mode never reached phase $marker; treating as failure."
                 printf '%s: 1\n' "$mode-evidence" >> "$RESULTS/summary.txt"

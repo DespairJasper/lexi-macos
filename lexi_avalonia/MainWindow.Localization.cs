@@ -48,7 +48,7 @@ public partial class MainWindow
         ThemeToggleBtn.Content = T(_settings.Theme == "Dark" ? "切换浅色" : "切换深色");
         _loadingLanguage = false;
         // Explicit UI-owned labels only. Never inspect or replace all visual-tree text.
-        foreach (var text in new[] { GlobalStatusText, ReviewHintText, DialogEditTitle, DialogDeleteTitle, RestoreDescriptionText, ArchiveEditErrorText })
+        foreach (var text in new[] { GlobalStatusText, UpdateCheckText, ReviewHintText, DialogEditTitle, DialogDeleteTitle, RestoreDescriptionText, ArchiveEditErrorText })
             text.Text = UiText.Redisplay(text.Text);
         if (_editingWordId is { } id && _allWords.FirstOrDefault(w => w.Id == id) is { } entry)
             DialogEditTitle.Text = entry.Word + T(" · 词汇档案");

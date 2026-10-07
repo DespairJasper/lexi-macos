@@ -165,6 +165,8 @@ public static class UiSmokeTests
             Trace("foundation-ui-done");
             await RecallCardTests.RunAsync(window, Check);
             Trace("recall-done");
+            await UpdateNoticeUiTests.RunAsync(window, Check);
+            Trace("update-notice-done");
             await MemoryFailureTests.RunAsync(window, Check);
             await MemoryRecoveryUiTests.RunAsync(window, Check);
             await MemorySourceDueUiTests.RunAsync(window, Check);

@@ -8,7 +8,9 @@ from pathlib import Path
 from ds_store import DSStore
 
 GUIDE_NAME = "安装说明 · Install.txt"
-POSITIONS = {"Lexi.app": (180, 170), "Applications": (500, 170), GUIDE_NAME: (340, 330)}
+UNINSTALL_NAME = "卸载Lexi.command"
+POSITIONS = {"Lexi.app": (180, 170), "Applications": (500, 170),
+             UNINSTALL_NAME: (500, 310), GUIDE_NAME: (340, 400)}
 
 
 def configure(volume: Path) -> None:
@@ -19,7 +21,7 @@ def configure(volume: Path) -> None:
             raise FileNotFoundError(volume / name)
     with DSStore.open(str(volume / ".DS_Store"), "w+") as store:
         store["."]["bwsp"] = {
-            "WindowBounds": "{{180, 100}, {680, 430}}",
+            "WindowBounds": "{{180, 100}, {680, 470}}",
             "ShowStatusBar": False,
             "ShowToolbar": False,
             "ShowTabView": False,
@@ -66,7 +68,7 @@ def verify(volume: Path) -> None:
             raise RuntimeError("Finder default view is not icon-view")
         if icons["iconSize"] != 96.0 or icons["backgroundType"] != 1:
             raise RuntimeError("Finder icon/background configuration mismatch")
-        print("PASS Finder background: glacier white; icon size: 96 pt; window: 680 × 430")
+        print("PASS Finder background: glacier white; icon size: 96 pt; window: 680 × 470")
         print("PASS Finder default view: icvl=type/icnv (matches upstream dmgbuild)")
 
 

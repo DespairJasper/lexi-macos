@@ -62,11 +62,12 @@ def main():
     version=ET.parse(source/'Lexi.csproj').getroot().findtext('./PropertyGroup/Version')
     import plistlib
     with (ROOT_DIR/'packaging/macOS/Info.plist').open('rb') as file: plist=plistlib.load(file)
-    expected_version='3.1.1'
+    expected_version='3.1.2'
     ui=(source/'MainWindow.axaml').read_text()
     ai=(source/'Services/AiService.cs').read_text()
     dmg=(ROOT_DIR/'scripts/package_dmg.sh').read_text()
     readme=(ROOT_DIR/'README.md').read_text()
+    updater=(source/'Update/UpdateChecker.cs').read_text()
     release_checks={
         'project version':version==expected_version,
         'macOS bundle versions':plist['CFBundleShortVersionString']==expected_version and plist['CFBundleVersion']==expected_version,
@@ -74,10 +75,18 @@ def main():
         'AI User-Agent version':f'Lexi/{expected_version}' in ai,
         'DMG name and version gate':f'Lexi-{expected_version}-macOS-arm64.dmg' in dmg and f'== "{expected_version}"' in dmg,
         'README current source version':f'当前源码版本为 **{expected_version}**' in readme,
+        'README 3.1.2 history':re.search(r'^\| 第三代 · 3\.1\.2 \|.*\|$',readme,re.M) is not None,
         'README 3.1.1 history':re.search(r'^\| 第三代 · 3\.1\.1 \|.*FSRS.*\|$',readme,re.M) is not None,
         'README 3.0.4 history':re.search(r'^\| 第三代 · 3\.0\.4 \|.*每日学习计划.*\|$',readme,re.M) is not None,
         'README 3.0.3 history':re.search(r'^\| 第三代 · 3\.0\.3 \|.*英文打字完成反馈修复.*\|$',readme,re.M) is not None,
         'README 3.0.3 release link':'https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3' in readme,
+        # 更新检查必须指向本项目的正式 Release API，且不得在客户端硬编码第二份产品版本
+        # （User-Agent 走 AppVersion.Display，与程序集版本同源）。
+        'update check endpoint':('https://api.github.com/repos/{Owner}/{Repository}/releases/latest' in updater),
+        'update check single version source':re.search(r'Lexi/\d',updater) is None and 'AppVersion.Display' in updater,
+        # 卸载工具必须随安装包提供：默认保留用户数据的选择由它承载。
+        'uninstall helper exists':(ROOT_DIR/'卸载Lexi.command').is_file(),
+        'uninstall helper shipped':'卸载Lexi.command' in dmg,
     }
     for label,ok in release_checks.items():
         print(('PASS ' if ok else 'FAIL ')+label)

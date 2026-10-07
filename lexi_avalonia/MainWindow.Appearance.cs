@@ -105,6 +105,6 @@ public partial class MainWindow
         var rendering = OperatingSystem.IsMacOS() ? "macOS Native / Skia" : Environment.GetEnvironmentVariable("LEXI_SOFTWARE_RENDERING") == "0" ? T("硬件优先") : T("软件");
         var osName = OperatingSystem.IsMacOS() ? "macOS" : OperatingSystem.IsWindows() ? "Windows" : "Unix";
         var hotkeyLabel = OperatingSystem.IsMacOS() ? "Option+D" : "Alt+D";
-        DiagnosticsText.Text = TF($"Lexi {typeof(MainWindow).Assembly.GetName().Version?.ToString(3)} · {osName}\n布局：{(compact ? "Compact" : width < 1280 ? "Medium" : "Expanded")} · 显示缩放 {RenderScaling * 100:0}%\n渲染：{rendering} · 数据仅存本机\n{hotkeyLabel}：{(App.Hotkey?.IsRegistered == true ? T("已注册") : T("未注册或被占用"))}");
+        DiagnosticsText.Text = TF($"Lexi {AppVersion.Display} · {osName}\n布局：{(compact ? "Compact" : width < 1280 ? "Medium" : "Expanded")} · 显示缩放 {RenderScaling * 100:0}%\n渲染：{rendering} · 数据仅存本机\n{hotkeyLabel}：{(App.Hotkey?.IsRegistered == true ? T("已注册") : T("未注册或被占用"))}");
     }
 }
