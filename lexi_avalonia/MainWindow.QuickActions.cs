@@ -126,7 +126,7 @@ public partial class MainWindow
         _quickCard?.Close();
         var card=new QuickCardWindow(_dictService,_vocabService,QuoteArchive,(text,token)=>new AiService().TranslateAsync(text,_settings,token),_settings,
             ()=>{RefreshWords();if(_currentPage=="quotes")RenderQuotes();},
-            word=>{ShowAndActivate();LookupInput.Text=word;_ =PerformLookupAsync();},
+            word=>{ShowAndActivate(preservePage:false);LookupInput.Text=word;_ =PerformLookupAsync();},
             ()=>{ShowAndActivate();ShowPage("quotes");},
             async (word,token)=>AiLookupConfigured?await new AiService().LookupWordAsync(word,_settings,token):null);
         _quickCard=card;card.Closed+=(_,_)=>{if(ReferenceEquals(_quickCard,card))_quickCard=null;};return card;

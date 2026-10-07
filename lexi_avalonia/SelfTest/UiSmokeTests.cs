@@ -32,6 +32,31 @@ public static class UiSmokeTests
         try
         {
             Trace("start");
+            // Reopening from the Dock must restore the existing UI, not navigate.
+            var flags = BindingFlags.Instance | BindingFlags.NonPublic;
+            var pageField = typeof(MainWindow).GetField("_currentPage", flags)!;
+            var epochField = typeof(MainWindow).GetField("_reviewEpoch", flags)!;
+            var showPage = typeof(MainWindow).GetMethod("ShowPage", flags)!;
+            foreach (var page in new[] { "vocab", "settings", "quotes", "ielts", "plans", "typing", "review", "lookup" })
+            {
+                showPage.Invoke(window, new object[] { page });
+                await Task.Delay(160);
+                var epoch = epochField.GetValue(window);
+                // Invoke the same native reopen handler target while visible, minimized and closed.
+                foreach (var state in new[] { "background", "minimized", "closed" })
+                {
+                    if (state == "minimized") window.WindowState = WindowState.Minimized;
+                    if (state == "closed") window.Close();
+                    window.ShowAndActivate();
+                    await Task.Delay(100);
+                    Check(window.IsVisible && WindowState.Minimized != window.WindowState
+                        && (string?)pageField.GetValue(window) == page,
+                        $"Dock reopen preserves {page} page after {state}");
+                    Check(Equals(epoch, epochField.GetValue(window)),
+                        $"Dock reopen preserves {page} navigation/session epoch after {state}");
+                }
+            }
+            Trace("dock-reopen-done");
             Check(window.IsVisible && !window.Topmost, "visible window, not always on top");
             if (OperatingSystem.IsMacOS())
             {

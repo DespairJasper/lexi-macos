@@ -14,7 +14,7 @@ Apple Silicon · macOS 12+ · 中英文界面 · 离线词典
 
 Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用里。阅读时用快捷小卡片查词或翻译，想记住的词收入档案，再按自己的计划学习。复习由记忆模型安排，无需手动计算间隔。
 
-当前源码版本为 **3.1.2**，安装包为 `Lexi-3.1.2-macOS-arm64.dmg`，配套 `.sha256` 校验文件随 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 提供。应用每次全新启动会在后台检查本仓库是否有更高的正式版本，有则提示并给出更新入口；更新与覆盖安装保留本机全部学习数据与记忆状态。个人 FSRS optimizer 已实现，并随应用打包。
+当前源码版本为 **3.1.3**，安装包为 `Lexi-3.1.3-macOS-arm64.dmg`，配套 `.sha256` 校验文件随 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 提供。应用每次全新启动会在后台检查本仓库是否有更高的正式版本，有则提示并给出更新入口；更新与覆盖安装保留本机全部学习数据与记忆状态。个人 FSRS optimizer 已实现，并随应用打包。
 
 ## 从阅读到学习，操作自然衔接
 
@@ -70,8 +70,8 @@ Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用
 
 适用 **Apple Silicon（M 系列）Mac、macOS 12 或更新版本**。安装包包含 .NET 运行环境、离线词典与本地 optimizer，普通使用者无需安装开发工具。
 
-1. 在 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 下载 `Lexi-3.1.2-macOS-arm64.dmg` 与 `Lexi-3.1.2-macOS-arm64.dmg.sha256`。
-2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.1.2-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
+1. 在 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 下载 `Lexi-3.1.3-macOS-arm64.dmg` 与 `Lexi-3.1.3-macOS-arm64.dmg.sha256`。
+2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.1.3-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
 3. 打开 DMG，将 Lexi 拖入“应用程序”，推出磁盘映像后启动。磁盘中另附 `卸载Lexi.command`，用法见下方“卸载与数据保留”。
 4. 使用跨应用选词时，在“系统设置 → 隐私与安全 → 设备控制和数据访问”中授权 Lexi；未授权时仍可手动输入。
 5. 按需配置 AI 服务，开始整理词汇和每日学习计划。
@@ -117,6 +117,11 @@ bash scripts/package_dmg.sh --no-build
 要以自己的身份发布，需要显式替换这两处 pin：先用 `bash scripts/build_fsrs_optimizer.sh` 重建辅助程序并重新审计其字节，把新的 SHA256 写回 `packaging/fsrs-helper-pin.json`；再把你自己证书的 designated requirement 写回 `packaging/release-pin.json`。本项目发布身份的私钥不随源码提供，也不应通过削弱门禁来冒充原身份。
 
 `release.sh` 依次执行回归、签名打包、包内隔离验收、许可证与隐私检查，并生成绑定实际应用的合格证明；DMG 打包与安装均验证该证明。测试应使用隔离数据目录，避免向日常学习数据灌入模拟记录。
+
+## 3.1.3 更新
+
+- 修复点击 Dock 图标唤醒应用时强制返回首页的问题；切换应用、最小化和关闭窗口后重新打开均保留原页面与页面状态。
+- 快捷卡片的主动查词跳转及其余功能保持原行为。
 
 ## 3.1.2 更新
 

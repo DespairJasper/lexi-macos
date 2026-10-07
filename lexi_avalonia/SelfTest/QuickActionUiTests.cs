@@ -77,6 +77,14 @@ public static class QuickActionUiTests
             Check(CurrentCard().OriginalInput.Text=="","main window focus does not reuse another card's selection");
             CurrentCard().Close();await main.HandleQuickActionAsync(QuickAction.Translate,Environment.ProcessId);
             Check(CurrentCard().OriginalInput.Text=="","closed card does not leak stale selection into a new session");
+            // Explicit quick-card navigation must retain its pre-fix behavior.
+            typeof(MainWindow).GetMethod("ShowPage",BindingFlags.NonPublic|BindingFlags.Instance)!.Invoke(main,new object[]{"settings"});
+            CurrentCard().Prepare(QuickAction.Lookup,"resilient");
+            var detail=(Button)typeof(QuickCardWindow).GetField("_detail",BindingFlags.NonPublic|BindingFlags.Instance)!.GetValue(CurrentCard())!;
+            detail.RaiseEvent(new Avalonia.Interactivity.RoutedEventArgs(Button.ClickEvent));
+            await Task.Delay(150);
+            Check((string?)typeof(MainWindow).GetField("_currentPage",BindingFlags.NonPublic|BindingFlags.Instance)!.GetValue(main)=="lookup"
+                &&main.FindControl<TextBox>("LookupInput")!.Text=="resilient","explicit quick-card detail still navigates from settings to lookup");
         }
         catch(Exception ex){report.Add(ex.ToString());exit=1;}
         finally

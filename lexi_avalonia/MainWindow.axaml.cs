@@ -250,7 +250,7 @@ public partial class MainWindow : Window
         SetStatus(QuickText("主窗口已隐藏，全局快捷卡片继续可用；从菜单栏或 Dock 打开主窗口。","Main window hidden. Quick cards remain available; open the main window from the menu or Dock."));
     }
 
-    public void ShowAndActivate()
+    public void ShowAndActivate(bool preservePage = true)
     {
         if (_isForceClose) return;
         var restoreState = _hiddenWindowState ?? (WindowState == WindowState.Minimized ? _restoreWindowState : WindowState);
@@ -264,8 +264,10 @@ public partial class MainWindow : Window
             else if (_currentPage == "typing" && _typingSession.Current != null && _typingSession.Outcome != TypingOutcome.Correct) _typingInput.Focus();
             return;
         }
-        ShowPage("lookup");
-        LookupInput.Focus();
+        // Dock/menu/instance activation restores the existing page and its session.
+        // Only explicit lookup actions request navigation to the lookup page.
+        if (!preservePage) ShowPage("lookup");
+        if (_currentPage == "lookup") LookupInput.Focus();
     }
 
     public void ToggleVisibility()
