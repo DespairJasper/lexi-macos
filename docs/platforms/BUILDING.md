@@ -54,7 +54,7 @@ chmod +x gradlew
 
 ### 签名与升级
 
-当前 Release 提供 Android 源码与已有开发签名 APK。开发私钥不公开。你本地重新生成的 debug APK 可能使用不同签名，不能保证覆盖已安装的旧 APK。正式分发需要维护自己的长期 release 签名；切换签名前先导出数据，不以卸载冒充无损升级。
+当前 Release 提供 Android 源码与已有开发签名 APK。开发私钥不公开。本地生成的 debug APK 可能使用不同签名，不能保证覆盖已安装的旧 APK。正式分发需要维护自己的长期 release 签名；切换签名前先导出数据，卸载前应导出数据。
 
 ## macOS
 
