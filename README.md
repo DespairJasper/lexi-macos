@@ -155,8 +155,8 @@ Lexi 自有代码采用根目录 [LICENSE](LICENSE) 的**非商业许可**，允
 | 平台 | 版本 | 源码 | 下载 |
 | --- | --- | --- | --- |
 | macOS | 以本页原有说明为准 | [macos 导航](macos/README.md) → 原有 lexi_avalonia | [本仓库 Releases](https://github.com/DespairJasper/lexi-macos/releases) |
-| Windows | 1.2.4 | [windows](windows/README.md) | [完整安装包](https://github.com/Cofran-77/lexi/releases/tag/windows-v1.2.4-nc.1) |
-| Android | 0.2.2-alpha | [android](android/README.md) | [APK](https://github.com/Cofran-77/lexi/releases/tag/android-v0.2.2-nc.1) |
+| Windows | 1.2.4 | [windows](windows/README.md) | [完整安装包](https://github.com/DespairJasper/lexi-macos/releases/tag/windows-v1.2.4) |
+| Android | 0.2.2-alpha | [android](android/README.md) | [APK](https://github.com/DespairJasper/lexi-macos/releases/tag/android-v0.2.2) |
 
 Windows 提供离线查词、词汇档案、FSRS-6、每日计划、辅助拼写、专注学习、翻译、金句本和配套专题资料。Android 提供原生查词、档案、固定日期复习、可选 AI、CSV 迁移、PDF 与备份功能，当前不具备全部桌面功能。各端数据库独立，不提供跨端自动同步。
 

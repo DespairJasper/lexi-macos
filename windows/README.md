@@ -49,4 +49,4 @@ dotnet run --project Lexi.csproj
 
 ## 来源
 
-本端源码复制自 [Cofran-77/lexi](https://github.com/Cofran-77/lexi)，基线提交 68becc1。作者 Cofran-77、DespairJasper。安装包和更新记录由来源仓库提供。本目录许可见 LICENSE，第三方声明见 docs/platforms。
+本端源码复制自 [Cofran-77/lexi](https://github.com/Cofran-77/lexi)，基线提交 68becc1。作者 Cofran-77、DespairJasper。安装包在本仓库对应平台 Release 提供。本目录许可见 LICENSE，第三方声明见 docs/platforms。
