@@ -1,0 +1,14 @@
+{
+  "Source": "Original example by Cofran-77 and DespairJasper; MIT",
+  "Commit": "",
+  "Sections": [
+    {
+      "Id": "lexi-original-demo", "Kind": "vocabulary", "Title": "自备资料格式示例",
+      "Description": "原创示例，仅说明数据结构，不是 IELTS 教材。",
+      "Entries": [
+        { "Id": "lexi-demo-adaptive", "Words": ["adaptive"], "Pos": "adj.", "Meaning": "能够适应变化的", "Phonetic": "/əˈdæptɪv/", "Example": "We built an adaptive schedule for our study group.", "Group": 1, "Synonyms": ["flexible"] }
+      ]
+    }
+  ],
+  "Sentences": []
+}

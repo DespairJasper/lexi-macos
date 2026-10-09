@@ -1,0 +1,155 @@
+[
+  {
+    "Platform": "windows",
+    "Version": "1.0.0",
+    "Archive": "Lexi-1.0.0-Avalonia-源码.zip",
+    "ArchiveSHA256": "0AEA5C3D9FEC6A6198EE7480DB51900F014782BEE5163DFD07B60094CB807FFC",
+    "Files": 91,
+    "Excluded": 1,
+    "Commit": "faf1cff82bb76517e2e229c28c9bf83e75f72c19"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.1.0",
+    "Archive": "Lexi-1.1.0-Avalonia-源码.zip",
+    "ArchiveSHA256": "461A698147861E73BD35C596922E8365BBD7F17DD01BC8E47035576EA41BFC88",
+    "Files": 104,
+    "Excluded": 3,
+    "Commit": "56b80d0bdacdac96830bb7e636573a0aea03bc94"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.1.1",
+    "Archive": "Lexi-1.1.1-Avalonia-源码.zip",
+    "ArchiveSHA256": "C3CCBC62E8D88072EDCB6C332BF96DE5839B15E836E3D28FBB809B3F38488295",
+    "Files": 105,
+    "Excluded": 3,
+    "Commit": "a4ff540b164f8ea88126d6c08d3d3fcf8801f97d"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.1.2",
+    "Archive": "Lexi-1.1.2-Avalonia-源码.zip",
+    "ArchiveSHA256": "9E0990D177B90D20BD6B98A3C4FBC30C49D46B559FEAB7451952746A02E896C2",
+    "Files": 105,
+    "Excluded": 3,
+    "Commit": "bf5edbdb7470ec371e5a6311245ed801ff6a1d64"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.1.3",
+    "Archive": "Lexi-1.1.3-Avalonia-源码.zip",
+    "ArchiveSHA256": "ACCF10FF28137B16CC9608FD9E98EB1EBAA69333452D2EC6C52BF70AF4F2C7CB",
+    "Files": 106,
+    "Excluded": 3,
+    "Commit": "8614a5486be62c5e655cc7b82ed0c93c2b05d69c"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.1.4",
+    "Archive": "Lexi-1.1.4-Avalonia-源码.zip",
+    "ArchiveSHA256": "7EC691937F6D14E6296B50B340C7BC9223EC0C9D768C62B103F87B69C1E0F5F0",
+    "Files": 220,
+    "Excluded": 3886,
+    "Commit": "3746c02b3891d91b6e681ae3c709d8aa3399d593"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.2.0",
+    "Archive": "Lexi-1.2.0-Avalonia-源码.zip",
+    "ArchiveSHA256": "C3D203A20AE7F8B13758508B234C9E7A102B8C11407AB819B3B0CF5F36CF3B96",
+    "Files": 236,
+    "Excluded": 3888,
+    "Commit": "585a958afb4bbfba645db5ccd8023bd648a95a5c"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.2.1",
+    "Archive": "Lexi-1.2.1-Avalonia-源码.zip",
+    "ArchiveSHA256": "6BD29A097B75E6CAB1318F2B05B749333EFA852E620387A3EAC97A40CF09BE41",
+    "Files": 266,
+    "Excluded": 3893,
+    "Commit": "55a13545f5d99f1d13fc6c76d0cbc79686069ca1"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.2.2",
+    "Archive": "Lexi-1.2.2-Avalonia-源码.zip",
+    "ArchiveSHA256": "5B94157BB27BA764740F7A70B56415286E02310286CE8632627CAC798086BA6E",
+    "Files": 279,
+    "Excluded": 3915,
+    "Commit": "ea0a1704fc763398b94cd8795715eb5d7228e4a4"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.2.3",
+    "Archive": "Lexi-1.2.3-Avalonia-源码.zip",
+    "ArchiveSHA256": "1F6F19B512B4962675962B80B728E2D4C826839886F72EC1EBEA2174C7994975",
+    "Files": 292,
+    "Excluded": 3956,
+    "Commit": "aa1bb8189864d8748b79042710445a153e6588bb"
+  },
+  {
+    "Platform": "windows",
+    "Version": "1.2.4",
+    "Archive": "Lexi-1.2.4-Avalonia-源码.zip",
+    "ArchiveSHA256": "6276F42652D96508C286243CB80239865D4DCB430E0A1E2792DDE432B51F112D",
+    "Files": 293,
+    "Excluded": 3963,
+    "Commit": "777c5770e278c035465f1664339b614d6d2b8b0b"
+  },
+  {
+    "Platform": "android",
+    "Version": "0.1.0",
+    "Archive": "Lexi-Android-0.1.0-源码.zip",
+    "ArchiveSHA256": "12D053C585B7A7A05D5D6062376CCF082AC07B26251E689926927C3F0DB3924C",
+    "Files": 24,
+    "Excluded": 2,
+    "Commit": "c87a301150139f54891baccf72ed16f26c7c6395"
+  },
+  {
+    "Platform": "android",
+    "Version": "0.1.1",
+    "Archive": "Lexi-Android-0.1.1-源码.zip",
+    "ArchiveSHA256": "0A37585D0748A86C51B58941D2AC7F71F2AB93187827AEC8918813D393341D3F",
+    "Files": 24,
+    "Excluded": 2,
+    "Commit": "f41faf29f59accc3ef4dc08b965a933fb80efedb"
+  },
+  {
+    "Platform": "android",
+    "Version": "0.1.2",
+    "Archive": "Lexi-Android-0.1.2-源码.zip",
+    "ArchiveSHA256": "3E92C9C325EE1B4BE407DE0B9E13D29161EEB1F43392444D3BD88305C9A10E95",
+    "Files": 25,
+    "Excluded": 2,
+    "Commit": "b4d4b2bb9d8f3eea0e12b7a44d87ea209d495e28"
+  },
+  {
+    "Platform": "android",
+    "Version": "0.2.0",
+    "Archive": "Lexi-Android-0.2.0-源码.zip",
+    "ArchiveSHA256": "6A942F8246632FA8B72A367C0DFA556CEA9183D295053D57E0F5DEDC719A9B47",
+    "Files": 28,
+    "Excluded": 2,
+    "Commit": "1524cd294f2ad06c75ef3a02b4ee673c5433e2d7"
+  },
+  {
+    "Platform": "android",
+    "Version": "0.2.1",
+    "Archive": "Lexi-Android-0.2.1-源码.zip",
+    "ArchiveSHA256": "99F9E989898F9179A1CCC55CF028AFC4D627C9AF250658068529EDBB7080EA2E",
+    "Files": 35,
+    "Excluded": 2,
+    "Commit": "63bf652aa4ce7f3bd38577551eb074fb11ceb819"
+  },
+  {
+    "Platform": "android",
+    "Version": "0.2.2",
+    "Archive": "Lexi-Android-0.2.2-源码.zip",
+    "ArchiveSHA256": "33168D16662E234F1CCD4ABCB897258EDBCECDEA4E8D948107BC125895925DA2",
+    "Files": 38,
+    "Excluded": 2,
+    "Commit": "5f58b6c60c539f2fa4581d0f5dadab6f396b556a"
+  }
+]

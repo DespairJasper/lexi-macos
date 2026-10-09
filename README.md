@@ -147,3 +147,17 @@ bash scripts/package_dmg.sh --no-build
 Lexi 自有代码采用根目录 [LICENSE](LICENSE) 的**非商业许可**，允许个人、教育与非商业研究用途下使用、修改及再分发；商业使用需事先取得权利人书面授权。
 
 第三方组件、词典与 IELTS 资料分别遵循各自条款，不由上述许可重新授权。详见 [NOTICES.md](NOTICES.md) 与 [第三方说明](lexi_avalonia/Notices/)。FSRS 训练器及依赖的许可原文、来源与需提供的源码保留在该目录。
+
+## Windows 与 Android
+
+新增两端源码来自 [Cofran-77/lexi](https://github.com/Cofran-77/lexi)，作者 **Cofran-77、DespairJasper**。原有 macOS 文件、资源与构建布局保持不变，各端独立实现和发布。
+
+| 平台 | 版本 | 源码 | 下载 |
+| --- | --- | --- | --- |
+| macOS | 以本页原有说明为准 | [macos 导航](macos/README.md) → 原有 lexi_avalonia | [本仓库 Releases](https://github.com/DespairJasper/lexi-macos/releases) |
+| Windows | 1.2.4 | [windows](windows/README.md) | [完整安装包](https://github.com/Cofran-77/lexi/releases/tag/windows-v1.2.4-nc.1) |
+| Android | 0.2.2-alpha | [android](android/README.md) | [APK](https://github.com/Cofran-77/lexi/releases/tag/android-v0.2.2-nc.1) |
+
+Windows 提供离线查词、词汇档案、FSRS-6、每日计划、辅助拼写、专注学习、翻译、金句本和配套专题资料。Android 提供原生查词、档案、固定日期复习、可选 AI、CSV 迁移、PDF 与备份功能，当前不具备全部桌面功能。各端数据库独立，不提供跨端自动同步。
+
+Windows 使用 .NET 8 / Avalonia，Android 使用 Kotlin / Jetpack Compose。详见 [构建指南](docs/platforms/BUILDING.md)。新增平台目录适用各自 LICENSE，来源与第三方权利见 [第三方声明](docs/platforms/THIRD_PARTY_NOTICES.md)，不改变原有 macOS 许可。

@@ -1,0 +1,156 @@
+Lexi Avalonia 1.0.0 dependencies. Includes resolved build dependencies; not every package ships in win-x64.
+
+Avalonia/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.Angle.Windows.Natives/2.1.25547.20250602
+License: LICENSE
+Project: https://avaloniaui.net/
+License URL: https://aka.ms/deprecateLicenseUrl
+
+Avalonia.BuildServices/11.3.2
+License: MIT
+Project: https://avaloniaui.net/
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.Desktop/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.FreeDesktop/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.Native/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.Remote.Protocol/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.Skia/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.Themes.Fluent/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.Win32/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+Avalonia.X11/11.3.12
+License: MIT
+Project: https://avaloniaui.net/?utm_source=nuget&utm_medium=referral&utm_content=project_homepage_link
+License URL: https://licenses.nuget.org/MIT
+
+HarfBuzzSharp/8.3.1.1
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+HarfBuzzSharp.NativeAssets.Linux/8.3.1.1
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+HarfBuzzSharp.NativeAssets.macOS/8.3.1.1
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+HarfBuzzSharp.NativeAssets.WebAssembly/8.3.1.1
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+HarfBuzzSharp.NativeAssets.Win32/8.3.1.1
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+MicroCom.Runtime/0.11.0
+License: MIT
+Project: 
+License URL: https://licenses.nuget.org/MIT
+
+Microsoft.Data.Sqlite/8.0.25
+License: MIT
+Project: https://docs.microsoft.com/dotnet/standard/data/sqlite/
+License URL: https://licenses.nuget.org/MIT
+
+Microsoft.Data.Sqlite.Core/8.0.25
+License: MIT
+Project: https://docs.microsoft.com/dotnet/standard/data/sqlite/
+License URL: https://licenses.nuget.org/MIT
+
+SkiaSharp/2.88.9
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+SkiaSharp.NativeAssets.Linux/2.88.9
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+SkiaSharp.NativeAssets.macOS/2.88.9
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+SkiaSharp.NativeAssets.WebAssembly/2.88.9
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+SkiaSharp.NativeAssets.Win32/2.88.9
+License: MIT
+Project: https://go.microsoft.com/fwlink/?linkid=868515
+License URL: https://licenses.nuget.org/MIT
+
+SQLitePCLRaw.bundle_e_sqlite3/2.1.6
+License: Apache-2.0
+Project: 
+License URL: https://licenses.nuget.org/Apache-2.0
+
+SQLitePCLRaw.core/2.1.6
+License: Apache-2.0
+Project: 
+License URL: https://licenses.nuget.org/Apache-2.0
+
+SQLitePCLRaw.lib.e_sqlite3/2.1.6
+License: Apache-2.0
+Project: 
+License URL: https://licenses.nuget.org/Apache-2.0
+
+SQLitePCLRaw.provider.e_sqlite3/2.1.6
+License: Apache-2.0
+Project: 
+License URL: https://licenses.nuget.org/Apache-2.0
+
+System.IO.Pipelines/8.0.0
+License: MIT
+Project: https://dot.net/
+License URL: https://licenses.nuget.org/MIT
+
+System.Memory/4.5.3
+License: 
+Project: https://dot.net/
+License URL: https://github.com/dotnet/corefx/blob/master/LICENSE.TXT
+
+Tmds.DBus.Protocol/0.21.2
+License: MIT
+Project: 
+License URL: https://licenses.nuget.org/MIT

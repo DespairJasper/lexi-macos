@@ -1,0 +1,16 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" android:maxSdkVersion="28" />
+    <application android:label="Lexi" android:icon="@drawable/ic_launcher" android:theme="@style/Theme.Lexi" android:allowBackup="false" android:usesCleartextTraffic="false" android:supportsRtl="true">
+        <provider android:name="androidx.core.content.FileProvider" android:authorities="${applicationId}.files" android:exported="false" android:grantUriPermissions="true">
+            <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+        </provider>
+        <activity android:name=".MainActivity" android:exported="true" android:launchMode="singleTop" android:resizeableActivity="true" android:windowSoftInputMode="adjustResize">
+            <intent-filter><action android:name="android.intent.action.MAIN" /><category android:name="android.intent.category.LAUNCHER" /></intent-filter>
+            <intent-filter><action android:name="android.intent.action.SEND" /><category android:name="android.intent.category.DEFAULT" /><data android:mimeType="text/plain" /></intent-filter>
+        </activity>
+        <activity-alias android:name=".ProcessText" android:targetActivity=".MainActivity" android:exported="true" android:label="Lexi 查词">
+            <intent-filter><action android:name="android.intent.action.PROCESS_TEXT" /><category android:name="android.intent.category.DEFAULT" /><data android:mimeType="text/plain" /></intent-filter>
+        </activity-alias>
+    </application>
+</manifest>

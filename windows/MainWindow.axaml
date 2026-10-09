@@ -1,0 +1,756 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:controls="using:Lexi.Controls"
+        x:Class="Lexi.MainWindow"
+        Title="lexi"
+        Width="1100" Height="760" MinWidth="760" MinHeight="520" CanResize="True"
+        WindowStartupLocation="CenterScreen"
+        Background="Transparent"
+        TransparencyLevelHint="Mica, AcrylicBlur, Blur, None"
+        SystemDecorations="None" ExtendClientAreaToDecorationsHint="True" Topmost="False"
+        Foreground="{DynamicResource InkBrush}"
+        Icon="Assets/icon.ico">
+
+  <Border Name="RootWindowBorder" CornerRadius="16" ClipToBounds="True" Background="{DynamicResource PaperBrush}" BorderBrush="{DynamicResource CardBorderGradient}" BorderThickness="1" BoxShadow="{DynamicResource FloatingShadow}">
+  <Grid>
+    <!-- Main Window Layout -->
+    <Grid RowDefinitions="48,*,28">
+      <!-- Title Bar -->
+      <Border Name="DragBar" Background="Transparent" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="16,0,0,0">
+        <Grid ColumnDefinitions="Auto,*,Auto,Auto,Auto,Auto,Auto,Auto">
+          <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+            <Image Source="avares://Lexi/Assets/lexi-logo.png" Width="30" Height="30" Stretch="Uniform" VerticalAlignment="Center"/>
+            <TextBlock Text="lexi" FontSize="20" FontWeight="Bold" VerticalAlignment="Center"/>
+          </StackPanel>
+
+          <Button Name="LanguageToggleBtn" Grid.Column="2" Classes="ghost" Content="EN" ToolTip.Tip="切换界面语言" Margin="0,0,6,0"/>
+          <Button Name="ThemeToggleBtn" Grid.Column="3" Classes="ghost" Content="切换深色" ToolTip.Tip="切换浅色 / 深色主题，自动保存" Margin="0,0,12,0"/>
+          <Button Name="GlobalFocusButton" Grid.Column="4" Content="专注" Classes="ghost" Focusable="False" ToolTip.Tip="进入 / 退出专注模式 · F11" Margin="0,0,8,0"/>
+
+          <!-- Centered vector Path caption buttons, no font glyphs -->
+          <Button Name="HideToTrayBtn" Grid.Column="5" Classes="window-control" ToolTip.Tip="最小化到任务栏" AutomationProperties.Name="最小化" Margin="0">
+            <Path Data="M 3,8 L 13,8" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" StrokeLineCap="Round" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Button>
+          <Button Name="MaximizeBtn" Grid.Column="6" Classes="window-control" ToolTip.Tip="最大化 / 还原" AutomationProperties.Name="最大化或还原" Margin="0">
+            <Path Name="MaximizeGlyph" Data="M 3,3 L 13,3 L 13,13 L 3,13 Z" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.2" Width="16" Height="16"/>
+          </Button>
+          <Button Name="QuitAppBtn" Grid.Column="7" Classes="window-control close" ToolTip.Tip="关闭到托盘；退出请用托盘菜单" AutomationProperties.Name="关闭到托盘">
+            <Path Data="M 3.5,3.5 L 12.5,12.5 M 12.5,3.5 L 3.5,12.5" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.5" StrokeLineCap="Round" Width="16" Height="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+          </Button>
+        </Grid>
+      </Border>
+
+      <!-- Central Body: Sidebar + Dynamic Page -->
+      <Grid Name="MainBodyGrid" Grid.Row="1" ColumnDefinitions="208,*">
+        <!-- Sidebar Navigation -->
+        <Border Name="SidebarBorder" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0" Padding="12,18,12,14" Background="Transparent">
+          <Grid RowDefinitions="Auto,Auto,Auto,*,Auto,Auto">
+            <Button Name="NavLookup" Classes="nav active">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 9.5,3 A 5.5,5.5 0 1 1 4,8.5 A 5.5,5.5 0 0 1 9.5,3 M 13.5,13.5 L 17,17"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5" StrokeLineCap="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="查一个词" VerticalAlignment="Center" FontSize="13"/>
+                </StackPanel>
+              </Grid>
+            </Button>
+
+            <Button Name="NavVocab" Grid.Row="1" Classes="nav">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 4,4 L 14,4 M 4,8 L 14,8 M 4,12 L 11,12"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5" StrokeLineCap="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="词汇档案" VerticalAlignment="Center" FontSize="13"/>
+                </StackPanel>
+                <Border Grid.Column="1" Classes="badge" VerticalAlignment="Center">
+                  <TextBlock Name="NavVocabBadge" Text="0" Classes="badge-text"/>
+                </Border>
+              </Grid>
+            </Button>
+
+            <Button Name="NavReview" Grid.Row="2" Classes="nav">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 9,3 A 6,6 0 1 1 3,9 A 6,6 0 0 1 9,3 M 9,5.5 L 9,9 L 11.5,10.5"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.5" StrokeLineCap="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="今日重逢" VerticalAlignment="Center" FontSize="13"/>
+                </StackPanel>
+                <Border Grid.Column="1" Classes="badge badge-accent" VerticalAlignment="Center">
+                  <TextBlock Name="NavReviewBadge" Text="0" Classes="badge-text badge-accent-text"/>
+                </Border>
+              </Grid>
+            </Button>
+
+            <!-- Bottom Offline Notice & Settings -->
+            <StackPanel Name="LearningNavHost" Grid.Row="3" VerticalAlignment="Top"/>
+            <StackPanel Grid.Row="4" Spacing="4" Margin="6,0,6,16">
+              <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                <Ellipse Width="7" Height="7" Fill="#16815B"/>
+                <TextBlock Text="离线词库已就绪" FontSize="11" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryGreen}"/>
+              </StackPanel>
+              <TextBlock Text="59,026 个词条" Classes="muted" FontSize="10" Margin="13,0,0,0"/>
+            </StackPanel>
+
+            <Button Name="NavSettings" Grid.Row="5" Classes="nav">
+              <Grid ColumnDefinitions="*,Auto">
+                <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
+                  <Path Data="M 9,3.5 L 10,5.5 L 12,5 L 12.5,7 L 14.5,7.5 L 13.5,9.5 L 14.5,11.5 L 12.5,12 L 12,14 L 10,13.5 L 9,15.5 L 8,13.5 L 6,14 L 5.5,12 L 3.5,11.5 L 4.5,9.5 L 3.5,7.5 L 5.5,7 L 6,5 L 8,5.5 Z M 9,7.5 A 2,2 0 1 0 9,11.5 A 2,2 0 1 0 9,7.5"
+                        Stroke="{Binding $parent[Button].Foreground}" StrokeThickness="1.3" StrokeLineCap="Round" StrokeJoin="Round" Width="18" Height="18" VerticalAlignment="Center"/>
+                  <TextBlock Text="主题与设置" VerticalAlignment="Center" FontSize="13"/>
+                </StackPanel>
+              </Grid>
+            </Button>
+          </Grid>
+        </Border>
+
+        <!-- Pages Host Container -->
+        <Panel Name="PagesHost" Grid.Column="1">
+          <!-- 1. LOOKUP PAGE -->
+          <Grid Name="LookupPageHost" RowDefinitions="*,Auto">
+          <!-- Keep spacing outside the ScrollViewer: its Fluent presenter does not
+               subtract Padding from the reported viewport/maximum scroll offset. -->
+          <ScrollViewer Name="PageLookup" HorizontalScrollBarVisibility="Disabled" Margin="36,24,36,24" IsVisible="True">
+            <StackPanel Name="LookupPageContent" Spacing="18" MaxWidth="720" HorizontalAlignment="Stretch">
+              <TextBlock Text="查词" Classes="h1" Margin="0,0,0,10"/>
+
+              <!-- Search Input Bar with Soft Focus Glow and 150ms Fade-in Clear Button -->
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBox Name="LookupInput"
+                         Watermark="输入一个英文单词 (例如: serendipity, resilient)..."
+                         FontSize="15"
+                         Padding="14,10,36,10">
+                  <TextBox.InnerRightContent>
+                    <Button Name="LookupClearBtn"
+                            Classes="clear-btn" Opacity="0" IsHitTestVisible="False" Focusable="False"
+                            ToolTip.Tip="清除输入"
+                            VerticalAlignment="Center"
+                            HorizontalAlignment="Right"
+                            Margin="0,0,6,0">
+                      <Path Data="M 4,4 L 12,12 M 12,4 L 4,12"
+                            Stroke="{DynamicResource MutedBrush}"
+                            StrokeThickness="1.5"
+                            StrokeLineCap="Round"
+                            Width="16" Height="16"
+                            HorizontalAlignment="Center"
+                            VerticalAlignment="Center"/>
+                    </Button>
+                  </TextBox.InnerRightContent>
+                </TextBox>
+                <Button Name="LookupBtn" Grid.Column="1" Classes="primary" Content="查询 ↵" Margin="10,0,0,0" Padding="18,10"/>
+              </Grid>
+
+              <TextBlock Text="本地词典查询，无需网络，不消耗 Token · 支持 Enter 回车" Classes="muted" FontSize="11"/>
+
+              <!-- Result Word Card -->
+              <Border Name="LookupResultCard" Classes="card" IsVisible="False">
+                <StackPanel Spacing="14">
+                  <Grid ColumnDefinitions="*,Auto">
+                    <StackPanel Spacing="2">
+                      <WrapPanel Orientation="Horizontal" VerticalAlignment="Bottom">
+                        <SelectableTextBlock Name="ResultWordText" FontSize="30" TextWrapping="Wrap" FontWeight="Bold" Foreground="{DynamicResource InkBrush}"/>
+                        <SelectableTextBlock Name="ResultPhoneticText" Classes="muted" FontSize="14" VerticalAlignment="Bottom" Margin="12,0,0,5"/>
+                        <controls:InlineAudioButton Name="LookupSpeakButton" Tag="{Binding #ResultWordText.Text}" Click="OnContentSpeakClick" ToolTip.Tip="朗读单词" AutomationProperties.Name="朗读单词" Margin="8,0,0,4"/>
+                      </WrapPanel>
+                    </StackPanel>
+                    <Border Grid.Column="1" Background="{DynamicResource TintBrush}" CornerRadius="12" Padding="10,4" VerticalAlignment="Top">
+                      <TextBlock Text="离线词库" FontSize="10" FontWeight="SemiBold" Foreground="{DynamicResource PrimaryGreen}"/>
+                    </Border>
+                  </Grid>
+
+                  <WrapPanel Name="ResultPosPanel" IsVisible="False"/>
+                  <SelectableTextBlock Name="ResultTranslationText" FontSize="15" TextWrapping="Wrap" LineHeight="24"/>
+                  <SelectableTextBlock Name="ResultDefinitionText" Classes="muted" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
+
+                  <!-- Independent AI Tool Section -->
+                  <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+                    <StackPanel Spacing="12">
+                      <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Text="再多了解一点" FontWeight="SemiBold" FontSize="13"/>
+                        <TextBlock Grid.Column="1" Text="按需生成 · 不自动消耗" Classes="muted" FontSize="11"/>
+                      </Grid>
+
+                      <!-- Capsule CheckBoxes -->
+                      <WrapPanel Orientation="Horizontal">
+                        <CheckBox Name="AiOptExamples" Classes="capsule" Content="例句 (1–3 句)" IsChecked="True" Margin="0,0,8,6"/>
+                        <CheckBox Name="AiOptSynonyms" Classes="capsule" Content="同义词 (3–5 个)" IsChecked="True" Margin="0,0,8,6"/>
+                        <CheckBox Name="AiOptAntonyms" Classes="capsule" Content="反义词 (2–4 个)" Margin="0,0,8,6"/>
+                        <CheckBox Name="AiOptPhrases" Classes="capsule" Content="常用词组" Margin="0,0,8,6"/>
+                        <Button Name="AiGenerateBtn" Classes="secondary" Content="✦ 生成" Margin="10,0,8,6"/>
+                        <Button Name="AiCancelBtn" Classes="ghost" Content="取消" IsVisible="False" Margin="0,0,0,6"/>
+                      </WrapPanel>
+
+                      <Button Name="AiDrawerToggleBtn" Classes="ghost" HorizontalAlignment="Left" Content="展开扩展 ↓" IsVisible="False"/>
+
+                      <!-- Animated Collapsible Drawer with Recessed Trough Depth -->
+                      <Border Name="AiDrawerSlot" Classes="drawer-slot" ClipToBounds="True" Height="0" Opacity="0" IsVisible="False">
+                        <Border Name="AiResultBox" Padding="16,14">
+                          <StackPanel Spacing="12">
+                            <!-- Examples Group -->
+                            <StackPanel Name="AiResultExamplesGroup" Spacing="8" IsVisible="False">
+                              <TextBlock Name="AiResultExamplesTitle" Text="语境例句" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource PrimaryGreen}"/>
+                              <SelectableTextBlock Name="AiResultExamplesBody" IsVisible="False" TextWrapping="Wrap" FontSize="12"/>
+                              <StackPanel Name="AiResultExamplesContainer" Spacing="6"/>
+                            </StackPanel>
+
+                            <StackPanel Name="AiResultPhrasesGroup" Spacing="6" IsVisible="False">
+                              <TextBlock Text="常用词组" Classes="eyebrow"/>
+                              <StackPanel Name="AiResultPhrasesContainer" Spacing="6"/>
+                            </StackPanel>
+                            <!-- Synonyms Group (Micro-capsule Buttons) -->
+                            <StackPanel Name="AiResultSynonymsGroup" Spacing="6" IsVisible="False">
+                              <TextBlock Name="AiResultSynonymsTitle" Text="同义替换" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource PrimaryGreen}"/>
+                              <TextBlock Name="AiResultSynonymsBody" IsVisible="False" TextWrapping="Wrap" FontSize="12"/>
+                              <WrapPanel Name="AiResultSynonymsPanel" Orientation="Horizontal"/>
+                            </StackPanel>
+
+                            <!-- Antonyms Group (Micro-capsule Buttons) -->
+                            <StackPanel Name="AiResultAntonymsGroup" Spacing="6" IsVisible="False">
+                              <TextBlock Name="AiResultAntonymsTitle" Text="反义表达" FontWeight="SemiBold" FontSize="12" Foreground="{DynamicResource PrimaryGreen}"/>
+                              <TextBlock Name="AiResultAntonymsBody" IsVisible="False" TextWrapping="Wrap" FontSize="12"/>
+                              <WrapPanel Name="AiResultAntonymsPanel" Orientation="Horizontal"/>
+                            </StackPanel>
+                          </StackPanel>
+                        </Border>
+                      </Border>
+                    </StackPanel>
+                  </Border>
+
+                </StackPanel>
+              </Border>
+
+              <!-- Not Found / Custom Add Card -->
+              <Border Name="LookupNotFoundCard" Classes="card" IsVisible="False">
+                <StackPanel Spacing="14">
+                  <TextBlock Text="离线词库未收录该单词" FontWeight="SemiBold" FontSize="15" Foreground="{DynamicResource PrimaryGreen}"/>
+                  <TextBlock Text="您可以手动补充音标与释义，直接录入生词本建立记忆轨迹：" Classes="muted"/>
+                  <TextBox Name="ManualWordInput" Watermark="单词" FontSize="14"/>
+                  <TextBox Name="ManualPhoneticInput" Watermark="音标 (例如: /prəˈnʌnsiˌeɪʃn/)" FontSize="13"/>
+                  <TextBox Name="ManualTranslationInput" Watermark="中文释义 (必填)" AcceptsReturn="True" Height="65" FontSize="13"/>
+                  <TextBox Name="ManualDefinitionInput" Watermark="英文定义 (可选)" AcceptsReturn="True" Height="50" FontSize="13"/>
+                  <Button Name="ManualAddBtn" Classes="primary" Content="录入生词本" HorizontalAlignment="Right"/>
+                </StackPanel>
+              </Border>
+
+              <!-- Empty Placeholder Card -->
+              <Border Name="LookupEmptyCard" Classes="card" IsVisible="True" Padding="36,28">
+                <StackPanel Spacing="16" HorizontalAlignment="Center">
+                  <TextBlock Text="输入单词查询" FontWeight="SemiBold" FontSize="16" HorizontalAlignment="Center"/>
+                  <StackPanel Orientation="Horizontal" Spacing="8" HorizontalAlignment="Center">
+                    <Button Name="QuickWord1" Classes="secondary" Content="serendipity ↗"/>
+                    <Button Name="QuickWord2" Classes="secondary" Content="resilient ↗"/>
+                    <Button Name="QuickWord3" Classes="secondary" Content="wander ↗"/>
+                  </StackPanel>
+                </StackPanel>
+              </Border>
+            </StackPanel>
+          </ScrollViewer>
+          <!-- An actual layout row, not an overlay: never covers expansion content. -->
+          <Border Name="LookupActionBar" Grid.Row="1" IsVisible="{Binding #LookupResultCard.IsVisible}"
+                  MaxWidth="720" Margin="36,0,50,16" Padding="0,12,0,0"
+                  BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel VerticalAlignment="Center" Spacing="4" Margin="0,0,12,0">
+                <TextBlock Name="ArchiveStateText" Text="未入库 · 收藏你真正遇见的词" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+                <WrapPanel>
+                  <Button Name="EditCurrentArchiveBtn" Classes="ghost" Content="编辑档案" IsVisible="False"/>
+                  <Button Name="RecordEncounterBtn" Classes="ghost" Content="再次遇见" IsVisible="False"/>
+                </WrapPanel>
+              </StackPanel>
+              <Button Name="AddWordBtn" Grid.Column="1" Classes="primary" Content="＋ 加入生词本" VerticalAlignment="Center"/>
+            </Grid>
+          </Border>
+          </Grid>
+
+          <!-- 2. VOCAB NOTEBOOK PAGE -->
+          <Grid Name="PageVocab" RowDefinitions="Auto,Auto,*,Auto" Margin="36,24,36,16" IsVisible="False">
+            <!-- Header -->
+            <Grid ColumnDefinitions="*,Auto">
+              <StackPanel Spacing="4">
+                <TextBlock Name="VocabPageTitle" Text="词汇档案" Classes="h1"/>
+                <TextBlock Name="VocabPageSubtitle" Text="已收藏的词汇与学习记录" Classes="muted"/>
+              </StackPanel>
+              <StackPanel Name="VocabFocusActionHost" Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center"/>
+            </Grid>
+
+            <!-- Filters Bar -->
+            <Grid Grid.Row="1" ColumnDefinitions="*,Auto" Margin="0,16,0,10">
+              <TextBox Name="VocabSearchInput" Watermark="搜索单词、释义、来源、备注或标签…" Padding="10,7"/>
+              <ComboBox Name="VocabStatusFilter" Grid.Column="1" Margin="10,0,0,0" SelectedIndex="0" MinWidth="112">
+                <ComboBoxItem Content="全部状态" IsSelected="True"/>
+                <ComboBoxItem Content="学习中"/>
+                <ComboBoxItem Content="已掌握"/>
+              </ComboBox>
+            </Grid>
+
+            <!-- Words List Container -->
+            <Grid Grid.Row="2" RowDefinitions="Auto,*">
+              <!-- Selection Toolbar -->
+              <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto" Margin="2,4,2,8">
+                <CheckBox Name="SelectAllCheckBox" Content="全选当前页" VerticalAlignment="Center"/>
+                <Button Name="InvertSelectBtn" Grid.Column="1" Classes="ghost" Content="反选" VerticalAlignment="Center" Margin="10,0,0,0"/>
+                <TextBlock Name="SelectedCountText" Grid.Column="2" Text="已选 0 项" Classes="muted" VerticalAlignment="Center" Margin="14,0,0,0"/>
+                <Button Name="UndoReviewBtn" Grid.Column="3" Classes="ghost" Content="↺ 撤销上次复习" ToolTip.Tip="恢复最近一次复习的单词状态" VerticalAlignment="Center" Margin="0,0,8,0"/>
+              </Grid>
+
+              <!-- Words Scrollable List with Independent Expandable Rows -->
+              <Border Grid.Row="1" Classes="card" Padding="0">
+                <ListBox Name="VocabListBox" Classes="vocabulary" Background="Transparent" BorderThickness="0" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                  <!-- Bounded pages use actual heights: recycling mixed-height AI cards
+                       in Avalonia 11.3 can leave stale row positions during scrolling. -->
+                  <ListBox.ItemsPanel><ItemsPanelTemplate><StackPanel/></ItemsPanelTemplate></ListBox.ItemsPanel>
+                  <ListBox.ItemTemplate>
+                    <DataTemplate>
+                      <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="14,10">
+                        <StackPanel Spacing="8">
+                          <!-- Main Row -->
+                          <Grid ColumnDefinitions="Auto,Auto,*,Auto,Auto">
+                            <!-- Checkbox -->
+                            <CheckBox IsChecked="{Binding Selected, Mode=TwoWay}" VerticalAlignment="Center" Margin="0,0,8,0"/>
+
+                            <!-- Independent Expand Toggle Chevron -->
+                            <ToggleButton Grid.Column="1"
+                                          IsChecked="{Binding IsExpanded, Mode=TwoWay}"
+                                          Classes="chevron-toggle" AutomationProperties.Name="展开或收起单词详情"
+                                          ToolTip.Tip="展开/收起完整释义与定义"
+                                          VerticalAlignment="Center"
+                                          Margin="0,0,10,0"/>
+
+                            <!-- Word & Compact Meaning -->
+                            <StackPanel Grid.Column="2" Spacing="2" VerticalAlignment="Center">
+                              <WrapPanel Orientation="Horizontal">
+                                <SelectableTextBlock Text="{Binding Word}" TextWrapping="Wrap" Margin="0,0,8,0" FontSize="17" FontWeight="Bold" Foreground="{DynamicResource InkBrush}"/>
+                                <SelectableTextBlock Text="{Binding Phonetic}" Classes="muted" FontSize="13" VerticalAlignment="Center"/>
+                              </WrapPanel>
+                              <!-- Compact translation (single line with ellipsis) when collapsed -->
+                              <SelectableTextBlock Text="{Binding Translation}"
+                                         IsVisible="{Binding !IsExpanded}"
+                                         Classes="muted"
+                                         TextWrapping="NoWrap"
+                                         TextTrimming="CharacterEllipsis"
+                                         FontSize="12"/>
+                              <SelectableTextBlock Text="{Binding Archive.SourceTitle}" IsVisible="{Binding !IsExpanded}" Classes="muted" FontSize="10" TextTrimming="CharacterEllipsis"/>
+                              <ItemsControl ItemsSource="{Binding Archive.Tags}" IsVisible="{Binding !IsExpanded}" MaxHeight="24" ClipToBounds="True">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><SelectableTextBlock Text="{Binding}" Classes="muted" FontSize="10" Margin="0,0,8,0"/></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                            </StackPanel>
+
+                            <!-- Stage Status -->
+                            <StackPanel Grid.Column="3" VerticalAlignment="Center" Margin="14,0" HorizontalAlignment="Right">
+                              <Border Background="{DynamicResource TintBrush}" CornerRadius="10" Padding="8,2" HorizontalAlignment="Right">
+                                <TextBlock Text="{Binding StatusLabel}" FontWeight="SemiBold" FontSize="11" Foreground="{DynamicResource PrimaryGreen}"/>
+                              </Border>
+                              <TextBlock Text="{Binding NextReviewDisplay}" Classes="muted" FontSize="10" HorizontalAlignment="Right" Margin="0,2,0,0"/>
+                            </StackPanel>
+
+                            <!-- Row Actions -->
+                            <StackPanel Grid.Column="4" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                              <controls:InlineAudioButton Tag="{Binding Word}" Click="OnContentSpeakClick" ToolTip.Tip="朗读单词" AutomationProperties.Name="朗读单词"/>
+                              <Button Tag="{Binding Id}" Click="OnEditWordClick" Classes="row-btn" ToolTip.Tip="编辑词汇档案" AutomationProperties.Name="编辑词汇档案">
+                                <Path Data="M 3,11 L 11,3 L 13,5 L 5,13 L 2,14 Z" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.2" Width="14" Height="14"/>
+                              </Button>
+                              <Button Tag="{Binding Id}" Click="OnDeleteWordClick" Classes="row-btn" ToolTip.Tip="删除">
+                                <Path Data="M 3,3 L 11,11 M 11,3 L 3,11" Stroke="{DynamicResource MutedBrush}" StrokeThickness="1.2" StrokeLineCap="Round" Width="14" Height="14"/>
+                              </Button>
+                            </StackPanel>
+                          </Grid>
+
+                          <!-- Expanded Details Section (Shown when IsExpanded == True) -->
+                          <Border IsVisible="{Binding IsExpanded}" Classes="drawer-slot" Padding="14,10" Margin="32,0,0,4">
+                            <StackPanel Spacing="8">
+                              <StackPanel Spacing="2">
+                                <TextBlock Text="完整释义" Classes="eyebrow" FontSize="10"/>
+                                <SelectableTextBlock Text="{Binding Translation}" FontSize="14" TextWrapping="Wrap" LineHeight="23"/>
+                              </StackPanel>
+
+                              <StackPanel Spacing="2" IsVisible="{Binding Definition, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                                <TextBlock Text="英文定义" Classes="eyebrow" FontSize="10"/>
+                                <SelectableTextBlock Text="{Binding Definition}" Classes="muted" FontSize="14" TextWrapping="Wrap" LineHeight="22"/>
+                              </StackPanel>
+
+                              <SelectableTextBlock Text="{Binding Archive.SourceTitle}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Archive.SourceTitle, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <SelectableTextBlock Text="{Binding Archive.SourceExcerpt}" TextWrapping="Wrap" LineHeight="23" IsVisible="{Binding Archive.SourceExcerpt, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <SelectableTextBlock Text="{Binding Notes}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding Notes, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <ItemsControl ItemsSource="{Binding Archive.Tags}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><Border Classes="pos-chip"><SelectableTextBlock Text="{Binding}" FontSize="11"/></Border></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <WrapPanel>
+                                <Button Classes="secondary" Content="记得" Click="OnRememberWordClick" Margin="0,0,8,6"/>
+                                <Button Classes="ghost" Content="还不熟 · 明日再见" Click="OnUnfamiliarWordClick" Margin="0,0,8,6"/>
+                                <Button Classes="ghost" Content="再次遇见 +1" Click="OnEncounterWordClick" Margin="0,0,8,6"/>
+                              </WrapPanel>
+                              <TextBlock Text="{Binding Archive.EncounterCount, StringFormat='遇见 {0} 次 · AI 辅助内容可在编辑档案中修改'}" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+                              <WrapPanel>
+                                <CheckBox Classes="capsule" Content="例句 (1–3 句)" IsChecked="{Binding OptExamples, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <CheckBox Classes="capsule" Content="同义词" IsChecked="{Binding OptSynonyms, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <CheckBox Classes="capsule" Content="反义词" IsChecked="{Binding OptAntonyms, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <CheckBox Classes="capsule" Content="常用词组" IsChecked="{Binding OptPhrases, Mode=TwoWay}" Margin="0,0,6,6"/>
+                                <Button Classes="secondary" Content="{Binding AiButtonText}" IsEnabled="{Binding !IsGeneratingAi}" Click="OnRowAiGenerateClick" Margin="0,0,6,6"/>
+                                <Button Classes="ghost" Content="取消" IsVisible="{Binding IsGeneratingAi}" Click="OnRowAiCancelClick"/>
+                              </WrapPanel>
+                              <TextBlock Text="{Binding AiStatusText}" Classes="muted" TextWrapping="Wrap" IsVisible="{Binding AiStatusText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                              <TextBlock Text="语境例句" Classes="eyebrow" IsVisible="{Binding HasAiExamples}"/>
+                              <ItemsControl ItemsSource="{Binding AiExamples}" IsVisible="{Binding HasAiExamples}">
+                                <ItemsControl.ItemTemplate><DataTemplate>
+                                  <Border Classes="example-card" Margin="0,0,0,6"><StackPanel Spacing="4">
+                                    <SelectableTextBlock Text="{Binding English}" FontSize="15" LineHeight="24" TextWrapping="Wrap"/>
+                                    <SelectableTextBlock Text="{Binding Chinese}" Classes="muted" FontSize="13" LineHeight="21" TextWrapping="Wrap"/>
+                                    <StackPanel Orientation="Horizontal" Spacing="6"><controls:InlineAudioButton Tag="{Binding English}" Click="OnContentSpeakClick" ToolTip.Tip="朗读例句"/><Button Click="OnExampleQuoteClick" Classes="row-btn" Content="＋" ToolTip.Tip="收藏到金句本" AutomationProperties.Name="收藏例句到金句本"/></StackPanel>
+                                  </StackPanel></Border>
+                                </DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <TextBlock Text="同义替换" Classes="eyebrow" IsVisible="{Binding HasAiSynonyms}"/>
+                              <ItemsControl ItemsSource="{Binding AiSynonyms}" IsVisible="{Binding HasAiSynonyms}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><Button Classes="micro-capsule" Content="{Binding}" Click="OnRelatedWordClick"/></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <TextBlock Text="反义表达" Classes="eyebrow" IsVisible="{Binding HasAiAntonyms}"/>
+                              <ItemsControl ItemsSource="{Binding AiAntonyms}" IsVisible="{Binding HasAiAntonyms}">
+                                <ItemsControl.ItemsPanel><ItemsPanelTemplate><WrapPanel/></ItemsPanelTemplate></ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate><DataTemplate><Button Classes="micro-capsule" Content="{Binding}" Click="OnRelatedWordClick"/></DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <TextBlock Text="常用词组" Classes="eyebrow" IsVisible="{Binding HasAiPhrases}"/>
+                              <ItemsControl ItemsSource="{Binding AiPhrases}" IsVisible="{Binding HasAiPhrases}">
+                                <ItemsControl.ItemTemplate><DataTemplate>
+                                  <Border Classes="example-card" Margin="0,0,0,6"><StackPanel Spacing="3">
+                                    <SelectableTextBlock Text="{Binding English}" FontSize="14" TextWrapping="Wrap"/>
+                                    <SelectableTextBlock Text="{Binding Chinese}" Classes="muted" FontSize="13" TextWrapping="Wrap"/>
+                                  </StackPanel></Border>
+                                </DataTemplate></ItemsControl.ItemTemplate>
+                              </ItemsControl>
+                              <Grid ColumnDefinitions="*,Auto" Margin="0,4,0,0">
+                                <TextBlock Text="{Binding StageDescription}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
+                                <TextBlock Grid.Column="1" Text="{Binding CreatedAt, StringFormat='录入于 {0}'}" Classes="muted" FontSize="10" VerticalAlignment="Center"/>
+                              </Grid>
+                            </StackPanel>
+                          </Border>
+                        </StackPanel>
+                      </Border>
+                    </DataTemplate>
+                  </ListBox.ItemTemplate>
+                </ListBox>
+              </Border>
+            </Grid>
+
+            <!-- Bottom Batch Action Bar -->
+            <Border Grid.Row="3" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,12,0,0" Margin="0,10,0,0">
+              <StackPanel Spacing="6">
+              <StackPanel Name="VocabPager" Orientation="Horizontal" HorizontalAlignment="Center" Spacing="12" IsVisible="False">
+                <Button Name="VocabPreviousBtn" Classes="ghost" Content="上一页"/>
+                <TextBlock Name="VocabPageText" Classes="muted" VerticalAlignment="Center"/>
+                <Button Name="VocabNextBtn" Classes="ghost" Content="下一页"/>
+              </StackPanel>
+              <Grid Name="ArchiveActionsHost" ColumnDefinitions="Auto,*,Auto">
+                <ComboBox Name="BatchActionCombo" SelectedIndex="0" IsVisible="False">
+                  <ComboBoxItem Content="批量操作…"/>
+                  <ComboBoxItem Content="完成本次复习 (推进阶段)"/>
+                  <ComboBoxItem Content="标记已掌握"/>
+                  <ComboBoxItem Content="今日复习"/>
+                  <ComboBoxItem Content="调整复习阶段…"/>
+                  <ComboBoxItem Content="重新学习 (第 1 阶段)"/>
+                  <ComboBoxItem Content="删除所选…"/>
+                </ComboBox>
+                <Button Name="ExportPrintBtn" Grid.Column="2" Classes="ghost" Content="↗ 打印" ToolTip.Tip="导出打印 A4 清单"/>
+              </Grid>
+              </StackPanel>
+            </Border>
+          </Grid>
+
+          <!-- Recall: no archive-management controls or answers before reveal. -->
+          <Grid Name="PageReview" IsVisible="False" Margin="32,24" RowDefinitions="Auto,*,Auto">
+            <StackPanel Spacing="6">
+              <TextBlock Text="ONE WORD AT A TIME" Classes="eyebrow"/>
+              <Grid ColumnDefinitions="*,Auto">
+                <TextBlock Text="今日重逢" Classes="h1"/>
+                <TextBlock Name="ReviewRemainingText" Grid.Column="1" Classes="muted" VerticalAlignment="Center"/>
+              </Grid>
+              <TextBlock Name="ReviewHintText" Classes="muted" TextWrapping="Wrap"/>
+            </StackPanel>
+            <Grid Name="ReviewCardHost" Grid.Row="1" Margin="0,22,0,20" MaxWidth="760">
+              <Border Name="ReviewBackTwo" Margin="26,18,0,0" Background="{DynamicResource TintBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" CornerRadius="20" IsHitTestVisible="False"/>
+              <Border Name="ReviewBackOne" Margin="13,9,13,9" Background="{DynamicResource CardBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" CornerRadius="20" IsHitTestVisible="False"/>
+              <Border Name="ReviewCard" Margin="0,0,26,18" Background="{DynamicResource DialogSurfaceBrush}" BorderBrush="{DynamicResource LineBrush}" BorderThickness="1" CornerRadius="20" BoxShadow="{DynamicResource SoftCardShadow}" Padding="26" ClipToBounds="True">
+                <Grid RowDefinitions="*,Auto">
+                  <ScrollViewer HorizontalScrollBarVisibility="Disabled">
+                    <StackPanel Spacing="16" VerticalAlignment="Center">
+                      <SelectableTextBlock Name="ReviewWordText" FontSize="32" FontWeight="SemiBold" TextAlignment="Center" TextWrapping="Wrap"/>
+                      <SelectableTextBlock Name="ReviewPhoneticText" Classes="muted" TextAlignment="Center" TextWrapping="Wrap"/>
+                      <Border Name="ReviewAnswer" IsVisible="False" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,18,0,8">
+                        <StackPanel Spacing="12">
+                          <SelectableTextBlock Name="ReviewMeaningText" FontSize="17" LineHeight="28" TextWrapping="Wrap"/>
+                          <SelectableTextBlock Name="ReviewDefinitionText" Classes="muted" TextWrapping="Wrap" LineHeight="24"/>
+                        </StackPanel>
+                      </Border>
+                    </StackPanel>
+                  </ScrollViewer>
+                  <Grid Grid.Row="1" Margin="0,16,0,0">
+                    <Button Name="ReviewRevealBtn" Classes="primary" Content="查看释义" MinHeight="44" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                    <Grid Name="ReviewRatingBar" ColumnDefinitions="*,8,*,8,*" IsVisible="False">
+                      <Button Name="ReviewUnfamiliarBtn" Classes="secondary" Content="忘记" MinHeight="44" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                      <Button Name="ReviewUnsureBtn" Grid.Column="2" Classes="secondary" Content="模糊" MinHeight="44" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                      <Button Name="ReviewRememberBtn" Grid.Column="4" Classes="secondary" Content="认识" MinHeight="44" HorizontalAlignment="Stretch" HorizontalContentAlignment="Center"/>
+                    </Grid>
+                  </Grid>
+                </Grid>
+              </Border>
+            </Grid>
+            <Border Name="ReviewEmptyCard" Grid.Row="1" Classes="card" VerticalAlignment="Center" IsVisible="False">
+              <StackPanel Spacing="12">
+                <TextBlock Text="今天的重逢已完成" FontSize="23" FontWeight="SemiBold"/>
+                <TextBlock Text="词会在合适的日子再来。现在可以继续阅读，遇见新的表达。" Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel>
+            </Border>
+            <StackPanel Grid.Row="2" Spacing="8">
+              <Button Name="ReviewRoundUndoBtn" Classes="secondary" Content="撤销上一次评价" HorizontalAlignment="Center" IsEnabled="False"/>
+              <TextBlock Text="Space 查看释义 · ← 忘记 · ↓ 模糊 · → 认识；模糊或忘记后需连续认识三次" Classes="muted" FontSize="11" TextAlignment="Center" TextWrapping="Wrap"/>
+            </StackPanel>
+          </Grid>
+
+          <!-- 3. SETTINGS PAGE -->
+          <ScrollViewer Name="PageSettings" HorizontalScrollBarVisibility="Disabled" Margin="36,24,36,24" IsVisible="False">
+            <StackPanel Name="SettingsContent" Spacing="18" MaxWidth="760" HorizontalAlignment="Left">
+              <StackPanel Spacing="4">
+                <TextBlock Text="MAKE IT YOURS" Classes="eyebrow"/>
+                <TextBlock Text="主题与设置" Classes="h1"/>
+                <TextBlock Text="基础释义始终离线。进阶生成由你决定。" Classes="muted"/>
+              </StackPanel>
+
+              <Border Name="ThemeSettingsCard" Classes="card">
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="外观" FontWeight="SemiBold" FontSize="16"/>
+                    <TextBlock Text="界面语言" FontSize="12"/>
+                    <ComboBox Name="SettingsLanguageCombo">
+                      <ComboBoxItem Content="简体中文"/>
+                      <ComboBoxItem Content="English"/>
+                    </ComboBox>
+                    <ComboBox Name="SettingsThemeCombo"><ComboBoxItem Content="浅色 · 晨雾"/><ComboBoxItem Content="深色 · 夜林"/></ComboBox>
+                    <CheckBox Name="HighContrastBox" Content="高对比度 · 更清楚的文字和边界"/>
+                    <CheckBox Name="OpaqueMaterialBox" Content="不透明背景 · 减少背景干扰"/>
+                    <CheckBox Name="ReduceMotionBox" Content="减少动态效果"/>
+                    <TextBlock Text="外观选项即时生效并保存。" Classes="muted" FontSize="11"/>
+                  </StackPanel>
+              </Border>
+
+              <Border Name="LookupShortcutsCard" Classes="card"><StackPanel Spacing="10">
+                <TextBlock Text="查词与快捷方式" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock Text="Ctrl+D 收藏当前单词；Alt+Space 保留 Windows 系统菜单。学习按键可以在此自定义。" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="选中英文后按 Alt+D 即查；未选中时唤醒输入框。优先使用本地词典，已配置 AI 时可补全未收录的词。" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="× 隐藏到托盘 · 横线最小化 · 标题栏双击最大化 · 拖动边缘调整大小。完全退出请用托盘菜单。" Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel></Border>
+              <Border Name="AiSettingsCard" Classes="card">
+                <StackPanel Spacing="16">
+                  <TextBlock Text="AI 与语境偏好" FontSize="16" FontWeight="SemiBold"/>
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="模型厂商预设" FontWeight="SemiBold" FontSize="12"/>
+                    <ComboBox Name="SettingsProviderCombo">
+                      <ComboBoxItem Content="DeepSeek"/>
+                      <ComboBoxItem Content="智谱 AI · GLM"/>
+                      <ComboBoxItem Content="阿里百炼 · Qwen"/>
+                      <ComboBoxItem Content="自定义 · OpenAI 兼容"/>
+                    </ComboBox>
+                  </StackPanel>
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="接口地址 · Base URL" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBox Name="SettingsBaseUrlInput"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="接口协议" FontWeight="SemiBold" FontSize="12"/>
+                    <ComboBox Name="SettingsProtocolCombo">
+                      <ComboBoxItem Content="Chat Completions · 通用兼容"/>
+                      <ComboBoxItem Content="Responses · 流式接口"/>
+                    </ComboBox>
+                    <TextBlock Text="按服务商支持的协议选择；完整接口地址也可填写。" Classes="muted" FontSize="11" TextWrapping="Wrap"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="模型名称 · Model Name" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBox Name="SettingsModelInput"/>
+                  </StackPanel>
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="API Key" FontWeight="SemiBold" FontSize="12"/>
+                    <TextBox Name="SettingsApiKeyInput" PasswordChar="●"/>
+                  </StackPanel>
+
+                  <CheckBox Name="SettingsRememberKeyBox" Content="记住 API Key（使用 Windows 当前用户加密保护）"/>
+                  <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Name="SettingsTestConnectionBtn" Content="测试连接" Classes="secondary"/>
+                    <Button Name="SettingsCancelConnectionBtn" Content="取消测试" Classes="secondary" IsVisible="False"/>
+                  </StackPanel>
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="AI 语境偏好" FontWeight="SemiBold" FontSize="12"/>
+                    <ComboBox Name="SettingsContextCombo" SelectedIndex="0">
+                      <ComboBoxItem Content="日常表达"/><ComboBoxItem Content="工作写作"/>
+                      <ComboBoxItem Content="学术阅读"/><ComboBoxItem Content="技术文档"/><ComboBoxItem Content="自定义"/>
+                    </ComboBox>
+                    <TextBox Name="SettingsContextInput" Watermark="例如：产品设计与商务沟通" MaxLength="500" IsVisible="False"/>
+                    <CheckBox Name="SettingsIncludeSourceBox" Content="生成时附带该词的原句（会发送给所选 AI 厂商）"/>
+                  </StackPanel>
+
+
+                  <StackPanel Spacing="6">
+                    <TextBlock Text="请求超时时间" FontWeight="SemiBold" FontSize="12"/>
+                    <ComboBox Name="SettingsTimeoutCombo">
+                      <ComboBoxItem Content="5 秒 · 快速响应"/>
+                      <ComboBoxItem Content="15 秒 · 标准模型" IsSelected="True"/>
+                      <ComboBoxItem Content="30 秒 · 深度推理"/>
+                      <ComboBoxItem Content="60 秒"/>
+                      <ComboBoxItem Content="120 秒"/>
+                    </ComboBox>
+                  </StackPanel>
+
+                  <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,14,0,0">
+                    <Grid ColumnDefinitions="*,Auto">
+                      <TextBlock Text="离线优先 · 缺词按配置 AI 补全 · 扩展需点击生成" TextWrapping="Wrap" Margin="0,0,16,0" Classes="muted" VerticalAlignment="Center" FontSize="12"/>
+                      <Button Name="SettingsSaveBtn" Grid.Column="1" Classes="primary" Content="保存设置"/>
+                    </Grid>
+                  </Border>
+                </StackPanel>
+              </Border>
+              <Border Name="DataSettingsCard" Classes="card">
+                <StackPanel Spacing="10">
+                  <TextBlock Text="数据与备份" FontWeight="SemiBold" FontSize="16"/>
+                  <TextBlock Name="DataIdentityText" TextWrapping="Wrap" FontWeight="SemiBold"/>
+                  <TextBlock Name="DataLocationText" Classes="muted" TextWrapping="Wrap"/>
+                  <Button Name="OpenDataFolderBtn" Classes="ghost" Content="打开数据目录" HorizontalAlignment="Left"/>
+                  <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+                    <StackPanel Spacing="10">
+                      <TextBlock Text="备份与恢复" FontWeight="SemiBold"/>
+                      <TextBlock Name="LastBackupText" Classes="muted" TextWrapping="Wrap"/>
+                      <WrapPanel>
+                        <Button Name="BackupNowBtn" Classes="primary" Content="立即备份" Margin="0,0,12,8"/>
+                        <Button Name="RestoreBackupBtn" Classes="secondary" Content="从备份恢复…" Margin="0,0,0,8"/>
+                      </WrapPanel>
+                    </StackPanel>
+                  </Border>
+                  <Border BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,1,0,0" Padding="0,16,0,0">
+                    <StackPanel Spacing="10">
+                      <TextBlock Text="导入与导出" FontWeight="SemiBold"/>
+                      <TextBlock Text="导出当前勾选的词；没有勾选时，导出当前筛选结果。" Classes="muted" TextWrapping="Wrap"/>
+                      <WrapPanel>
+                        <Button Name="ImportCsvBtn" Classes="secondary" Content="导入 CSV / JSON" Margin="0,0,12,8"/>
+                        <Button Name="ArchiveExportMenuBtn" Classes="secondary" Content="导出…" Margin="0,0,0,8">
+                          <Button.Flyout>
+                            <Flyout Placement="Bottom">
+                              <StackPanel Spacing="8">
+                                <Button Name="ExportCsvBtn" Classes="ghost" Content="导出 CSV" HorizontalAlignment="Stretch"/>
+                                <Button Name="ExportJsonBtn" Classes="ghost" Content="导出完整档案 JSON" HorizontalAlignment="Stretch"/>
+                              </StackPanel>
+                            </Flyout>
+                          </Button.Flyout>
+                        </Button>
+                      </WrapPanel>
+                      <Expander Header="格式与备份范围说明">
+                        <TextBlock Text="导出遵循当前筛选与勾选；无勾选时导出当前筛选全部词。JSON 保留词汇、语境、AI 和当前复习状态；SQLite 备份另含完整复习历史。导出不含 API Key，恢复使用 SQLite 备份。旧版历史备份可能含未加密密钥，请自行保管。" Classes="muted" TextWrapping="Wrap" FontSize="12"/>
+                      </Expander>
+                    </StackPanel>
+                  </Border>
+                </StackPanel>
+              </Border>
+              <Border Name="AboutSettingsCard" Classes="card"><StackPanel Spacing="10">
+                <TextBlock Text="关于与诊断" FontSize="16" FontWeight="SemiBold"/>
+                <TextBlock Name="DiagnosticsText" Classes="muted" TextWrapping="Wrap"/>
+                <TextBlock Text="Lexi · 私人词汇档案。离线查词，按需使用自己的 AI，保存真正遇见的表达。" Classes="muted" TextWrapping="Wrap"/>
+              </StackPanel></Border>
+            </StackPanel>
+          </ScrollViewer>
+        </Panel>
+      </Grid>
+
+      <!-- Bottom Global Status Bar -->
+      <Border Grid.Row="2" Background="{DynamicResource TintBrush}" Padding="20,0">
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Name="GlobalStatusText" Text="本地查词不调用 AI。关闭窗口后可通过快捷键或托盘重新打开。" VerticalAlignment="Center" FontSize="11"/>
+          <TextBlock Grid.Column="1" Text="Lexi 1.2.4" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+        </Grid>
+      </Border>
+    </Grid>
+
+    <!-- Overlay Dialog: Edit Translation -->
+    <Border Name="DialogEditOverlay" Background="#80000000" IsVisible="False">
+      <Border Classes="card" Background="{DynamicResource DialogSurfaceBrush}" Width="620" MaxHeight="620" Margin="30" HorizontalAlignment="Center" VerticalAlignment="Stretch">
+        <Grid RowDefinitions="Auto,*,Auto">
+          <TextBlock Name="DialogEditTitle" Text="编辑词汇档案" FontWeight="Bold" FontSize="18" Margin="0,0,0,14"/>
+          <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" Margin="0,0,0,14">
+            <StackPanel Spacing="8" Margin="0,0,14,0">
+              <TextBlock Text="释义" Classes="eyebrow"/>
+              <TextBox Name="DialogEditInput" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBlock Text="从哪里遇见" Classes="eyebrow"/>
+              <ComboBox Name="ArchiveSourceTypeCombo" SelectedIndex="0"><ComboBoxItem Content="未指定"/><ComboBoxItem Content="书籍"/><ComboBoxItem Content="文章"/><ComboBoxItem Content="工作"/><ComboBoxItem Content="其他"/></ComboBox>
+              <TextBox Name="ArchiveSourceTitleInput" Watermark="书名、文章标题或来源链接" MaxLength="1000"/>
+              <TextBox Name="ArchiveExcerptInput" Watermark="遇见这个词的原句（可选）" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBox Name="ArchiveNotesInput" Watermark="写给自己的备注" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBox Name="ArchiveTagsInput" Watermark="标签，用逗号分隔，例如 阅读, 工作" MaxLength="1000"/>
+              <TextBlock Text="AI 辅助内容 · 可自由修订" Classes="eyebrow" Margin="0,8,0,0"/>
+              <TextBlock Text="例句与词组每行一条，用 | 分开英文和中文。空白表示清除该项。" Classes="muted" TextWrapping="Wrap" FontSize="11"/>
+              <TextBox Name="ArchiveExamplesInput" Watermark="英文例句 | 中文翻译" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="75" MaxLength="10000"/>
+              <TextBox Name="ArchiveSynonymsInput" Watermark="同义词，用逗号分隔" MaxLength="2000"/>
+              <TextBox Name="ArchiveAntonymsInput" Watermark="反义词，用逗号分隔" MaxLength="2000"/>
+              <TextBox Name="ArchivePhrasesInput" Watermark="常用词组 | 中文含义" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="65" MaxLength="10000"/>
+              <TextBlock Name="ArchiveEditErrorText" TextWrapping="Wrap" Foreground="{DynamicResource PrimaryGreen}"/>
+            </StackPanel>
+          </ScrollViewer>
+          <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Name="DialogEditCancelBtn" Classes="ghost" Content="取消"/>
+            <Button Name="DialogEditConfirmBtn" Classes="primary" Content="保存"/>
+          </StackPanel>
+        </Grid>
+      </Border>
+    </Border>
+
+    <Border Name="RestoreOverlay" Background="#80000000" IsVisible="False">
+      <Border Classes="card" Background="{DynamicResource DialogSurfaceBrush}" MaxWidth="500" Margin="30" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="恢复这份词库备份？" FontWeight="Bold" FontSize="18"/>
+          <TextBlock Name="RestoreDescriptionText" TextWrapping="Wrap"/>
+          <TextBlock Text="恢复会替换当前词库。恢复前的完整数据库会另行保留。API Key 使用当前电脑的加密凭据。" Classes="muted" TextWrapping="Wrap"/>
+          <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Spacing="10">
+            <Button Name="RestoreCancelBtn" Classes="ghost" Content="取消"/>
+            <Button Name="RestoreConfirmBtn" Classes="primary" Content="确认恢复"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Overlay Dialog: Change Stage -->
+    <Border Name="DialogStageOverlay" Background="#80000000" IsVisible="False">
+      <Border Classes="card" MaxWidth="380" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Text="调整艾宾浩斯复习阶段" FontWeight="Bold" FontSize="16"/>
+          <TextBlock Text="选定阶段后，将从今天重新计算下一次复习时间：" Classes="muted"/>
+          <ComboBox Name="DialogStageCombo">
+            <ComboBoxItem Content="第 1 天 (阶段 1)" IsSelected="True"/>
+            <ComboBoxItem Content="第 2 天 (阶段 2)"/>
+            <ComboBoxItem Content="第 4 天 (阶段 3)"/>
+            <ComboBoxItem Content="第 7 天 (阶段 4)"/>
+            <ComboBoxItem Content="第 15 天 (阶段 5)"/>
+            <ComboBoxItem Content="已掌握 (完成学习)"/>
+          </ComboBox>
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Name="DialogStageCancelBtn" Classes="ghost" Content="取消"/>
+            <Button Name="DialogStageConfirmBtn" Classes="primary" Content="确认调整"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+
+    <!-- Overlay Dialog: Confirm Delete -->
+    <Border Name="DialogDeleteOverlay" Background="#80000000" IsVisible="False">
+      <Border Classes="card" MaxWidth="400" HorizontalAlignment="Center" VerticalAlignment="Center">
+        <StackPanel Spacing="14">
+          <TextBlock Name="DialogDeleteTitle" Text="确认删除？" FontWeight="Bold" FontSize="16"/>
+          <TextBlock Text="删除后将清除该单词及其所有历史复习记录，无法撤销。" Classes="muted" TextWrapping="Wrap"/>
+          <StackPanel Orientation="Horizontal" Spacing="10" HorizontalAlignment="Right">
+            <Button Name="DialogDeleteCancelBtn" Classes="ghost" Content="取消"/>
+            <Button Name="DialogDeleteConfirmBtn" Classes="danger" Content="确认删除"/>
+          </StackPanel>
+        </StackPanel>
+      </Border>
+    </Border>
+  </Grid>
+  </Border>
+</Window>
+

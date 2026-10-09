@@ -1,0 +1,40 @@
+# Build outputs and local tools
+**/bin/
+**/obj/
+**/publish/
+**/target/
+**/build/
+**/.gradle/
+**/.idea/
+**/.vs/
+**/.avalonia-build-tasks/
+**/.work/
+.tools/
+dist/
+Lexi-*-Windows-x64/
+*.apk
+*.exe
+*.pdb
+*.zip
+*.msi
+*.dmg
+*.app/
+# User archives, secrets and machine-specific settings
+local.properties
+*.jks
+*.keystore
+keystore.properties
+*.dpapi
+*.env
+.env.*
+appsettings.local.json
+settings.json
+vocab.sqlite3*
+learning-progress.json
+daily-study-plans.json
+wolfpack.config.json
+**/Notices/verification/
+# IELTS book data and media are NOT licensed by this project
+windows/Assets/IELTS/**
+!windows/Assets/IELTS/README.md
+!windows/Assets/IELTS/catalog.example.json

@@ -1,0 +1,27 @@
+<Application xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             x:Class="Lexi.App"
+             RequestedThemeVariant="Default">
+  <Application.Styles>
+    <FluentTheme />
+    <StyleInclude Source="avares://Lexi/Styles/VisualTheme.axaml" />
+    <StyleInclude Source="avares://Lexi/Styles/InteractionControls.axaml" />
+    <StyleInclude Source="avares://Lexi/Styles/OverlaySurfaces.axaml" />
+  </Application.Styles>
+
+
+
+  <TrayIcon.Icons>
+    <TrayIcons>
+      <TrayIcon Icon="Assets/icon.ico" ToolTipText="Lexi · 记住每一次遇见">
+        <TrayIcon.Menu>
+          <NativeMenu>
+            <NativeMenuItem Header="显示 / 隐藏主窗口" Click="OnTrayToggle" />
+            <NativeMenuItemSeparator />
+            <NativeMenuItem Header="退出 Lexi" Click="OnTrayQuit" />
+          </NativeMenu>
+        </TrayIcon.Menu>
+      </TrayIcon>
+    </TrayIcons>
+  </TrayIcon.Icons>
+</Application>

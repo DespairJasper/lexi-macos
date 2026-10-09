@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Lexi</AssemblyName><RootNamespace>Lexi</RootNamespace>
+    <Version>1.2.4</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
+    <EnableDefaultItems>true</EnableDefaultItems>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Desktop" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Themes.Fluent" Version="11.3.12" />
+    <PackageReference Include="Avalonia.Fonts.Inter" Version="11.3.12" />
+    <PackageReference Include="Microsoft.Data.Sqlite" Version="8.0.25" />
+    <AvaloniaResource Include="Assets/icon.ico" />
+    <AvaloniaResource Include="Assets/lexi-logo.png" />
+    <Content Include="Assets/icon.ico" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/dictionary.sqlite3" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="Assets/IELTS/**" CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest" />
+    <Content Include="Notices/**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Include="native/fsrs-optimizer/target/release/fsrs-optimizer.exe" Link="fsrs-optimizer.exe"
+             CopyToOutputDirectory="PreserveNewest" CopyToPublishDirectory="PreserveNewest"
+             Condition="Exists('native/fsrs-optimizer/target/release/fsrs-optimizer.exe')" />
+    <Compile Remove="publish/**;tests/**;Core/**;Domain/**;Application/**;Infrastructure/**;Models/**;Platform/WindowsSecretStore.cs;Platform/WindowsDocumentLauncher.cs;Services/AiService.cs;Services/DictionaryService.cs;Services/VocabularyService.cs;Services/VocabularyService.Memory.cs;Services/VocabularyService.MemoryLegacyDue.cs;Services/VocabularyService.Archive.cs;Services/DatabaseSafety.cs;Services/ExportService.cs;Services/ArchiveTransferService*.cs" />
+    <ProjectReference Include="Core/Lexi.Core.csproj" />
+    <Compile Remove="Services/VocabularyService.Quotes.cs;Services/VocabularyService.ManualDue.cs;Services/QuoteExportService.cs" />
+    <ProjectReference Include="Infrastructure/Lexi.Infrastructure.csproj" />
+    <None Remove="publish/**" />
+    <AvaloniaXaml Remove="publish/**" />
+  </ItemGroup>
+</Project>
+

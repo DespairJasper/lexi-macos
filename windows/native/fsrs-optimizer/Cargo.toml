@@ -1,0 +1,20 @@
+[package]
+name = "fsrs-optimizer"
+version = "0.2.0"
+edition = "2021"
+authors = ["Cofran-77", "DespairJasper"]
+license = "PolyForm-Noncommercial-1.0.0"
+description = "Standalone FSRS-6 personal parameter training helper for Lexi"
+
+[dependencies]
+fsrs = { path = "vendor/fsrs", version = "5.2.0" }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+rayon = "1.10"
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = true

@@ -1,0 +1,168 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <Styles.Resources>
+    <ResourceDictionary>
+      <ResourceDictionary.ThemeDictionaries>
+        <!-- Light Theme: Soft paper-white surfaces and subtle blue-grey borders -->
+        <ResourceDictionary x:Key="Light">
+          <SolidColorBrush x:Key="FocusBackgroundBrush">#F8FAFC</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusCardBackgroundBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusCardBorderBrush">#E2E8F0</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusHeaderFooterBrush">#F1F5F9</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusMutedBrush">#64748B</SolidColorBrush>
+
+          <SolidColorBrush x:Key="PlanCardBackgroundBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="PlanCardBorderBrush">#E2E8F0</SolidColorBrush>
+          <SolidColorBrush x:Key="PlanCardHoverBorderBrush">#93C5FD</SolidColorBrush>
+
+          <SolidColorBrush x:Key="DrawerBackgroundBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="DrawerOverlayBrush">#330F172A</SolidColorBrush>
+          <SolidColorBrush x:Key="DrawerHeaderBorderBrush">#E2E8F0</SolidColorBrush>
+
+          <SolidColorBrush x:Key="ArchiveActionBarBrush">#F8FAFC</SolidColorBrush>
+          <SolidColorBrush x:Key="ArchiveActionBarBorderBrush">#E2E8F0</SolidColorBrush>
+          <SolidColorBrush x:Key="ArchiveMenuItemHoverBrush">#F1F5F9</SolidColorBrush>
+          <SolidColorBrush x:Key="ArchiveMenuDangerHoverBrush">#FEF2F2</SolidColorBrush>
+        </ResourceDictionary>
+
+        <!-- Dark Theme: Low-contrast blue-grey layers, never pure black (#000000) -->
+        <ResourceDictionary x:Key="Dark">
+          <SolidColorBrush x:Key="FocusBackgroundBrush">#151E2B</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusCardBackgroundBrush">#1E293B</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusCardBorderBrush">#334155</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusHeaderFooterBrush">#182234</SolidColorBrush>
+          <SolidColorBrush x:Key="FocusMutedBrush">#94A3B8</SolidColorBrush>
+
+          <SolidColorBrush x:Key="PlanCardBackgroundBrush">#1E293B</SolidColorBrush>
+          <SolidColorBrush x:Key="PlanCardBorderBrush">#334155</SolidColorBrush>
+          <SolidColorBrush x:Key="PlanCardHoverBorderBrush">#60A5FA</SolidColorBrush>
+
+          <SolidColorBrush x:Key="DrawerBackgroundBrush">#1E293B</SolidColorBrush>
+          <SolidColorBrush x:Key="DrawerOverlayBrush">#66000000</SolidColorBrush>
+          <SolidColorBrush x:Key="DrawerHeaderBorderBrush">#334155</SolidColorBrush>
+
+          <SolidColorBrush x:Key="ArchiveActionBarBrush">#1E293B</SolidColorBrush>
+          <SolidColorBrush x:Key="ArchiveActionBarBorderBrush">#334155</SolidColorBrush>
+          <SolidColorBrush x:Key="ArchiveMenuItemHoverBrush">#283548</SolidColorBrush>
+          <SolidColorBrush x:Key="ArchiveMenuDangerHoverBrush">#3B1C1C</SolidColorBrush>
+        </ResourceDictionary>
+      </ResourceDictionary.ThemeDictionaries>
+    </ResourceDictionary>
+  </Styles.Resources>
+
+  <!-- Plan Board Card Styles -->
+  <Style Selector="Border.plan-card">
+    <Setter Property="Background" Value="{DynamicResource PlanCardBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource PlanCardBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="12" />
+    <Setter Property="Padding" Value="16" />
+    <Setter Property="BoxShadow" Value="{DynamicResource SoftCardShadow}" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+        <BoxShadowsTransition Property="BoxShadow" Duration="0:0:0.2" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Border.plan-card:pointerover">
+    <Setter Property="BorderBrush" Value="{DynamicResource PlanCardHoverBorderBrush}" />
+    <Setter Property="BoxShadow" Value="{DynamicResource FloatingShadow}" />
+  </Style>
+
+  <Style Selector="TextBlock.plan-card-title">
+    <Setter Property="FontSize" Value="16" />
+    <Setter Property="FontWeight" Value="SemiBold" />
+    <Setter Property="Foreground" Value="{DynamicResource InkBrush}" />
+    <Setter Property="TextWrapping" Value="Wrap" />
+    <Setter Property="MaxLines" Value="2" />
+    <Setter Property="TextTrimming" Value="CharacterEllipsis" />
+  </Style>
+
+  <Style Selector="ProgressBar.plan-progress">
+    <Setter Property="Height" Value="5" />
+    <Setter Property="CornerRadius" Value="2.5" />
+    <Setter Property="Background" Value="{DynamicResource TintBrush}" />
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryGreen}" />
+  </Style>
+
+  <!-- Settings Drawer Styles -->
+  <Style Selector="Border.settings-drawer">
+    <Setter Property="Background" Value="{DynamicResource DrawerBackgroundBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource DrawerHeaderBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1,0,0,0" />
+    <Setter Property="BoxShadow" Value="{DynamicResource DrawerShadow}" />
+  </Style>
+
+  <Style Selector="Button.settings-section-card">
+    <Setter Property="Background" Value="{DynamicResource CardBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="14,12" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.15" />
+        <BrushTransition Property="BorderBrush" Duration="0:0:0.15" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.settings-section-card:pointerover">
+    <Setter Property="Background" Value="{DynamicResource TintBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource MutedBorderBrush}" />
+  </Style>
+
+  <!-- Archive Action Bar and Menu Items -->
+  <Style Selector="Border.archive-action-bar">
+    <Setter Property="Background" Value="{DynamicResource ArchiveActionBarBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource ArchiveActionBarBorderBrush}" />
+    <Setter Property="BorderThickness" Value="1" />
+    <Setter Property="CornerRadius" Value="10" />
+    <Setter Property="Padding" Value="12,8" />
+  </Style>
+
+  <Style Selector="Button.archive-menu-item">
+    <Setter Property="Height" Value="34" />
+    <Setter Property="MinHeight" Value="32" />
+    <Setter Property="MaxHeight" Value="36" />
+    <Setter Property="CornerRadius" Value="6" />
+    <Setter Property="Padding" Value="10,4" />
+    <Setter Property="Cursor" Value="Hand" />
+    <Setter Property="Background" Value="Transparent" />
+    <Setter Property="Transitions">
+      <Transitions>
+        <BrushTransition Property="Background" Duration="0:0:0.1" />
+      </Transitions>
+    </Setter>
+  </Style>
+
+  <Style Selector="Button.archive-menu-item:pointerover">
+    <Setter Property="Background" Value="{DynamicResource ArchiveMenuItemHoverBrush}" />
+  </Style>
+
+  <Style Selector="Button.archive-menu-item.danger:pointerover">
+    <Setter Property="Background" Value="{DynamicResource ArchiveMenuDangerHoverBrush}" />
+  </Style>
+
+  <!-- Focus Workspace Shell Styles -->
+  <Style Selector="Border.focus-workspace-host">
+    <Setter Property="Background" Value="{DynamicResource FocusBackgroundBrush}" />
+  </Style>
+
+  <Style Selector="Border.focus-header">
+    <Setter Property="Background" Value="{DynamicResource FocusHeaderFooterBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,0,0,1" />
+    <Setter Property="Padding" Value="24,12" />
+  </Style>
+
+  <Style Selector="Border.focus-footer">
+    <Setter Property="Background" Value="{DynamicResource FocusHeaderFooterBrush}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource LineBrush}" />
+    <Setter Property="BorderThickness" Value="0,1,0,0" />
+    <Setter Property="Padding" Value="24,14" />
+  </Style>
+</Styles>
