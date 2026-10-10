@@ -13,3 +13,5 @@
 [安装、使用、构建与许可](../README.md) · [本次发布说明](../docs/macos/releases/v3.2.2.md)。Windows 与 Android 继续使用各自的源码、数据库和发布版本。
 
 [3.2.1 原生界面预览](../README.md#界面预览) · [英文金句本](../docs/macos/images/quotes-en.png) · [学习按钮布局](../docs/macos/images/study-answer.png)。
+
+3.2.2 的备份预算根据主库大小调整：常规主库与备份合计最多2GB、备份最多20份；大库保留两个恢复点会超限时，备份最多两份。学习历史和个人记忆数据完整保留。

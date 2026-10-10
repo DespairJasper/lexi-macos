@@ -29,6 +29,7 @@ public static class Program
             ("journal", JournalTests.Run),
             ("storage-journal", StorageTests.Journal),
             ("storage-backups", StorageTests.Backups),
+            ("storage-retention-guards", StorageTests.RetentionGuards),
             ("storage-legacy", StorageTests.Legacy),
             ("storage-clock", StorageTests.ClockRollback),
             ("storage-directory", StorageTests.LinkedDirectory),

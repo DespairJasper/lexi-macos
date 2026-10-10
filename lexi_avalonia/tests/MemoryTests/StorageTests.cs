@@ -70,8 +70,19 @@ public static class StorageTests
         using (var incomplete = Open(repaired)) Exec(incomplete, "DROP TABLE words");
         var complete = DatabaseSafety.CreateAutomaticBackup(connection, box.Db, future.AddMinutes(3));
         Program.Check(complete != repaired, "物理完整但缺少业务schema的备份不能被复用");
+        using (var incomplete = Open(complete)) Exec(incomplete, "DROP TABLE fsrs_cards");
+        var memoryComplete = DatabaseSafety.CreateAutomaticBackup(connection, box.Db, future.AddMinutes(4));
+        Program.Check(memoryComplete != complete, "标记v2但缺少个人记忆表的备份不能充当完整恢复点");
         for (var i = 0; i < 24; i++) service.CreateManualBackup();
         Program.Check(Directory.GetFiles(box.Backups, "lexi-*.sqlite3").Length == 20, "完整备份数量受上限约束");
+        var beforeInvalidSource = Directory.GetFiles(box.Backups, "lexi-*.sqlite3").Order().ToArray();
+        Exec(connection, "DROP TABLE words");
+        try { DatabaseSafety.CreateBackup(connection, box.Db); Program.Check(false, "损坏业务schema的主库不能生成完整备份"); }
+        catch (SqliteException)
+        {
+            Program.Check(beforeInvalidSource.SequenceEqual(Directory.GetFiles(box.Backups, "lexi-*.sqlite3").Order()),
+                "主库验证失败时不能预先淘汰任何历史恢复点");
+        }
 
         using var big = new Sandbox();
         using var bigService = new VocabularyService(big.Db);
@@ -81,10 +92,35 @@ public static class StorageTests
         var unrelated = Path.Combine(big.Backups, "lexi-my-personal.sqlite3");
         File.WriteAllText(unrelated, "unmanaged backup");
         var second = bigService.CreateManualBackup();
-        Program.Check(!File.Exists(first) && File.Exists(second), "备份总量受预算约束，仍保留最新完整副本");
+        Program.Check(File.Exists(first) && File.Exists(second), "预算随主库大小增长，140MiB数据库保留多个完整恢复点");
         Program.Check(File.ReadAllText(unrelated) == "unmanaged backup", "清理不匹配任意用户命名文件");
         Program.Check(Scalar(second, "SELECT length(data) FROM preserved_blob") == 146800640,
             "预算管理没有裁剪备份中的业务数据");
+
+        Exec(bigConnection, "DELETE FROM preserved_blob; INSERT INTO preserved_blob VALUES(zeroblob(400*1024*1024));");
+        for (var i = 0; i < 5; i++) bigService.CreateManualBackup();
+        var normal = Directory.GetFiles(big.Backups, "lexi-*.sqlite3").Where(f => f != unrelated).ToArray();
+        Program.Check(normal.Length >= 2 && normal.Length <= 20
+            && new FileInfo(big.Db).Length + normal.Sum(f => new FileInfo(f).Length) <= 2_000_000_000,
+            "常规动态预算同时限制主库与备份总量2GB，并保留多个完整恢复点");
+        Exec(bigConnection, "DELETE FROM preserved_blob; INSERT INTO preserved_blob VALUES(zeroblob(700*1024*1024));");
+        bigService.AddWord("restore-a", "", "", "");
+        var largeA = bigService.CreateManualBackup();
+        bigService.AddWord("restore-b", "", "", "");
+        var largeB = bigService.CreateManualBackup();
+        bigService.AddWord("restore-c", "", "", "");
+        var largeC = bigService.CreateManualBackup();
+        var retained = Directory.GetFiles(big.Backups, "lexi-*.sqlite3").Where(f => f != unrelated).ToArray();
+        Program.Check(retained.Length == 2 && !File.Exists(largeA) && File.Exists(largeB) && File.Exists(largeC),
+            "主库与两个完整副本超过2GB时，最多保留最近两个有效恢复点");
+        Program.Check(new FileInfo(big.Db).Length + retained.Sum(f => new FileInfo(f).Length) > 2_000_000_000,
+            "超限例外只轮转备份，不能截断大型真实数据库");
+        Program.Check(Scalar(largeB, "SELECT count(*) FROM words WHERE word='restore-c'") == 0
+            && Scalar(largeC, "SELECT count(*) FROM words WHERE word='restore-c'") == 1,
+            "两个恢复点保存不同的完整历史状态");
+        Program.Check(Scalar(largeB, "SELECT length(data) FROM preserved_blob") == 734003200
+            && Scalar(largeC, "SELECT length(data) FROM preserved_blob") == 734003200,
+            "大库两个恢复点都完整保留业务内容");
     }
 
     public static void Legacy()
@@ -146,6 +182,22 @@ public static class StorageTests
         var first = DatabaseSafety.CreateAutomaticBackup(db, box.Db, rolledBack);
         var second = DatabaseSafety.CreateAutomaticBackup(db, box.Db, rolledBack.AddMinutes(1));
         Program.Check(first == second, "时钟回拨后只补建一次备份，再次保存仍正常节流");
+    }
+
+    public static void RetentionGuards()
+    {
+        using var box = new Sandbox(); using var service = new VocabularyService(box.Db);
+        using var db = Open(box.Db);
+        Exec(db, "CREATE TABLE temporary_blob(data BLOB); INSERT INTO temporary_blob VALUES(zeroblob(4*1024*1024));");
+        for (var i = 0; i < 20; i++) service.CreateManualBackup();
+        var before = Directory.GetFiles(box.Backups, "lexi-*.sqlite3").Order().ToArray();
+        Exec(db, "DROP TABLE temporary_blob; DROP TABLE words; VACUUM;");
+        try { DatabaseSafety.CreateAutomaticBackup(db, box.Db); Program.Check(false, "复用期间需要轮转时必须先验证主库"); }
+        catch (SqliteException)
+        {
+            Program.Check(before.SequenceEqual(Directory.GetFiles(box.Backups, "lexi-*.sqlite3").Order()),
+                "自动复用期间主库验证失败不能淘汰任何历史恢复点");
+        }
     }
 
     public static void LinkedDirectory()

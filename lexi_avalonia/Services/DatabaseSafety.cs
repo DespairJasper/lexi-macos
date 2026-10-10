@@ -7,6 +7,9 @@ namespace Lexi;
 /// <summary>Never copies a live .db file or guesses which WAL frames to discard.</summary>
 public static class DatabaseSafety
 {
+    private const long TotalStorageTarget = 2_000_000_000;
+    private const int MaximumBackups = 20;
+
     private static readonly Regex BackupName = new(
         @"^lexi-(\d{8}-\d{6}-\d{7})-[a-f0-9]{32}\.sqlite3$", RegexOptions.CultureInvariant);
     private static IEnumerable<FileInfo> ManagedBackups(string folder) => new DirectoryInfo(folder)
@@ -31,15 +34,62 @@ public static class DatabaseSafety
         backup.Open(); Validate(backup); ValidateApplicationSchema(backup);
     }
 
-    private static void PruneBackups(string folder, string keep, bool keepOnlyLatest)
+    private static long SnapshotBytes(SqliteConnection source)
     {
-        long retainedBytes = new FileInfo(keep).Length;
-        var retainedCount = 1;
+        using var cmd = source.CreateCommand();
+        cmd.CommandText = "PRAGMA page_count";
+        var pages = Convert.ToInt64(cmd.ExecuteScalar());
+        cmd.CommandText = "PRAGMA page_size";
+        return pages * Convert.ToInt64(cmd.ExecuteScalar());
+    }
+
+    private static long PrimaryBytes(SqliteConnection source, string databasePath)
+    {
+        // Include committed pages still in WAL and physical recovery sidecars.
+        var bytes = Math.Max(SnapshotBytes(source), new FileInfo(databasePath).Length);
+        foreach (var suffix in new[] { "-wal", "-shm", "-journal" })
+            if (File.Exists(databasePath + suffix)) bytes += new FileInfo(databasePath + suffix).Length;
+        return bytes;
+    }
+
+    private static long BackupBudget(long primaryBytes) => Math.Min(Math.Max(0, TotalStorageTarget - primaryBytes),
+        Math.Min(primaryBytes, long.MaxValue / MaximumBackups) * MaximumBackups);
+
+    private static bool NeedsRotation(string folder, long primaryBytes)
+    {
+        var files = ManagedBackups(folder).ToArray();
+        // Two points are the allowed large-database exception. Metadata alone
+        // suffices when the immutable snapshots already fit the retention caps.
+        return files.Length > MaximumBackups || (files.Length > 2
+            && files.Sum(f => f.Length) > BackupBudget(primaryBytes));
+    }
+
+    private static void PruneBackups(string folder, string keep, bool keepOnlyLatest,
+        long primaryBytes, long reservedBytes = 0, int reservedCount = 0)
+    {
+        long retainedBytes = new FileInfo(keep).Length + reservedBytes;
+        var retainedCount = 1 + reservedCount;
+        var budget = BackupBudget(primaryBytes);
         foreach (var old in ManagedBackups(folder).Where(f => f.FullName != keep))
         {
-            if (!keepOnlyLatest && retainedCount < 20 && retainedBytes + old.Length <= 256L * 1024 * 1024)
-            { retainedBytes += old.Length; retainedCount++; }
-            else try { old.Delete(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+            // Preserve two real, validated restore points once available. If
+            // those alone exceed 2 GB with the primary, overflow is capped at two.
+            var retain = !keepOnlyLatest && (retainedCount < 2 ||
+                (retainedCount < MaximumBackups && primaryBytes + retainedBytes <= TotalStorageTarget
+                 && retainedBytes + old.Length <= budget));
+            if (retain)
+            {
+                try { ValidateCompleteBackup(old.FullName); }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or UnauthorizedAccessException)
+                { retain = false; }
+            }
+            if (retain) { retainedBytes += old.Length; retainedCount++; }
+            else
+            {
+                // Failure must reach the existing backup warning; otherwise a
+                // permissions problem could silently defeat both storage caps.
+                old.Delete();
+            }
         }
     }
 
@@ -57,7 +107,7 @@ public static class DatabaseSafety
                 try { ValidateCompleteBackup(candidate.FullName); }
                 catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or UnauthorizedAccessException)
                 { continue; }
-                PruneBackups(folder, candidate.FullName, keepOnlyLatest: true);
+                PruneBackups(folder, candidate.FullName, keepOnlyLatest: true, PrimaryBytes(source, databasePath));
                 break;
             }
         }
@@ -74,9 +124,17 @@ public static class DatabaseSafety
             ? ManagedBackups(folder).FirstOrDefault(file => TryBackupTime(file, out var time) && time <= now) : null;
         if (latest != null && TryBackupTime(latest, out var created) && now - created < TimeSpan.FromMinutes(15))
         {
-            try { ValidateCompleteBackup(latest.FullName); return latest.FullName; }
+            try { ValidateCompleteBackup(latest.FullName); }
             catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or UnauthorizedAccessException)
-            { /* Never throttle to a damaged/unreadable backup. Create a valid one. */ }
+            { return CreateBackup(source, databasePath, now); }
+            var primaryBytes = PrimaryBytes(source, databasePath);
+            if (NeedsRotation(folder, primaryBytes))
+            {
+                // Never discard history when a damaged primary needs recovery.
+                Validate(source); ValidateApplicationSchema(source);
+                PruneBackups(folder, latest.FullName, keepOnlyLatest: false, primaryBytes);
+            }
+            return latest.FullName;
         }
         return CreateBackup(source, databasePath, now);
     }
@@ -110,15 +168,18 @@ public static class DatabaseSafety
         if (!hasVersions || !hasArchives) throw new InvalidDataException("词库档案结构不完整；已停止写入，请保留原库并恢复备份。");
         schema.CommandText = "SELECT version,applied_at FROM schema_migrations";
         var hasCurrent = false;
+        var hasMemory = false;
         using (var reader = schema.ExecuteReader())
         {
             while (reader.Read())
             {
                 if (reader.IsDBNull(0) || reader.GetInt32(0) is not (1 or 2)) throw new InvalidDataException("词库版本不受支持，请使用匹配版本打开。");
                 hasCurrent = true;
+                hasMemory |= reader.GetInt32(0) == 2;
             }
         }
         if (!hasCurrent) throw new InvalidDataException("词库档案迁移记录缺失。");
+        if (hasMemory) ValidateMemorySchema(source);
         schema.CommandText = "SELECT word_id,uuid,source_type,source_title,source_excerpt,tags_json,encounter_count,revision,created_at_utc,updated_at_utc,last_encountered_at_utc,ai_json FROM word_archives LIMIT 0";
         using (var reader = schema.ExecuteReader()) { }
         schema.CommandText = "SELECT count(*) FROM words w LEFT JOIN word_archives a ON a.word_id=w.id WHERE a.word_id IS NULL";
@@ -147,6 +208,26 @@ public static class DatabaseSafety
                 { throw new InvalidDataException("词库标签或 AI 档案损坏，已停止写入；原数据未被清空，请恢复备份。", ex); }
             }
         }
+    }
+
+    private static void ValidateMemorySchema(SqliteConnection source)
+    {
+        // Check the original v2 tables. Later additive tables are created by the
+        // normal migration and must not invalidate older complete v2 snapshots.
+        using var schema = source.CreateCommand();
+        schema.CommandText = """
+            SELECT session_id,started_at_utc,ended_at_utc,mode,primary_source,planned_word_count,plan_id FROM learning_sessions LIMIT 0;
+            SELECT event_id,session_id,word_key,presentation_id,occurred_at_utc,learning_mode,kind,response,previous_response,session_appearance_index,word_appearance_index,recognition_count_before,recognition_count_after,is_first_appearance_for_word,response_latency_ms,supersedes_event_id,is_recall FROM learning_events LIMIT 0;
+            SELECT word_key,session_id,first_presented_at_utc,completed_at_utc,first_initial_response,first_validated_response,total_presentations,final_known_count,final_fuzzy_count,final_forgotten_count,reset_count,response_revision_count,known_to_fuzzy,known_to_forgotten,fuzzy_to_forgotten,had_fuzzy,had_forgotten,had_response_revision,max_known_streak,presentations_to_mastery,time_to_mastery_ms FROM word_session_summaries LIMIT 0;
+            SELECT canonical_id,word_key,session_id,source_presentation_id,origin,rating,reviewed_at_utc,completed_at_utc,aggregation_policy_version,revision,invalidated,invalidated_at_utc,invalidation_reason,supersedes_canonical_id,pre_state_existed,difficulty,stability,reps,lapses,state,last_review_at_utc,next_review_at_utc,last_canonical_rating FROM canonical_reviews LIMIT 0;
+            SELECT word_key,difficulty,stability,reps,lapses,state,last_review_at_utc,next_review_at_utc,last_canonical_rating,fsrs_algorithm_version,fsrs_library_version,fsrs_parameter_version,last_applied_canonical_seq FROM fsrs_cards LIMIT 0;
+            SELECT snapshot_id,word_key,session_id,presentation_id,captured_at_utc,fsrs_difficulty_at_capture,fsrs_stability_at_capture,fsrs_retrievability_at_capture,feature_schema_version,model_version,features_json,missing_flags_json,label,confident_recall,labeled_at_utc FROM context_snapshots LIMIT 0;
+            SELECT decision_id,word_key,canonical_id,timestamp_utc,baseline_interval_days,baseline_retrievability,baseline_difficulty,baseline_stability,context_mode,context_delta,context_candidate_interval_days,final_interval_days,final_due_at_utc,desired_retention,fsrs_algorithm_version,fsrs_library_version,fsrs_parameter_version,aggregation_policy_version,trajectory_schema_version,context_feature_schema_version,context_model_version,scheduler_version FROM scheduler_decisions LIMIT 0;
+            SELECT model_version,model_kind,trained_at_utc,train_cutoff_utc,status,coefficients_json,scaler_json,metrics_json,last_good_model_version FROM personalization_models LIMIT 0;
+            SELECT id,kind,payload_json,created_at_utc,applied_at_utc,attempts,last_error FROM mutation_outbox LIMIT 0;
+            """;
+        using var reader = schema.ExecuteReader();
+        do { while (reader.Read()) { } } while (reader.NextResult());
     }
 
     private static long ReadBoundedInteger(SqliteDataReader reader, int ordinal, long minimum, long maximum)
@@ -249,6 +330,19 @@ public static class DatabaseSafety
         var temp = path + ".tmp";
         try
         {
+            Validate(source);
+            ValidateApplicationSchema(source);
+            // Reserve the incoming copy before writing it. Always validate and
+            // retain an existing restore point before removing any old snapshots.
+            foreach (var candidate in ManagedBackups(folder))
+            {
+                try { ValidateCompleteBackup(candidate.FullName); }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or UnauthorizedAccessException)
+                { continue; }
+                PruneBackups(folder, candidate.FullName, keepOnlyLatest,
+                    PrimaryBytes(source, databasePath), SnapshotBytes(source), reservedCount: 1);
+                break;
+            }
             using (var destination = new SqliteConnection(new SqliteConnectionStringBuilder
             { DataSource = temp, Pooling = false }.ToString()))
             {
@@ -266,7 +360,7 @@ public static class DatabaseSafety
             // Prune only our own completed snapshots, after a new valid one exists.
             // Always retain the just-validated snapshot, even after a clock change
             // or when the actual user's data itself is larger than the budget.
-            PruneBackups(folder, path, keepOnlyLatest);
+            PruneBackups(folder, path, keepOnlyLatest, PrimaryBytes(source, databasePath));
             return path;
         }
         finally
