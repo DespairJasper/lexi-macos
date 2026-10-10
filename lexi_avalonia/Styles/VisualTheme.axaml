@@ -31,34 +31,35 @@
           <SolidColorBrush x:Key="SuccessBrush">#39835B</SolidColorBrush>
           <SolidColorBrush x:Key="DangerBrush">#BD382E</SolidColorBrush>
           <SolidColorBrush x:Key="OverlayBrush">#660F2138</SolidColorBrush>
-          <SolidColorBrush x:Key="PosBrush">#E9F0F8</SolidColorBrush>
-          <SolidColorBrush x:Key="PosVerbBrush">#DCEBFA</SolidColorBrush>
-          <SolidColorBrush x:Key="PosModifierBrush">#E3E9F5</SolidColorBrush>
-          <SolidColorBrush x:Key="DialogSurfaceBrush">#F6F9FD</SolidColorBrush>
-          <SolidColorBrush x:Key="PaperBrush">#D8F5F9FF</SolidColorBrush>
-          <SolidColorBrush x:Key="CardBrush">#E8FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="InkBrush">#1B2D43</SolidColorBrush>
-          <SolidColorBrush x:Key="MutedBrush">#455B74</SolidColorBrush>
-          <SolidColorBrush x:Key="TintBrush">#E8F0FA</SolidColorBrush>
-          <SolidColorBrush x:Key="LineBrush">#CDDAE9</SolidColorBrush>
+          <SolidColorBrush x:Key="PosBrush">#E6F0F5</SolidColorBrush>
+          <SolidColorBrush x:Key="PosVerbBrush">#DDEDF3</SolidColorBrush>
+          <SolidColorBrush x:Key="PosModifierBrush">#E4EDF4</SolidColorBrush>
+          <SolidColorBrush x:Key="SidebarBrush">#EAF4F8</SolidColorBrush>
+          <SolidColorBrush x:Key="DialogSurfaceBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="PaperBrush">#F3F8FB</SolidColorBrush>
+          <SolidColorBrush x:Key="CardBrush">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="InkBrush">#203D4C</SolidColorBrush>
+          <SolidColorBrush x:Key="MutedBrush">#567482</SolidColorBrush>
+          <SolidColorBrush x:Key="TintBrush">#DFEDF3</SolidColorBrush>
+          <SolidColorBrush x:Key="LineBrush">#D4E3EA</SolidColorBrush>
           <SolidColorBrush x:Key="OnPrimaryBrush">#FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="PrimaryGreen">#245FAD</SolidColorBrush>
-          <SolidColorBrush x:Key="PrimaryGreenHover">#1E5299</SolidColorBrush>
-          <SolidColorBrush x:Key="PrimaryGreenPressed">#194581</SolidColorBrush>
-          <SolidColorBrush x:Key="InputBg">#E8FFFFFF</SolidColorBrush>
-          <SolidColorBrush x:Key="SelectionBrush">#DFECFB</SolidColorBrush>
-          <SolidColorBrush x:Key="InsetBrush">#0B245FAD</SolidColorBrush>
-          <SolidColorBrush x:Key="InsetBorderBrush">#20245FAD</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreen">#377F9E</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenHover">#2E718E</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenPressed">#28647E</SolidColorBrush>
+          <SolidColorBrush x:Key="InputBg">#FFFFFF</SolidColorBrush>
+          <SolidColorBrush x:Key="SelectionBrush">#D6EAF2</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBrush">#0C377F9E</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBorderBrush">#25377F9E</SolidColorBrush>
 
           <LinearGradientBrush x:Key="CardBorderGradient" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#80FFFFFF" Offset="0.0"/>
-            <GradientStop Color="#25245FAD" Offset="0.5"/>
+            <GradientStop Color="#25377F9E" Offset="0.5"/>
             <GradientStop Color="#12000000" Offset="1.0"/>
           </LinearGradientBrush>
 
           <BoxShadows x:Key="SoftCardShadow">0 3 18 0 #0926476B, 0 1 3 0 #0426476B</BoxShadows>
           <BoxShadows x:Key="FloatingShadow">0 8 28 0 #1826476B, 0 2 6 0 #0A26476B</BoxShadows>
-          <BoxShadows x:Key="FocusGlowShadow">0 0 8 1 #50245FAD</BoxShadows>
+          <BoxShadows x:Key="FocusGlowShadow">0 0 8 1 #50377F9E</BoxShadows>
           <BoxShadows x:Key="DrawerShadow">0 3 12 0 #0D26476B</BoxShadows>
         </ResourceDictionary>
 
@@ -70,31 +71,32 @@
           <SolidColorBrush x:Key="PosBrush">#293C53</SolidColorBrush>
           <SolidColorBrush x:Key="PosVerbBrush">#264463</SolidColorBrush>
           <SolidColorBrush x:Key="PosModifierBrush">#333F5B</SolidColorBrush>
-          <SolidColorBrush x:Key="DialogSurfaceBrush">#202C3D</SolidColorBrush>
-          <SolidColorBrush x:Key="PaperBrush">#D8182232</SolidColorBrush>
-          <SolidColorBrush x:Key="CardBrush">#E8202C3D</SolidColorBrush>
-          <SolidColorBrush x:Key="InkBrush">#E8F0FC</SolidColorBrush>
-          <SolidColorBrush x:Key="MutedBrush">#ACBED4</SolidColorBrush>
-          <SolidColorBrush x:Key="TintBrush">#263A52</SolidColorBrush>
-          <SolidColorBrush x:Key="LineBrush">#3C516B</SolidColorBrush>
-          <SolidColorBrush x:Key="OnPrimaryBrush">#14243A</SolidColorBrush>
-          <SolidColorBrush x:Key="PrimaryGreen">#93C5F8</SolidColorBrush>
-          <SolidColorBrush x:Key="PrimaryGreenHover">#ADD6FF</SolidColorBrush>
-          <SolidColorBrush x:Key="PrimaryGreenPressed">#7CB5F0</SolidColorBrush>
-          <SolidColorBrush x:Key="InputBg">#E8202C3D</SolidColorBrush>
-          <SolidColorBrush x:Key="SelectionBrush">#2A4667</SolidColorBrush>
-          <SolidColorBrush x:Key="InsetBrush">#152235</SolidColorBrush>
-          <SolidColorBrush x:Key="InsetBorderBrush">#3393C5F8</SolidColorBrush>
+          <SolidColorBrush x:Key="SidebarBrush">#1B303D</SolidColorBrush>
+          <SolidColorBrush x:Key="DialogSurfaceBrush">#21323E</SolidColorBrush>
+          <SolidColorBrush x:Key="PaperBrush">#172833</SolidColorBrush>
+          <SolidColorBrush x:Key="CardBrush">#21323E</SolidColorBrush>
+          <SolidColorBrush x:Key="InkBrush">#E5F1F6</SolidColorBrush>
+          <SolidColorBrush x:Key="MutedBrush">#ADC4CF</SolidColorBrush>
+          <SolidColorBrush x:Key="TintBrush">#2C4654</SolidColorBrush>
+          <SolidColorBrush x:Key="LineBrush">#3E5967</SolidColorBrush>
+          <SolidColorBrush x:Key="OnPrimaryBrush">#142D3A</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreen">#91C7DC</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenHover">#AFD9E9</SolidColorBrush>
+          <SolidColorBrush x:Key="PrimaryGreenPressed">#7AB6CE</SolidColorBrush>
+          <SolidColorBrush x:Key="InputBg">#21323E</SolidColorBrush>
+          <SolidColorBrush x:Key="SelectionBrush">#2E5060</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBrush">#1B303D</SolidColorBrush>
+          <SolidColorBrush x:Key="InsetBorderBrush">#3391C7DC</SolidColorBrush>
 
           <LinearGradientBrush x:Key="CardBorderGradient" StartPoint="0%,0%" EndPoint="100%,100%">
             <GradientStop Color="#35FFFFFF" Offset="0.0"/>
-            <GradientStop Color="#3393C5F8" Offset="0.5"/>
+            <GradientStop Color="#3391C7DC" Offset="0.5"/>
             <GradientStop Color="#0FFFFFFF" Offset="1.0"/>
           </LinearGradientBrush>
 
           <BoxShadows x:Key="SoftCardShadow">0 5 20 0 #3008101C, 0 1 4 0 #1608101C</BoxShadows>
           <BoxShadows x:Key="FloatingShadow">0 10 32 0 #60000000, 0 3 10 0 #35000000</BoxShadows>
-          <BoxShadows x:Key="FocusGlowShadow">0 0 8 1 #5593C5F8</BoxShadows>
+          <BoxShadows x:Key="FocusGlowShadow">0 0 8 1 #5591C7DC</BoxShadows>
           <BoxShadows x:Key="DrawerShadow">0 4 16 0 #35000000</BoxShadows>
         </ResourceDictionary>
       </ResourceDictionary.ThemeDictionaries>
@@ -103,6 +105,11 @@
 
 
   <!-- Global Font and Foreground -->
+  <Style Selector="ProgressBar">
+    <Setter Property="Foreground" Value="{DynamicResource PrimaryGreen}"/>
+    <Setter Property="Background" Value="{DynamicResource TintBrush}"/>
+  </Style>
+
   <Style Selector="Window">
     <Setter Property="FontFamily" Value="{DynamicResource BodyFont}"/>
     <Setter Property="FontWeight" Value="Normal"/>
@@ -138,7 +145,7 @@
     <Setter Property="Margin" Value="0,0,0,6"/>
   </Style>
 
-  <!-- Global Buttons: Press 80ms to 0.98 scale, Restore 200ms with SplineEasing subtle rebound, no continuous animation -->
+  <!-- Buttons: 1px hover lift, 0.98 press feedback, quiet 140ms settling. -->
   <Style Selector="Button">
     <Setter Property="FontSize" Value="13"/>
     <Setter Property="FontWeight" Value="Medium"/>
@@ -162,7 +169,7 @@
     <Setter Property="CornerRadius" Value="{DynamicResource ControlRadius}"/>
     <Setter Property="Padding" Value="{DynamicResource ControlPadding}"/>
     <Setter Property="Cursor" Value="Hand"/>
-    <Setter Property="RenderTransform" Value="scale(1)"/>
+    <Setter Property="RenderTransform" Value="translate(0px, 0px) scale(1)"/>
     <Setter Property="Transitions">
       <Transitions>
         <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.14" Easing="0.32, 0.72, 0, 1"/>
@@ -174,11 +181,12 @@
   </Style>
 
   <Style Selector="Button:pointerover">
-    <Setter Property="Opacity" Value="0.92"/>
+    <Setter Property="RenderTransform" Value="translate(0px, -1px) scale(1)"/>
+    <Setter Property="Opacity" Value="0.96"/>
   </Style>
 
   <Style Selector="Button:pressed">
-    <Setter Property="RenderTransform" Value="scale(0.97)"/>
+    <Setter Property="RenderTransform" Value="translate(0px, 0px) scale(0.98)"/>
     <Setter Property="Transitions">
       <Transitions>
         <TransformOperationsTransition Property="RenderTransform" Duration="0:0:0.09" Easing="CubicEaseOut"/>
@@ -263,6 +271,7 @@
     <Setter Property="Opacity" Value="0"/>
   </Style>
   <Style Selector="Button.window-control:pointerover">
+    <Setter Property="RenderTransform" Value="translate(0px, 0px) scale(1)"/>
     <Setter Property="Opacity" Value="1"/>
   </Style>
   <Style Selector="Button.window-control:pointerover Path">
@@ -308,7 +317,7 @@
     <Setter Property="Foreground" Value="{DynamicResource OnPrimaryBrush}"/>
   </Style>
 
-  <!-- Cards: Semi-transparent background, subtle gradient border, soft shadow -->
+  <!-- Glacier surfaces: white cards, cool fine borders, restrained ambient shadow. -->
   <Style Selector="Border.card">
     <Setter Property="Background" Value="{DynamicResource CardBrush}"/>
     <Setter Property="BorderBrush" Value="{DynamicResource CardBorderGradient}"/>
@@ -689,7 +698,7 @@
   <Style Selector="Window.reduce-motion Button, Window.reduce-motion CheckBox, Window.reduce-motion TextBox">
     <Setter Property="Transitions" Value="{x:Null}"/>
   </Style>
-  <Style Selector="Window.reduce-motion Button:pressed, Window.reduce-motion CheckBox:pressed">
+  <Style Selector="Window.reduce-motion Button:pointerover, Window.reduce-motion Button:pressed, Window.reduce-motion CheckBox:pressed">
     <Setter Property="RenderTransform" Value="scale(1)"/>
     <Setter Property="Transitions" Value="{x:Null}"/>
   </Style>

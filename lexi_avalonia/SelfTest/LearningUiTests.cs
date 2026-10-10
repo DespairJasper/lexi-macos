@@ -361,8 +361,9 @@ public static class LearningUiTests
                 Call("RenderStudyPlanLists"); Click("NavPlans");
                 DailyStudyPlan Lifecycle() => Field<List<DailyStudyPlan>>("_studyPlans").Single(p => p.Id == lifecycle.Id);
                 DailyStudyPlan PersistedLifecycle() => new DailyStudyPlanStore(plansPath).Load().Single(p => p.Id == lifecycle.Id);
-                Border PlanCard(string name) => C<Grid>("PageStudyPlan").GetLogicalDescendants().OfType<TextBlock>()
-                    .Single(t => t.Text == name).GetLogicalAncestors().OfType<Border>().First();
+                Grid PlanCard(string name) => C<Grid>("PageStudyPlan").GetLogicalDescendants().OfType<Button>()
+                    .Single(b => b.Name == "PlanDetailBtn" && b.Content?.ToString() == name)
+                    .GetLogicalAncestors().OfType<Grid>().First();
                 Button CardButton(string name, string button) => PlanCard(name).GetLogicalDescendants().OfType<Button>().Single(b => b.Name == button);
                 void ClickCard(string name, string button) => CardButton(name, button).RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
                 void ExpandPlanHistory()

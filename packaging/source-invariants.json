@@ -39,7 +39,7 @@
     "packaging/fsrs-notices-pin.json": "f8d2ba76cd60932efa97b793f2312ac0755a1ca839ca8915912dedb5ef05e834",
     "packaging/release-pin.json": "22293463b61ec138f956ad874dfe3e8013bb50259274b3df1b4c204ed5965427",
     "scripts/package_app.sh": "d23a0c65cc35a142f752492df723f2e50ac1b360230c76bc467894282399b4e3",
-    "scripts/package_dmg.sh": "df178babfb1035351341ccf13fd5b1b0a3e54ec604d81a4889809f385214ea22",
+    "scripts/package_dmg.sh": "3278fb51e96fc86dbd3d82b4f7c8ca5efa62fe66fd1f6ea08a4bdc85f37d4702",
     "scripts/release.sh": "c28485e3e6159722ab43cd38575834151c4bd73b35ffc8125359fc21e942205f",
     "scripts/release_proof.py": "c13b2038a8672a922198a533fdff7dc367ff2ce7895534239044f81cc817c5d6",
     "scripts/verify_packaged_app.sh": "a48efc16e1db555707fac85f1ee199855e9252f4af4a0d2dcccbeb5e1136ff21",

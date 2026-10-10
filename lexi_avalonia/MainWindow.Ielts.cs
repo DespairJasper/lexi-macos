@@ -67,7 +67,7 @@ public partial class MainWindow
             ConfigureIeltsPage(); ConfigureTypingPage();
             ConfigureStudyPlans();
             var host = (Panel)LookupPageHost.Parent!;
-            host.Children.Add(_ieltsPage!); host.Children.Add(_typingPage!); host.Children.Add(_studyPlanPage!);
+            host.Children.Add(_ieltsPage!); host.Children.Add(_typingPage!); host.Children.Add(_studyPlanPage!); host.Children.Add(_dailyPlanPage!);
             NavIelts.Click += (_, _) => { if (FocusCanNavigate) ShowPage("ielts"); };
             NavPlans.Click += (_, _) => { if (FocusCanNavigate) ShowPage("plans"); };
             NavTyping.Click += (_, _) => { if (FocusCanNavigate) ShowPage("typing"); };

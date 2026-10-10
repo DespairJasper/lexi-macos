@@ -87,6 +87,7 @@ public partial class MainWindow
     private bool PersistStudyPlanList(List<DailyStudyPlan> pending)
     {
         if (_planReadFailed) { SetStatus(T("学习计划读取失败，已暂停写入以保护原文件。")); return false; }
+        if (!MemoryDrainPendingBeforeJsonEdit()) return false;
         try { _studyPlanStore.Save(pending); _studyPlans = pending; return true; }
         catch (Exception ex) { SetStatus(T("学习计划保存失败：") + ex.Message); return false; }
     }

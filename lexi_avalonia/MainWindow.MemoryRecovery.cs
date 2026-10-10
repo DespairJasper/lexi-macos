@@ -52,6 +52,9 @@ public partial class MainWindow
         // 下一次启动继续试。
         if (!MemoryReplayPendingFinalize(memory, saved.PendingFinalize)) return false;
         if (saved.Scope != _memoryRecoveryScope) return false;
+        // The same plan can have first-learning and repeat-review checkpoints.
+        var persistedRound = JsonSerializer.Deserialize<StudyRound<string>.PersistedRound>(saved.RoundJson);
+        if (persistedRound is null || persistedRound.Mode != mode) return false;
         if (saved.Finished)
         {
             _memoryStore.DeleteSessionCheckpoint(MemoryCheckpointSurface, checkpoint.SessionId);

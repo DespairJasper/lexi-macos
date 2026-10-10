@@ -30,6 +30,7 @@ ui_result_file() {
         focus-test) echo "focus-result.txt" ;;
         learning-test) echo "learning-ui-result.txt" ;;
         quick-test) echo "quick-test-result.txt" ;;
+        glacier-test) echo "glacier-result.txt" ;;
         recovery-restart-b) echo "recovery-restart-result.txt" ;;
         *) echo "" ;;
     esac
@@ -82,10 +83,10 @@ if ! grep -q '^build: 0$' "$RESULTS/summary.txt"; then
     echo "Build failed; evidence: $RESULTS"
     exit 1
 fi
-for suite in AiTests SelectionTests MacPlatformTests LearningTests QuoteTests GlassTests MemoryTests; do
+for suite in AiTests SelectionTests MacPlatformTests LearningTests QuoteTests GlassTests MemoryTests PlanDashboardTests StatisticsTests; do
     run_check "$suite" "$DOTNET_BIN" run --project "$ROOT_DIR/lexi_avalonia/tests/$suite/$suite.csproj" -c Release
  done
-for mode in media-test self-test ui-smoke visual-test language-test focus-test learning-test quick-test; do
+for mode in media-test self-test ui-smoke visual-test language-test focus-test learning-test quick-test glacier-test; do
     mkdir -p "$RESULTS/$mode"
     run_check "$mode" env LEXI_DATA_DIR="$RESULTS/$mode" "$DOTNET_BIN" "$ROOT_DIR/lexi_avalonia/bin/Release/net8.0/Lexi.dll" "--$mode"
     require_ui_evidence "$mode"

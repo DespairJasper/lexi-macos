@@ -74,5 +74,6 @@ public partial class MainWindow
         RefreshLearningLabels();
         if (_planFeedback != null) _planFeedback.Text = UiText.Redisplay(_planFeedback.Text);
         RefreshStudyPlanLanguage();
+        RefreshStatisticsLanguage();
     }
 }

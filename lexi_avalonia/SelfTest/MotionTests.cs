@@ -43,6 +43,25 @@ public static class MotionTests
             check(!host.IsVisible && Math.Abs(vocab.Opacity - 1) < 0.001 && vocab.Transitions == null,
                 "page switch settles at the final pose without leftover animation values");
 
+            Click("NavReview");
+            await Task.Delay(35);
+            Click("NavVocab");
+            await Task.Delay(35);
+            Click("NavLookup");
+            await Task.Delay(400);
+            check(host.IsVisible && !review.IsVisible && !vocab.IsVisible && host.Opacity >= 0.999,
+                "rapid page navigation settles only the last requested page");
+            check(host.Transitions == null && review.Transitions == null && vocab.Transitions == null,
+                "cancelled page transitions leave reused pages at rest");
+
+            using (var cancelled = new CancellationTokenSource())
+            {
+                cancelled.Cancel();
+                await Motion.ToPoseAsync(host, Motion.Pose(20, .9), .2, Motion.Page, Motion.Enter, cancelled.Token);
+                check(host.Opacity >= .999 && host.RenderTransform?.Value.IsIdentity == true,
+                    "an already cancelled transition cannot alter the current page");
+            }
+
             var overlay = stageOverlay;
             Call("ShowOverlay", overlay);
             check(overlay.IsVisible && overlay.Opacity < 0.9, $"overlay fades in instead of hard-cutting (opacity={overlay.Opacity:0.00})");
@@ -52,6 +71,20 @@ public static class MotionTests
             check(overlay.IsVisible, "overlay stays mounted while fading out");
             await Task.Delay(400);
             check(!overlay.IsVisible && overlay.Opacity >= 0.999, "overlay hides only after the fade-out finished");
+
+            Call("ShowOverlay", overlay);
+            await Task.Delay(35);
+            Call("HideOverlay", overlay);
+            await Task.Delay(35);
+            Call("ShowOverlay", overlay);
+            await Task.Delay(400);
+            check(overlay.IsVisible && overlay.Opacity >= .999 && overlay.Transitions == null,
+                "reopening a closing overlay cancels stale hide completion");
+            check(overlay.Child is Control settledCard && settledCard.Opacity >= .999
+                && settledCard.Transitions == null && settledCard.RenderTransform?.Value.IsIdentity == true,
+                "reopened overlay card has no leftover fade or scale");
+            Call("HideOverlay", overlay);
+            await Task.Delay(220);
 
             reduce.IsChecked = true;
             Click("NavReview");

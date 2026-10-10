@@ -98,9 +98,18 @@ public partial class MainWindow
         MacGlassMaterial.Apply(this, _settings);
         UpdateGlassControls();
         if (!MacGlassMaterial.WantsLiquidGlass(_settings)) return;
-        // Only backgrounds change opacity. Foreground brushes stay crisp.
-        Resources["PaperBrush"] = new SolidColorBrush(MacGlassMaterial.SurfaceColor(_settings));
-        Resources["CardBrush"] = new SolidColorBrush(MacGlassMaterial.SurfaceColor(_settings, card: true));
+        // Keep the user's existing intensity/alpha mapping; only update the surface tint.
+        var dark = _settings.Theme == "Dark";
+        var paperAlpha = MacGlassMaterial.SurfaceColor(_settings).A;
+        var cardAlpha = MacGlassMaterial.SurfaceColor(_settings, card: true).A;
+        Color Surface(byte alpha, string rgb)
+        {
+            var color = Color.Parse(rgb);
+            return Color.FromArgb(alpha, color.R, color.G, color.B);
+        }
+        Resources["PaperBrush"] = new SolidColorBrush(Surface(paperAlpha, dark ? "#172833" : "#F3F8FB"));
+        Resources["SidebarBrush"] = new SolidColorBrush(Surface(paperAlpha, dark ? "#1B303D" : "#EAF4F8"));
+        Resources["CardBrush"] = new SolidColorBrush(Surface(cardAlpha, dark ? "#21323E" : "#FFFFFF"));
     }
 
     private void UpdateGlassControls()

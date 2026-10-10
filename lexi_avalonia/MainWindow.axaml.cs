@@ -75,6 +75,7 @@ public partial class MainWindow : Window
         ConfigureLearningMemory();
         RefreshWords();
         ConfigureLearningPages();
+        ConfigureStatistics();
         ConfigureUpdateCheck();
 
         ShowPage("lookup");
@@ -228,6 +229,8 @@ public partial class MainWindow : Window
     internal void PrepareForApplicationShutdown()
     {
         if (_isForceClose) return;
+        StatisticsStopTracking();
+        GlacierCancelPageMotion();
         MemoryCancelParameters();
         MemoryCancelContextTraining();
         StopLearningSpeech();
@@ -317,6 +320,7 @@ public partial class MainWindow : Window
         UpdateLearningNavigation(page);
 
         var incoming = PageControl(page);
+        GlacierCancelPageMotion();
         ApplyPageVisibility(page);
         if (previousPage != page) StartPageTransition(incoming);
 
@@ -339,10 +343,10 @@ public partial class MainWindow : Window
         if (page == "quotes") RenderQuotes();
         if (page == "ielts") RenderIeltsPage();
         if (page == "plans") RenderStudyPlanLists();
+        if (page == "dailyplan") RenderDailyPlanDetail();
+        if (page == "statistics") StatisticsEnterPage();
         if (page == "typing") ShowTypingPractice();
     }
-
-    private CancellationTokenSource? _pageTransitionCts;
 
     private Control? PageControl(string? page) => page switch
     {
@@ -352,6 +356,8 @@ public partial class MainWindow : Window
         "settings" => PageSettings,
         "ielts" => _ieltsPage,
         "plans" => _studyPlanPage,
+        "dailyplan" => _dailyPlanPage,
+        "statistics" => _statisticsPage,
         "typing" => _typingPage,
         "quotes" => _quotesPage,
         _ => null,
@@ -364,6 +370,10 @@ public partial class MainWindow : Window
         _quotesNav?.Classes.Set("active",page == "quotes");
         if (_ieltsPage != null) _ieltsPage.IsVisible = page == "ielts";
         if (_studyPlanPage != null) _studyPlanPage.IsVisible = page == "plans";
+        if (_dailyPlanPage != null) _dailyPlanPage.IsVisible = page == "dailyplan";
+        if (_statisticsPage != null) _statisticsPage.IsVisible = page == "statistics";
+        this.FindControl<Button>("NavStatistics")?.Classes.Set("active", page == "statistics");
+        NavPlans.Classes.Set("active", page is "plans" or "dailyplan");
         if (_typingPage != null) _typingPage.IsVisible = page == "typing";
         PageLookup.IsVisible = true; // 宿主的显隐已经足够，淡出过程中内容不应提前消失
         foreach (var (key, control) in new (string, Control)[]
@@ -378,13 +388,7 @@ public partial class MainWindow : Window
     // macOS 风格：旧页即时退场，新页淡入并轻微上浮（fade-through），不做硬切。
     private void StartPageTransition(Control? incoming)
     {
-        _pageTransitionCts?.Cancel();
-        if (incoming == null) return;
-        var cts = new CancellationTokenSource();
-        _pageTransitionCts = cts;
-
-        Motion.SetPose(incoming, Motion.Pose(0, 12, 1), 0);
-        _ = Motion.ToPoseAsync(incoming, Motion.Rest, 1, Motion.Standard, Motion.Enter, cts.Token);
+        if (incoming != null) GlacierAnimatePage(incoming);
     }
 
     #endregion

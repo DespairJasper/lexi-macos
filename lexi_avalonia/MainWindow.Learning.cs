@@ -121,9 +121,9 @@ public partial class MainWindow
             EndPoint = new RelativePoint(1, 1, RelativeUnit.Relative),
             GradientStops =
             [
-                new GradientStop(Color.Parse("#" + alpha + (dark ? "193447" : "E5F5FB")), 0),
-                new GradientStop(Color.Parse("#" + alpha + (dark ? "24445C" : "B5DDF2")), .52),
-                new GradientStop(Color.Parse("#" + alpha + (dark ? "18364B" : "DAEFF8")), 1)
+                new GradientStop(Color.Parse("#" + alpha + (dark ? "193447" : "EDF6F9")), 0),
+                new GradientStop(Color.Parse("#" + alpha + (dark ? "24445C" : "C6E2ED")), .52),
+                new GradientStop(Color.Parse("#" + alpha + (dark ? "18364B" : "E4F1F6")), 1)
             ]
         };
     }

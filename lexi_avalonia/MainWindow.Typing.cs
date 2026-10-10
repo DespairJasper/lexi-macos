@@ -106,6 +106,7 @@ public partial class MainWindow
     }
     private void RenderTypingWord()
     {
+        UpdatePlanTypingActivity();
         StopTypingShake();
         _typingPlayArea.GetLogicalDescendants().OfType<Button>().First(b => b.Name == "TypingSaveBtn").IsVisible = !_planTypingActive;
         _typingUpdating = true; _typingInput.Text = ""; _typingUpdating = false;
@@ -194,6 +195,7 @@ public partial class MainWindow
         var addedWrongCharacter = addedCharacters && Enumerable.Range(previousInput.Length, normalizedSubmission.Length - previousInput.Length)
             .Any(index => index >= target.Length || normalizedSubmission[index] != target[index]);
         var outcome = _typingSession.Submit(submitted);
+        UpdatePlanTypingActivity();
         var wrongFeedbackPlayed = false;
         if (addedWrongCharacter)
         {

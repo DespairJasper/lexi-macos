@@ -7,24 +7,48 @@ public sealed class DailyStudyPlanSession
     private readonly DateOnly _date;
     private PlanProgress? _beforeLastRating;
     private StudyRound<string>.Checkpoint? _beforeLastRound;
+    private readonly List<string> _batchIds;
+    private readonly string _activityId;
     private sealed record PlanProgress(HashSet<string> Completed, HashSet<string> Forgot,
-        DailyStudyPlanStatus Status, DateOnly? BatchDate);
+        DailyStudyPlanStatus Status, DateOnly? BatchDate, DateOnly? CurrentDate,
+        HashSet<DateOnly> Dates, List<DailyStudyPlanActivity> Activities);
 
-    public DailyStudyPlanSession(DailyStudyPlan plan, DateOnly date, StudyRound<string>? round = null)
+    public DailyStudyPlanSession(DailyStudyPlan plan, DateOnly date, StudyRound<string>? round = null,
+        StudyMode mode = StudyMode.FirstLearn, IReadOnlyList<DailyStudyPlanWord>? reviewWords = null)
     {
         _plan = plan ?? throw new ArgumentNullException(nameof(plan));
         _date = date;
         Round = round ?? new StudyRound<string>();
-        DailyStudyPlanRules.RestoreLegacyBatch(plan);
-        var remaining = DailyStudyPlanRules.GetTodayWords(plan, date);
-        if (remaining.Count > 0 && !plan.CurrentBatchWordIds.Any(id => !plan.CompletedWordIds.Contains(id)))
+        if (!Enum.IsDefined(mode)) throw new ArgumentOutOfRangeException(nameof(mode));
+        Mode = mode;
+        IReadOnlyList<DailyStudyPlanWord> remaining;
+        if (mode == StudyMode.Review)
         {
-            plan.CurrentBatchWordIds = remaining.Select(w => w.Id).ToList();
-            plan.CurrentBatchRandomOrder = plan.RandomOrder;
+            var scope = reviewWords ?? DailyStudyPlanRules.GetTodayBatch(plan, date);
+            if (scope.Count == 0 && plan.Status == DailyStudyPlanStatus.Completed) scope = plan.Words;
+            remaining = scope.Where(w => plan.CompletedWordIds.Contains(w.Id) && plan.Words.Any(p => p.Id == w.Id))
+                .DistinctBy(w => w.Id).ToList();
+            _batchIds = remaining.Select(w => w.Id).ToList();
         }
-        if (plan.CurrentBatchWordIds.Count > 0) plan.CurrentBatchRandomOrder ??= plan.RandomOrder;
-        Round.Reset(remaining.Select(w => w.Id), StudyMode.FirstLearn,
+        else
+        {
+            DailyStudyPlanRules.RestoreLegacyBatch(plan);
+            remaining = DailyStudyPlanRules.GetTodayWords(plan, date);
+            if (remaining.Count > 0 && !plan.CurrentBatchWordIds.Any(id => !plan.CompletedWordIds.Contains(id)))
+            {
+                plan.CurrentBatchWordIds = remaining.Select(w => w.Id).ToList();
+                plan.CurrentBatchRandomOrder = plan.RandomOrder;
+            }
+            if (remaining.Count > 0) plan.CurrentBatchDate = date;
+            if (plan.CurrentBatchWordIds.Count > 0) plan.CurrentBatchRandomOrder ??= plan.RandomOrder;
+            _batchIds = plan.CurrentBatchWordIds.ToList();
+        }
+        Round.Reset(remaining.Select(w => w.Id), mode,
             shuffle: plan.CurrentBatchRandomOrder ?? plan.RandomOrder);
+        _activityId = Guid.NewGuid().ToString("N");
+        if (remaining.Count > 0) plan.Activities.Add(new DailyStudyPlanActivity { Id = _activityId,
+            Date = date, Kind = mode == StudyMode.Review ? "review" : "firstlearn",
+            StartedAtUtc = DateTime.UtcNow, WordCount = remaining.Count });
     }
 
     /// <summary>
@@ -35,7 +59,8 @@ public sealed class DailyStudyPlanSession
     public Action<string, StudyRating, StudyCommitResult>? OnRatingApplied { get; set; }
 
     public StudyRound<string> Round { get; }
-    public IReadOnlyList<DailyStudyPlanWord> BatchWords => _plan.CurrentBatchWordIds
+    public StudyMode Mode { get; }
+    public IReadOnlyList<DailyStudyPlanWord> BatchWords => _batchIds
         .Select(id => _plan.Words.Single(w => w.Id == id)).ToList();
     public bool CanUndo => _beforeLastRating != null && _beforeLastRound != null && Round.CanUndo;
 
@@ -53,13 +78,16 @@ public sealed class DailyStudyPlanSession
         var wordId = Round.Current;
         var result = Round.Commit(rating);
         if (rating == StudyRating.Forgot) _plan.ForgotWordIds.Add(wordId);
-        if (result.Completed && !DailyStudyPlanRules.CompleteWord(_plan, wordId, _date))
+        if (result.Completed && Mode == StudyMode.FirstLearn && !DailyStudyPlanRules.CompleteWord(_plan, wordId, _date))
         {
             checkpoint.Restore();
             RestoreProgress(progress);
             return null;
         }
         var finalized = false;
+        // A real response counts as a study date even when the word needs another pass.
+        _plan.LearningDates.Add(_date);
+        UpdateActivity();
         try
         {
             // Persist the final real response before reducing it to a canonical.
@@ -81,17 +109,19 @@ public sealed class DailyStudyPlanSession
         return result;
     }
 
-    public bool Undo(Func<bool> save)
+    public bool Undo(Func<bool> save, Action<string>? applyMemory = null)
     {
         if (!CanUndo) return false;
         var checkpoint = Round.CaptureCheckpoint(); var current = CaptureProgress();
         _beforeLastRound!.Restore(); RestoreProgress(_beforeLastRating!);
         if (!TrySave(save)) { checkpoint.Restore(); RestoreProgress(current); return false; }
+        try { applyMemory?.Invoke(Round.Current); }
+        catch { checkpoint.Restore(); RestoreProgress(current); TrySave(save); throw; }
         _beforeLastRating = null; _beforeLastRound = null;
         return true;
     }
 
-    public StudyCommitResult? ReclassifyAsForgot(Func<bool> save)
+    public StudyCommitResult? ReclassifyAsForgot(Func<bool> save, Action<string>? applyMemory = null)
     {
         if (!CanUndo) return null;
         var checkpoint = Round.CaptureCheckpoint(); var current = CaptureProgress();
@@ -99,18 +129,33 @@ public sealed class DailyStudyPlanSession
         var id = Round.Current;
         var result = Round.Commit(StudyRating.Forgot);
         _plan.ForgotWordIds.Add(id);
+        _plan.LearningDates.Add(_date);
+        UpdateActivity();
         if (!TrySave(save)) { checkpoint.Restore(); RestoreProgress(current); return null; }
+        try { applyMemory?.Invoke(id); }
+        catch { checkpoint.Restore(); RestoreProgress(current); TrySave(save); throw; }
         return result;
     }
 
     private PlanProgress CaptureProgress() => new(new(_plan.CompletedWordIds, StringComparer.Ordinal),
-        new(_plan.ForgotWordIds, StringComparer.Ordinal), _plan.Status, _plan.LastBatchCompletedDate);
+        new(_plan.ForgotWordIds, StringComparer.Ordinal), _plan.Status, _plan.LastBatchCompletedDate,
+        _plan.CurrentBatchDate, new(_plan.LearningDates), _plan.Activities.Select(CloneActivity).ToList());
     private void RestoreProgress(PlanProgress progress)
     {
         _plan.CompletedWordIds = new(progress.Completed, StringComparer.Ordinal);
         _plan.ForgotWordIds = new(progress.Forgot, StringComparer.Ordinal);
         _plan.Status = progress.Status; _plan.LastBatchCompletedDate = progress.BatchDate;
+        _plan.CurrentBatchDate = progress.CurrentDate; _plan.LearningDates = new(progress.Dates);
+        _plan.Activities = progress.Activities.Select(CloneActivity).ToList();
     }
+    private void UpdateActivity()
+    {
+        var activity = _plan.Activities.FirstOrDefault(a => a.Id == _activityId);
+        if (activity != null) activity.CompletedWordCount = Round.Completed;
+    }
+    private static DailyStudyPlanActivity CloneActivity(DailyStudyPlanActivity a) => new() { Id = a.Id,
+        Date = a.Date, Kind = a.Kind, StartedAtUtc = a.StartedAtUtc, WordCount = a.WordCount,
+        CompletedWordCount = a.CompletedWordCount };
     private static bool TrySave(Func<bool> save)
     {
         ArgumentNullException.ThrowIfNull(save);

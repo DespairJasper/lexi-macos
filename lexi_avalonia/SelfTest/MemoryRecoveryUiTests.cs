@@ -124,7 +124,7 @@ public static class MemoryRecoveryUiTests
                     1, false, 713);
                 Set("_studyPlanStore", new DailyStudyPlanStore(Path.Combine(folder, "daily-study-plans.json")));
                 Set("_studyPlans", new List<DailyStudyPlan> { plan });
-                Call("StartPlanCardRound", plan);
+                Call("StartPlanCardRound", plan, StudyMode.FirstLearn, null!);
                 check(Field<bool>("_planCardActive") && Field<StudyRound<string>>("_focusRound").HasCurrent,
                     "plan fixture really opens shared card UI");
                 await Invoke("CompleteFocusLearnAsync");
@@ -204,7 +204,7 @@ public static class MemoryRecoveryUiTests
             // 真正的新进程启动与进程内重绑唯一的语义差异就是 run 标识（见 MainWindow.MemoryProcessRunId）。
             Set("_memoryRunId", Guid.NewGuid().ToString("N"));
             Call("RebindMemory"); Call("RefreshWords");
-            Call("StartPlanCardRound", crashPlan);
+            Call("StartPlanCardRound", crashPlan, StudyMode.FirstLearn, null!);
             check(Count("SELECT COUNT(*) FROM canonical_reviews WHERE word_key=$key AND invalidated=0", crashKey) == 1,
                 "restart replays the pending finalize instead of dropping a finished-but-uncommitted round");
             check(Count("SELECT reps FROM fsrs_cards WHERE word_key=$key", crashKey) == 1,

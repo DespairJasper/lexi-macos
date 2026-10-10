@@ -42,3 +42,8 @@ private-update-backup*/
 **/__pycache__/
 *.pyc
 .superpowers/
+
+# 统计侧车与本机工作记录
+study-activity.json
+study-activity.json.*
+.planning/

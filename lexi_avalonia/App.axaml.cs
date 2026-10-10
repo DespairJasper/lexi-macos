@@ -37,13 +37,13 @@ public partial class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
-            var mainWindow = Environment.GetCommandLineArgs().Contains("--learning-test") ? LearningUiTests.CreateWindow() : new MainWindow();
+            var mainWindow = Environment.GetCommandLineArgs().Any(a => a is "--learning-test" or "--glacier-test") ? LearningUiTests.CreateWindow() : new MainWindow();
             desktop.MainWindow = mainWindow;
             desktop.ShutdownRequested += (_, _) =>
             {
                 if (!mainWindow.IsRestoring) mainWindow.PrepareForApplicationShutdown();
             };
-            if (Environment.GetCommandLineArgs().Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test" or "--recovery-restart-a" or "--recovery-restart-b"))
+            if (Environment.GetCommandLineArgs().Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--glacier-test" or "--quick-test" or "--recovery-restart-a" or "--recovery-restart-b"))
             {
                 var started = false;
                 mainWindow.Opened += async (_, _) =>
@@ -52,6 +52,7 @@ public partial class App : Application
                     started = true;
                     await System.Threading.Tasks.Task.Delay(300);
                     if (Environment.GetCommandLineArgs().Contains("--quick-test")) await QuickActionUiTests.RunAsync(mainWindow);
+                    else if (Environment.GetCommandLineArgs().Contains("--glacier-test")) await GlacierUiTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--learning-test")) await LearningUiTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--focus-test")) await FocusUiTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--language-test")) await LanguageTests.RunAsync(mainWindow);
@@ -154,7 +155,7 @@ public partial class App : Application
 
     // Self-test, smoke and visual runs must never raise a system permission dialog.
     internal static bool IsAutomatedTestRun() =>
-        Environment.GetCommandLineArgs().Any(a => a is "--self-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--quick-test" or "--media-test" or "--recovery-restart-a" or "--recovery-restart-b");
+        Environment.GetCommandLineArgs().Any(a => a is "--self-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--glacier-test" or "--quick-test" or "--media-test" or "--recovery-restart-a" or "--recovery-restart-b");
 
     public void ToggleMainWindow()
     {

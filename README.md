@@ -2,7 +2,7 @@
 
 # Lexi · 把阅读中的生词，变成自己的长期记忆
 
-**macOS 英语学习应用 · 流畅的小卡片交互 · 液态玻璃界面 · 本机个性化记忆系统**
+**macOS 英语学习应用 · 流畅的小卡片交互 · 冰川蓝界面 · 本机个性化记忆系统**
 
 [下载与版本记录](https://github.com/DespairJasper/lexi-macos/releases) · [使用与安装](#安装与开始使用) · [记忆系统](#复习逐渐适应你的记忆) · [源码构建](#从源码构建)
 
@@ -14,7 +14,7 @@ Apple Silicon · macOS 12+ · 中英文界面 · 离线词典
 
 Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用里。阅读时用快捷小卡片查词或翻译，想记住的词收入档案，再按自己的计划学习。复习由记忆模型安排，无需手动计算间隔。
 
-当前源码版本为 **3.1.3**，安装包为 `Lexi-3.1.3-macOS-arm64.dmg`，配套 `.sha256` 校验文件随 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 提供。应用每次全新启动会在后台检查本仓库是否有更高的正式版本，有则提示并给出更新入口；更新与覆盖安装保留本机全部学习数据与记忆状态。个人 FSRS optimizer 已实现，并随应用打包。
+当前源码版本为 **3.2.0**，安装包为 `Lexi-3.2.0-macOS-arm64.dmg`。前往 [3.2.0 发布页](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.0) 下载。更新沿用原数据目录与数据库身份；新增时长记录独立保存于 `study-activity.json`，旧版未记录的时长显示“暂无记录”。
 
 ## 从阅读到学习，操作自然衔接
 
@@ -31,13 +31,13 @@ Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用
 
 ## 看得清楚，也用得顺手
 
-界面以单词和学习内容为中心：学习卡片留出阅读空间，三格进度让轮内状态一眼可见，导航计数居中显示；快捷小卡片把查词、翻译与摘录留在阅读现场。
+界面使用冰川蓝与蓝灰色，页面切换、按钮反馈和浮层过渡保持连贯。学习卡片留出阅读空间，三格进度显示轮内状态；快捷小卡片把查词、翻译与摘录留在阅读现场。首页去掉品牌图标与左上角文字，保留快捷键和设置入口。
 
 液态玻璃与毛玻璃外观提供层次感，效果强度可调整。需要更清晰的对比或更安静的界面时，可启用高对比度、不透明背景与减少动态效果。中英文界面覆盖日常学习与设置。
 
 ## 复习逐渐适应你的记忆
 
-3.1.1 使用 **FSRS-6** 安排长期复习。模型根据每个词的难度、记忆稳定度与随时间变化的可回忆性，计算下一次复习时间。不同词、不同作答历史会得到不同排期。
+从 3.1.1 起使用 **FSRS-6** 安排长期复习。模型根据每个词的难度、记忆稳定度与随时间变化的可回忆性，计算下一次复习时间。不同词、不同作答历史会得到不同排期。
 
 轮内学习仍保留熟悉的三按钮、三次认识进度、模糊回退、忘记重学、逐遍随机与改判撤销。系统记录呈现、作答和修改轨迹，每个词每轮只形成一个有效长期复习信号，避免把强化练习重复计为多次长期复习。
 
@@ -70,8 +70,8 @@ Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用
 
 适用 **Apple Silicon（M 系列）Mac、macOS 12 或更新版本**。安装包包含 .NET 运行环境、离线词典与本地 optimizer，普通使用者无需安装开发工具。
 
-1. 在 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 下载 `Lexi-3.1.3-macOS-arm64.dmg` 与 `Lexi-3.1.3-macOS-arm64.dmg.sha256`。
-2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.1.3-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
+1. 在 [发布记录](https://github.com/DespairJasper/lexi-macos/releases) 下载 `Lexi-3.2.0-macOS-arm64.dmg` 与 `Lexi-3.2.0-macOS-arm64.dmg.sha256`。
+2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.2.0-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
 3. 打开 DMG，将 Lexi 拖入“应用程序”，推出磁盘映像后启动。磁盘中另附 `卸载Lexi.command`，用法见下方“卸载与数据保留”。
 4. 使用跨应用选词时，在“系统设置 → 隐私与安全 → 设备控制和数据访问”中授权 Lexi；未授权时仍可手动输入。
 5. 按需配置 AI 服务，开始整理词汇和每日学习计划。
@@ -82,7 +82,7 @@ Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用
 
 用户数据存放在 `~/Library/Application Support/Lexi/`，**不在应用包内**。因此：
 
-- **更新 / 覆盖安装**：把新版 `Lexi.app` 拖入“应用程序”替换旧版即可。数据目录不会被安装过程触碰，词库、学习记录、金句、每日计划、IELTS 进度与全部内部记忆原样保留。
+- **更新 / 覆盖安装**：先用 `⌘Q` 正常退出 Lexi，再把新版 `Lexi.app` 拖入“应用程序”替换旧版。数据目录不会被安装过程触碰，词库、学习记录、金句、每日计划、IELTS 进度与全部内部记忆原样保留。
 - **卸载**：双击随 DMG 提供的 `卸载Lexi.command`。它默认**只移除应用并保留全部用户数据**；只有在交互中选择“删除用户数据”并键入 `DELETE` 确认后，才会删除本应用自己的数据目录与钥匙串中的 API Key，且删除前会列出具体路径。
 - 不提供“卸载时自动删除数据”的默认行为，也不会触碰数据目录以外的任何文件。
 
@@ -118,6 +118,27 @@ bash scripts/package_dmg.sh --no-build
 
 `release.sh` 依次执行回归、签名打包、包内隔离验收、许可证与隐私检查，并生成绑定实际应用的合格证明；DMG 打包与安装均验证该证明。测试应使用隔离数据目录，避免向日常学习数据灌入模拟记录。
 
+## 3.2.0 更新
+
+- **学习计划**：今日大卡片汇总总词数与进度，下半部分以条状计划保留原有操作；已完成计划另卡汇总实际学习天数与去重词数。
+- **每日学习**：初次学习、今日复习与拼写练习分别进入。今日任务完成后仅首次学习入口变灰；复习直接进入回忆阶段，复习与拼写都可多次练习。
+- **学习统计**：学习天数、去重词数、单词卡与拼写时长，以及单日峰值、最长会话、连续学习、近14天时长趋势和易忘词 TOP 50。顶部四项指标在窄窗口中仍保持一行，并随宽度调整字号。
+- **活动图与动画**：每日按色深显示时长；每周、每月和累计用自下而上填充的方格柱表示聚合时长。进入统计或切换活动图周期时，从左到右逐渐呈现；遗忘曲线同样逐渐绘制。支持“减少动态效果”。
+- **遗忘曲线**：区分模型预测与真实复习观察，用通俗文字解释坐标、百分比和参数。预测不是考试分数；缺少记录时显示空状态，不填入演示值。
+- **双语与数据**：新增界面及说明随中文 / English 同步切换；原数据沿用，初学、复习与拼写有效时长分别从本版本开始记录。
+
+### 界面预览
+
+以下是 3.2.0 原生应用截图；学习计划与统计使用隔离的示例数据，不含个人学习资料。
+
+| 学习计划 | 每日计划 |
+| --- | --- |
+| ![学习计划汇总与条状列表](docs/macos/images/study-plans.png) | ![每日首次学习、复习和拼写入口](docs/macos/images/daily-plan.png) |
+
+![冰川蓝学习统计：四项指标、活动图与遗忘曲线](docs/macos/images/statistics.png)
+
+[首页预览](docs/macos/images/home.png) · [3.2.0 详细发布说明](docs/macos/releases/v3.2.0.md)
+
 ## 3.1.3 更新
 
 - 修复点击 Dock 图标唤醒应用时强制返回首页的问题；切换应用、最小化和关闭窗口后重新打开均保留原页面与页面状态。
@@ -139,8 +160,9 @@ bash scripts/package_dmg.sh --no-build
 | 第三代 · 3.1.1 | FSRS-6 长期排期、个人参数 optimizer、Context 校准、完整学习轨迹与模型恢复 |
 | 第三代 · 3.1.2 | 启动后台检查正式 Release 并提示更新、更新与覆盖安装完整保留用户数据与记忆、卸载可选保留数据 |
 | 第三代 · 3.1.3 | 修复 Dock 唤醒时强制返回首页，保留原页面与页面状态；快捷卡片主动查词保持原行为 |
+| 第三代 · 3.2.0 | 冰川蓝界面、计划汇总与每日复习 / 拼写、双语学习统计、活动图与遗忘曲线动画 |
 
-[3.1.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.3) · [3.1.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.2) · [3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
+[3.2.0 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.0) · [3.1.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.3) · [3.1.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.2) · [3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
 
 ## 许可与第三方内容
 
@@ -154,7 +176,7 @@ Lexi 自有代码采用根目录 [LICENSE](LICENSE) 的**非商业许可**，允
 
 | 平台 | 版本 | 源码 | 下载 |
 | --- | --- | --- | --- |
-| macOS | 以本页原有说明为准 | [macos 导航](macos/README.md) → 原有 lexi_avalonia | [本仓库 Releases](https://github.com/DespairJasper/lexi-macos/releases) |
+| macOS | 3.2.0 | [macos 导航](macos/README.md) → 原有 lexi_avalonia | [本仓库 Releases](https://github.com/DespairJasper/lexi-macos/releases) |
 | Windows | 1.2.4 | [windows](windows/README.md) | [完整安装包](https://github.com/DespairJasper/lexi-macos/releases/tag/windows-v1.2.4) |
 | Android | 0.2.2-alpha | [android](android/README.md) | [APK](https://github.com/DespairJasper/lexi-macos/releases/tag/android-v0.2.2) |
 

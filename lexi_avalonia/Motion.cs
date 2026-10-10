@@ -22,6 +22,8 @@ internal static class Motion
     public static readonly TimeSpan Fast = TimeSpan.FromMilliseconds(150);
     /// <summary>页面、浮层、卡片的标准进出场时长。</summary>
     public static readonly TimeSpan Standard = TimeSpan.FromMilliseconds(220);
+    /// <summary>页面切换：8px 轻移与淡入，独立于浮层时长。</summary>
+    public static readonly TimeSpan Page = TimeSpan.FromMilliseconds(280);
     /// <summary>大范围布局变化的收尾时长。</summary>
     public static readonly TimeSpan Slow = TimeSpan.FromMilliseconds(300);
 
@@ -63,6 +65,7 @@ internal static class Motion
     public static async Task ToPoseAsync(Control control, string transform, double opacity,
         TimeSpan duration, Easing easing, CancellationToken ct = default)
     {
+        if (ct.IsCancellationRequested) return;
         if (IsReduced(control) || duration <= TimeSpan.Zero)
         {
             SetPose(control, transform, opacity);
@@ -92,6 +95,7 @@ internal static class Motion
     public static async Task HeightToAsync(Control control, double from, double to,
         double fromOpacity, double toOpacity, TimeSpan duration, Easing easing, CancellationToken ct = default)
     {
+        if (ct.IsCancellationRequested) return;
         if (IsReduced(control) || duration <= TimeSpan.Zero)
         {
             control.Transitions = null;

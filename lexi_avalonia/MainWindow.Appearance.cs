@@ -8,7 +8,7 @@ namespace Lexi;
 public partial class MainWindow
 {
     private bool _loadingAppearance;
-    private static readonly string[] AppearanceBrushes = ["PaperBrush", "CardBrush", "DialogSurfaceBrush", "InputBg", "InkBrush", "MutedBrush", "LineBrush", "PrimaryGreen", "PrimaryGreenHover", "PrimaryGreenPressed", "OnPrimaryBrush", "TintBrush", "SelectionBrush", "InsetBrush", "InsetBorderBrush", "CardBorderGradient"];
+    private static readonly string[] AppearanceBrushes = ["PaperBrush", "SidebarBrush", "CardBrush", "DialogSurfaceBrush", "InputBg", "InkBrush", "MutedBrush", "LineBrush", "PrimaryGreen", "PrimaryGreenHover", "PrimaryGreenPressed", "OnPrimaryBrush", "TintBrush", "SelectionBrush", "InsetBrush", "InsetBorderBrush", "CardBorderGradient"];
 
     private void BindAppearanceEvents()
     {
@@ -47,7 +47,7 @@ public partial class MainWindow
             void Brush(string key, string color) => Resources[key] = new SolidColorBrush(Color.Parse(color));
             var bg = dark ? "#101010" : "#FFFFFF";
             var fg = dark ? "#FFFFFF" : "#000000";
-            foreach (var key in new[] { "PaperBrush", "CardBrush", "DialogSurfaceBrush", "InputBg", "InsetBrush" }) Brush(key, bg);
+            foreach (var key in new[] { "PaperBrush", "SidebarBrush", "CardBrush", "DialogSurfaceBrush", "InputBg", "InsetBrush" }) Brush(key, bg);
             foreach (var key in new[] { "InkBrush", "MutedBrush", "LineBrush", "InsetBorderBrush", "CardBorderGradient" }) Brush(key, fg);
             foreach (var key in new[] { "PrimaryGreen", "PrimaryGreenHover", "PrimaryGreenPressed" }) Brush(key, dark ? "#AAE8FF" : "#003E67");
             Brush("OnPrimaryBrush", dark ? "#000000" : "#FFFFFF");
@@ -56,8 +56,8 @@ public partial class MainWindow
         }
         else if (_settings.OpaqueMaterial)
         {
-            Resources["PaperBrush"] = new SolidColorBrush(Color.Parse(dark ? "#131C29" : "#F3F7FC"));
-            Resources["CardBrush"] = new SolidColorBrush(Color.Parse(dark ? "#202C3D" : "#FFFFFF"));
+            Resources["PaperBrush"] = new SolidColorBrush(Color.Parse(dark ? "#172833" : "#F3F8FB"));
+            Resources["CardBrush"] = new SolidColorBrush(Color.Parse(dark ? "#21323E" : "#FFFFFF"));
             Resources["InputBg"] = Resources["CardBrush"];
         }
         if (OperatingSystem.IsMacOS()) ApplyGlassAppearance();
@@ -68,6 +68,7 @@ public partial class MainWindow
             UpdateGlassControls();
         }
         Classes.Set("reduce-motion", _settings.ReduceMotion);
+        if (_settings.ReduceMotion) GlacierCancelPageMotion();
         ApplyLearningBackdrop();
         foreach (var key in new[] { "SoftCardShadow", "FloatingShadow", "FocusGlowShadow", "DrawerShadow" })
         {

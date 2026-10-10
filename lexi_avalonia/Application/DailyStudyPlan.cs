@@ -3,6 +3,16 @@ namespace Lexi;
 public enum DailyStudyPlanSource { Archive, Ielts }
 public enum DailyStudyPlanStatus { Active, Completed, Stopped }
 
+public sealed class DailyStudyPlanActivity
+{
+    public string Id { get; set; } = "";
+    public DateOnly Date { get; set; }
+    public string Kind { get; set; } = "";
+    public DateTime StartedAtUtc { get; set; }
+    public int WordCount { get; set; }
+    public int CompletedWordCount { get; set; }
+}
+
 public sealed class DailyStudyPlanWord
 {
     public string Id { get; set; } = "";
@@ -32,6 +42,10 @@ public sealed class DailyStudyPlan
     public bool? CurrentBatchRandomOrder { get; set; }
     public List<string> OriginalWordIds { get; set; } = [];
     public HashSet<string> ForgotWordIds { get; set; } = [];
+    // Missing legacy dates remain missing. Only real new learning writes these fields.
+    public DateOnly? CurrentBatchDate { get; set; }
+    public HashSet<DateOnly> LearningDates { get; set; } = [];
+    public List<DailyStudyPlanActivity> Activities { get; set; } = [];
 }
 
 public static class DailyStudyPlanRules
@@ -94,6 +108,11 @@ public static class DailyStudyPlanRules
             ForgotWordIds = new(plan.ForgotWordIds, StringComparer.Ordinal),
             CurrentBatchWordIds = new(plan.CurrentBatchWordIds),
             CurrentBatchRandomOrder = plan.CurrentBatchRandomOrder,
+            CurrentBatchDate = plan.CurrentBatchDate,
+            LearningDates = new(plan.LearningDates),
+            Activities = plan.Activities.Select(a => new DailyStudyPlanActivity { Id = a.Id, Date = a.Date,
+                Kind = a.Kind, StartedAtUtc = a.StartedAtUtc, WordCount = a.WordCount,
+                CompletedWordCount = a.CompletedWordCount }).ToList(),
             OriginalWordIds = plan.OriginalWordIds.Count > 0 ? new(plan.OriginalWordIds) : plan.Words.Select(w => w.Id).ToList()
         };
         // Recover legacy progress using the old quota, before changing it.
@@ -141,6 +160,29 @@ public static class DailyStudyPlanRules
         return unfinishedBatch.Count > 0 ? unfinishedBatch : plan.Words
             .Where(w => !plan.CompletedWordIds.Contains(w.Id)).Take(plan.DailyWordCount).ToList();
     }
+
+    /// <summary>Today's stable first-learning denominator, including already completed task items.</summary>
+    public static IReadOnlyList<DailyStudyPlanWord> GetTodayBatch(DailyStudyPlan plan, DateOnly date)
+    {
+        ArgumentNullException.ThrowIfNull(plan);
+        if (plan.CurrentBatchWordIds.Count > 0 &&
+            (plan.CurrentBatchDate == date || plan.LastBatchCompletedDate == date ||
+             plan.CurrentBatchWordIds.Any(id => !plan.CompletedWordIds.Contains(id))))
+        {
+            var ids = plan.CurrentBatchWordIds.ToHashSet(StringComparer.Ordinal);
+            return plan.Words.Where(w => ids.Contains(w.Id)).ToList();
+        }
+        if (plan.Status != DailyStudyPlanStatus.Active ||
+            plan.LastBatchCompletedDate is { } completed && date <= completed) return [];
+        // Preserve a partly learned legacy batch, without assigning it a fictitious start date.
+        if (plan.CompletedWordIds.Count % plan.DailyWordCount != 0)
+            return plan.Words.Skip(plan.CompletedWordIds.Count / plan.DailyWordCount * plan.DailyWordCount)
+                .Take(plan.DailyWordCount).ToList();
+        return GetTodayWords(plan, date);
+    }
+
+    public static int TodayCompleted(DailyStudyPlan plan, DateOnly date) =>
+        GetTodayBatch(plan, date).Count(w => plan.CompletedWordIds.Contains(w.Id));
 
     private static IReadOnlyList<DailyStudyPlanWord> UnfinishedBatch(DailyStudyPlan plan)
     {
@@ -191,6 +233,8 @@ public static class DailyStudyPlanRules
         }
         else plan.CurrentBatchRandomOrder ??= plan.RandomOrder;
         plan.CompletedWordIds.Add(wordId);
+        plan.CurrentBatchDate = date;
+        plan.LearningDates.Add(date);
         if (plan.CompletedWordIds.Count == plan.Words.Count)
             plan.Status = DailyStudyPlanStatus.Completed;
         if (plan.Status == DailyStudyPlanStatus.Completed ||

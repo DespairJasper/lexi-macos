@@ -23,11 +23,6 @@
       <!-- Title Bar -->
       <Border Name="DragBar" Background="Transparent" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,0,1" Padding="20,0">
         <Grid ColumnDefinitions="Auto,Auto,Auto,Auto,*,Auto,Auto,Auto">
-          <StackPanel Grid.Column="3" Orientation="Horizontal" Spacing="10" VerticalAlignment="Center" Margin="16,0,0,0">
-            <Image Source="avares://Lexi/Assets/lexi-logo.png" Width="30" Height="30" VerticalAlignment="Center"/>
-            <TextBlock Text="lexi" FontSize="20" FontWeight="Medium" VerticalAlignment="Center"/>
-          </StackPanel>
-
           <Button Name="LanguageToggleBtn" Grid.Column="5" Classes="ghost" Content="EN" ToolTip.Tip="{DynamicResource Ui_LanguageTip}" Margin="0,0,8,0"/>
           <Button Name="ThemeToggleBtn" Grid.Column="6" Classes="ghost" Content="{DynamicResource Ui_2}" ToolTip.Tip="{DynamicResource Ui_4}" Margin="0,0,12,0"/>
           <TextBlock Grid.Column="7" Text="⌥ D" Classes="muted" VerticalAlignment="Center" Margin="0,0,0,0"/>
@@ -48,8 +43,8 @@
       <!-- Central Body: Sidebar + Dynamic Page -->
       <Grid Name="WindowBodyGrid" Grid.Row="1" ColumnDefinitions="216,*">
         <!-- Sidebar Navigation -->
-        <Border Name="SidebarShell" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0" Padding="12,18,12,14" Background="Transparent">
-          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto">
+        <Border Name="SidebarShell" BorderBrush="{DynamicResource LineBrush}" BorderThickness="0,0,1,0" Padding="12,18,12,14" Background="{DynamicResource SidebarBrush}">
+          <Grid RowDefinitions="Auto,Auto,Auto,Auto,Auto,Auto,Auto,*,Auto,Auto">
             <Button Name="NavLookup" Classes="nav active">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
@@ -91,8 +86,10 @@
 
             <Button Name="NavPlans" Grid.Row="5" Classes="nav" Content="学习计划" FontSize="13" />
 
+            <Button Name="NavStatistics" Grid.Row="6" Classes="nav" Content="学习统计" FontSize="13" />
+
             <!-- Bottom Offline Notice & Settings -->
-            <StackPanel Grid.Row="7" Spacing="4" Margin="6,0,6,16">
+            <StackPanel Grid.Row="8" Spacing="4" Margin="6,0,6,16">
               <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
                 <Ellipse Width="7" Height="7" Fill="{DynamicResource SuccessBrush}"/>
                 <TextBlock Text="{DynamicResource Ui_14}" FontSize="11" FontWeight="Medium" Foreground="{DynamicResource PrimaryGreen}"/>
@@ -100,7 +97,7 @@
               <TextBlock Text="{DynamicResource Ui_15}" Classes="muted" FontSize="10" Margin="13,0,0,0"/>
             </StackPanel>
 
-            <Button Name="NavSettings" Grid.Row="8" Classes="nav">
+            <Button Name="NavSettings" Grid.Row="9" Classes="nav">
               <Grid ColumnDefinitions="*,Auto">
                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                   <Path Data="M 9,3.5 L 10,5.5 L 12,5 L 12.5,7 L 14.5,7.5 L 13.5,9.5 L 14.5,11.5 L 12.5,12 L 12,14 L 10,13.5 L 9,15.5 L 8,13.5 L 6,14 L 5.5,12 L 3.5,11.5 L 4.5,9.5 L 3.5,7.5 L 5.5,7 L 6,5 L 8,5.5 Z M 9,7.5 A 2,2 0 1 0 9,11.5 A 2,2 0 1 0 9,7.5"
@@ -674,7 +671,7 @@
                 </Button>
               </StackPanel>
             </Border>
-            <TextBlock Text="lexi 3.1.3" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+            <TextBlock Text="lexi 3.2.0" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
           </StackPanel>
         </Grid>
       </Border>
