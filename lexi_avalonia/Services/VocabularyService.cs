@@ -154,10 +154,13 @@ public sealed partial class VocabularyService : IVocabularyArchive, ILearningMem
             if (Convert.ToInt32(count.ExecuteScalar()) > 0)
             {
                 DatabaseSafety.ValidateApplicationSchema(_connection);
-                LastBackupPath = DatabaseSafety.CreateBackup(_connection, _dbPath);
+                LastBackupPath = NeedsStorageMaintenanceBackup()
+                    ? DatabaseSafety.CreateStorageMaintenanceBackup(_connection, _dbPath)
+                    : DatabaseSafety.CreateBackup(_connection, _dbPath);
             }
             InitializeDatabase();
             DatabaseSafety.Validate(_connection);
+            MaintainStorage();
         }
         catch { _connection.Dispose(); throw; }
     }
@@ -1086,14 +1089,16 @@ public sealed partial class VocabularyService : IVocabularyArchive, ILearningMem
         cmd.Parameters.AddWithValue("$json", JsonSerializer.Serialize(persisted));
         cmd.ExecuteNonQuery();
     }
-    private void BackupCommittedState()
+    private void BackupCommittedState(bool force = false, bool keepOnlyLatest = false)
     {
         try
         {
-            LastBackupPath = DatabaseSafety.CreateBackup(_connection, _dbPath);
+            LastBackupPath = force
+                ? DatabaseSafety.CreateBackup(_connection, _dbPath, keepOnlyLatest: keepOnlyLatest)
+                : DatabaseSafety.CreateAutomaticBackup(_connection, _dbPath);
             BackupWarning = "";
         }
-        catch (Exception ex) when (ex is IOException or SqliteException or UnauthorizedAccessException)
+        catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or UnauthorizedAccessException)
         {
             // The primary transaction already committed; never tell users to retry a
             // successful destructive action just because a secondary backup failed.

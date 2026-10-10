@@ -535,7 +535,7 @@ public sealed partial class VocabularyService
     /// 作答前快照（<see cref="SaveContextSnapshot"/>）、决策日志（<see cref="SaveSchedulerDecision"/>）。
     /// 这三条是**追加型审计数据**，一次真实复习卡（呈现 + 3 次回忆作答 + 1 次改判 + 1 次定稿）
     /// 会产生 8–10 次写；每次写都做一次「全库拷贝 + 全库 JSON 校验」
-    /// （<c>DatabaseSafety.CreateBackup</c> 实测约 19 ms/写、1.7 MB 库，且发生在 UI 线程的点击回调里）
+    /// （完整 SQLite 备份发生在 UI 线程，不能在每次进度变化时执行）
     /// 线性放大成明显卡顿。
     /// </para>
     /// <para>
@@ -2383,11 +2383,21 @@ public sealed partial class VocabularyService
     /// <summary>outbox 簿记：不改动用户数据，不触发自动备份。</summary>
     public void MarkMutationApplied(long id, DateTime atUtc)
     {
+        var at = UtcText(atUtc);
+        using var tx = _connection.BeginTransaction();
         using var cmd = _connection.CreateCommand();
-        cmd.CommandText = "UPDATE mutation_outbox SET applied_at_utc = $at WHERE id = $id AND applied_at_utc IS NULL";
-        cmd.Parameters.AddWithValue("$at", UtcText(atUtc));
+        cmd.Transaction = tx;
+        // The JSON file was durably published before this acknowledgement. Keep
+        // pending rows on rollback, but never retain acknowledged full snapshots.
+        cmd.CommandText = """
+            UPDATE mutation_outbox SET applied_at_utc = $at WHERE id = $id AND applied_at_utc IS NULL;
+            DELETE FROM mutation_outbox WHERE id = $id AND kind = $kind AND applied_at_utc IS NOT NULL;
+            """;
+        cmd.Parameters.AddWithValue("$at", at);
         cmd.Parameters.AddWithValue("$id", id);
+        cmd.Parameters.AddWithValue("$kind", CrossStoreJournal.MutationKind);
         cmd.ExecuteNonQuery();
+        tx.Commit();
     }
 
     /// <summary>outbox 簿记：不改动用户数据，不触发自动备份。</summary>

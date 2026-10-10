@@ -62,7 +62,7 @@ def main():
     version=ET.parse(source/'Lexi.csproj').getroot().findtext('./PropertyGroup/Version')
     import plistlib
     with (ROOT_DIR/'packaging/macOS/Info.plist').open('rb') as file: plist=plistlib.load(file)
-    expected_version='3.2.1'
+    expected_version='3.2.2'
     ui=(source/'MainWindow.axaml').read_text()
     ai=(source/'Services/AiService.cs').read_text()
     dmg=(ROOT_DIR/'scripts/package_dmg.sh').read_text()

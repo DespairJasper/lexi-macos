@@ -1,11 +1,86 @@
 using Microsoft.Data.Sqlite;
 using System.Globalization;
+using System.Text.RegularExpressions;
 
 namespace Lexi;
 
 /// <summary>Never copies a live .db file or guesses which WAL frames to discard.</summary>
 public static class DatabaseSafety
 {
+    private static readonly Regex BackupName = new(
+        @"^lexi-(\d{8}-\d{6}-\d{7})-[a-f0-9]{32}\.sqlite3$", RegexOptions.CultureInvariant);
+    private static IEnumerable<FileInfo> ManagedBackups(string folder) => new DirectoryInfo(folder)
+        .GetFiles("lexi-*.sqlite3")
+        .Where(f => (f.Attributes & FileAttributes.ReparsePoint) == 0 && BackupName.IsMatch(f.Name) && TryBackupTime(f, out _))
+        .OrderByDescending(f => f.Name, StringComparer.Ordinal);
+
+    private static void RejectLinkedBackupDirectory(string folder)
+    {
+        if (new DirectoryInfo(folder).LinkTarget != null)
+            throw new InvalidDataException("备份目录不能是符号链接；已停止向外部目录写入或清理。");
+    }
+
+    private static bool TryBackupTime(FileInfo file, out DateTime created) => DateTime.TryParseExact(
+        BackupName.Match(file.Name).Groups[1].Value, "yyyyMMdd-HHmmss-fffffff", CultureInfo.InvariantCulture,
+        DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out created);
+
+    private static void ValidateCompleteBackup(string path)
+    {
+        using var backup = new SqliteConnection(new SqliteConnectionStringBuilder
+        { DataSource = path, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString());
+        backup.Open(); Validate(backup); ValidateApplicationSchema(backup);
+    }
+
+    private static void PruneBackups(string folder, string keep, bool keepOnlyLatest)
+    {
+        long retainedBytes = new FileInfo(keep).Length;
+        var retainedCount = 1;
+        foreach (var old in ManagedBackups(folder).Where(f => f.FullName != keep))
+        {
+            if (!keepOnlyLatest && retainedCount < 20 && retainedBytes + old.Length <= 256L * 1024 * 1024)
+            { retainedBytes += old.Length; retainedCount++; }
+            else try { old.Delete(); } catch (Exception ex) when (ex is IOException or UnauthorizedAccessException) { }
+        }
+    }
+
+    internal static string CreateStorageMaintenanceBackup(SqliteConnection source, string databasePath)
+    {
+        // The source has already passed startup integrity/schema validation.
+        // Retain one independently validated old snapshot before freeing space;
+        // otherwise a disk full of 3.2.1 backups can prevent maintenance starting.
+        var folder = Path.Combine(Path.GetDirectoryName(databasePath)!, "backups");
+        RejectLinkedBackupDirectory(folder);
+        if (Directory.Exists(folder))
+        {
+            foreach (var candidate in ManagedBackups(folder))
+            {
+                try { ValidateCompleteBackup(candidate.FullName); }
+                catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or UnauthorizedAccessException)
+                { continue; }
+                PruneBackups(folder, candidate.FullName, keepOnlyLatest: true);
+                break;
+            }
+        }
+        return CreateBackup(source, databasePath, keepOnlyLatest: true);
+    }
+
+    public static string CreateAutomaticBackup(SqliteConnection source, string databasePath, DateTime? nowUtc = null)
+    {
+        var now = nowUtc ?? DateTime.UtcNow;
+        if (now.Kind != DateTimeKind.Utc) throw new ArgumentException("备份时刻必须是 UTC。", nameof(nowUtc));
+        var folder = Path.Combine(Path.GetDirectoryName(databasePath)!, "backups");
+        RejectLinkedBackupDirectory(folder);
+        var latest = Directory.Exists(folder)
+            ? ManagedBackups(folder).FirstOrDefault(file => TryBackupTime(file, out var time) && time <= now) : null;
+        if (latest != null && TryBackupTime(latest, out var created) && now - created < TimeSpan.FromMinutes(15))
+        {
+            try { ValidateCompleteBackup(latest.FullName); return latest.FullName; }
+            catch (Exception ex) when (ex is IOException or InvalidDataException or SqliteException or UnauthorizedAccessException)
+            { /* Never throttle to a damaged/unreadable backup. Create a valid one. */ }
+        }
+        return CreateBackup(source, databasePath, now);
+    }
+
     public static void RejectOrphanedSidecars(string path)
     {
         if (File.Exists(path + ".restore-pending.json"))
@@ -162,11 +237,15 @@ public static class DatabaseSafety
         if (foreign.Read()) throw new InvalidDataException("词库关联记录检查失败，已停止写入。");
     }
 
-    public static string CreateBackup(SqliteConnection source, string databasePath)
+    public static string CreateBackup(SqliteConnection source, string databasePath, DateTime? nowUtc = null, bool keepOnlyLatest = false)
     {
         var folder = Path.Combine(Path.GetDirectoryName(databasePath)!, "backups");
+        RejectLinkedBackupDirectory(folder);
         Directory.CreateDirectory(folder);
-        var path = Path.Combine(folder, $"lexi-{DateTime.UtcNow:yyyyMMdd-HHmmss-fffffff}-{Guid.NewGuid():N}.sqlite3");
+        var now = nowUtc ?? DateTime.UtcNow;
+        if (now.Kind != DateTimeKind.Utc) throw new ArgumentException("备份时刻必须是 UTC。", nameof(nowUtc));
+        var stamp = now.ToString("yyyyMMdd-HHmmss-fffffff", CultureInfo.InvariantCulture);
+        var path = Path.Combine(folder, $"lexi-{stamp}-{Guid.NewGuid():N}.sqlite3");
         var temp = path + ".tmp";
         try
         {
@@ -185,8 +264,9 @@ public static class DatabaseSafety
             using (var stream = new FileStream(temp, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) stream.Flush(true);
             File.Move(temp, path);
             // Prune only our own completed snapshots, after a new valid one exists.
-            foreach (var old in new DirectoryInfo(folder).GetFiles("lexi-*.sqlite3").OrderByDescending(f => f.Name).Skip(20))
-                try { old.Delete(); } catch (IOException) { }
+            // Always retain the just-validated snapshot, even after a clock change
+            // or when the actual user's data itself is larger than the budget.
+            PruneBackups(folder, path, keepOnlyLatest);
             return path;
         }
         finally

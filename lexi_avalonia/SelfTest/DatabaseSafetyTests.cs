@@ -41,6 +41,8 @@ public static class DatabaseSafetyTests
                 Check(Scalar(check, "SELECT translation FROM words") == "durable-23", "repeated reopen preserves latest edits");
                 Check(Scalar(check, "SELECT settings_json FROM app_settings").Contains("not-persisted") == false, "backups do not enable key persistence");
             }
+            // Explicitly capture the latest edit; routine backups now use a time interval.
+            using (var current = new VocabularyService(path)) current.CreateManualBackup();
             Check(Directory.GetFiles(Path.Combine(folder, "backups"), "*.sqlite3").Length <= 20, "snapshot retention bounded");
             // A corrupt preexisting file must fail before schema/init or backup rotation.
             var corrupt = Path.Combine(folder, "corrupt.sqlite3");

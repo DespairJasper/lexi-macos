@@ -671,7 +671,7 @@
                 </Button>
               </StackPanel>
             </Border>
-            <TextBlock Text="lexi 3.2.1" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
+            <TextBlock Text="lexi 3.2.2" Classes="muted" VerticalAlignment="Center" FontSize="11"/>
           </StackPanel>
         </Grid>
       </Border>

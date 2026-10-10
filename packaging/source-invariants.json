@@ -39,11 +39,11 @@
     "packaging/fsrs-notices-pin.json": "f8d2ba76cd60932efa97b793f2312ac0755a1ca839ca8915912dedb5ef05e834",
     "packaging/release-pin.json": "22293463b61ec138f956ad874dfe3e8013bb50259274b3df1b4c204ed5965427",
     "scripts/package_app.sh": "d23a0c65cc35a142f752492df723f2e50ac1b360230c76bc467894282399b4e3",
-    "scripts/package_dmg.sh": "609e2c9e1ce47d7a07fd767dc7bf02273ae7b49eb78e143796a997c219bbaa2b",
+    "scripts/package_dmg.sh": "84dbdf758d3e7d92dca2863e1f5b99bf1be9ded4b5ebcd241fd2d706bca0be6b",
     "scripts/release.sh": "c28485e3e6159722ab43cd38575834151c4bd73b35ffc8125359fc21e942205f",
     "scripts/release_proof.py": "c13b2038a8672a922198a533fdff7dc367ff2ce7895534239044f81cc817c5d6",
     "scripts/verify_packaged_app.sh": "a48efc16e1db555707fac85f1ee199855e9252f4af4a0d2dcccbeb5e1136ff21",
-    "scripts/backup_user_data.sh": "7242e0d661db9332e1def483455897350154abf0a8f36211be3d005dbc6d2fe2",
+    "scripts/backup_user_data.sh": "588a068ec98049c44e6afee35cbe97430fe9155c12d0aab37410c6940bd81b4b",
     "scripts/install_app.py": "3ef81fa3f866d1276de696d726771410a6956655f350e71cdcf344c40566f20e",
     "卸载Lexi.command": "a19a781ce2478cfeb00b764daf60648864430c1d32e8ec8bcbdb017ec13e5eed"
   },

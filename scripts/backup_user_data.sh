@@ -64,7 +64,7 @@ done
 [ -f "$DEST/WAL-STATE.txt" ] || echo "(无 WAL/SHM 残留：快照时源库未处于活跃写入)" > "$DEST/WAL-STATE.txt"
 
 # 个人 JSON（存在才拷）
-for name in ielts-learning.json daily-study-plans.json; do
+for name in ielts-learning.json ielts-learning.json.backup daily-study-plans.json daily-study-plans.json.backup study-activity.json study-activity.json.backup; do
     [ -f "$DATA_DIR/$name" ] && cp -p "$DATA_DIR/$name" "$DEST/"
 done
 

@@ -27,6 +27,11 @@ public static class Program
             ("optimizer-signature", OptimizerBoundaryTests.SnapshotSignatureDoesNotCollide),
             ("recovery", SessionRecoveryTests.Run),
             ("journal", JournalTests.Run),
+            ("storage-journal", StorageTests.Journal),
+            ("storage-backups", StorageTests.Backups),
+            ("storage-legacy", StorageTests.Legacy),
+            ("storage-clock", StorageTests.ClockRollback),
+            ("storage-directory", StorageTests.LinkedDirectory),
             ("coordinator", CoordinatorTests.Run),
             ("store", StoreTests.Run),
             // Context 特征/校准尚未实现（P6）。保留登记，让它的缺席在输出里以 SKIP 显式暴露，

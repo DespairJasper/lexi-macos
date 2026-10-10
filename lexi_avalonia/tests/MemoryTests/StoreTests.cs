@@ -1201,7 +1201,7 @@ public static class StoreTests
     }
 
     // =====================================================================
-    // P1-7：高频追加型写不再每次触发全库备份；定稿仍触发一次
+    // P1-7 / 3.2.2：高频追加型写不备份；定稿保存后复用最近完整备份
     // =====================================================================
 
     private static void HighFrequencyWritesDoNotBackupTheWholeDatabase()
@@ -1228,8 +1228,8 @@ public static class StoreTests
         now = now.AddSeconds(2);
         var commit = coordinator.CommitWord(word, StudyMode.Review);
         Program.Check(commit is not null && commit.Applied, "定稿成功");
-        Program.Check(CountBackups(box.Dir) == afterSession + 1,
-            $"定稿仍然触发恰好一次全库备份（新增 {CountBackups(box.Dir) - afterSession} 次）");
+        Program.Check(CountBackups(box.Dir) == afterSession,
+            $"定稿成功后在备份间隔内复用已有完整快照（新增 {CountBackups(box.Dir) - afterSession} 次）");
     }
 
     private static int CountBackups(string dir)

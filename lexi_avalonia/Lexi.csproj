@@ -3,7 +3,7 @@
     <OutputType>WinExe</OutputType><TargetFramework>net8.0</TargetFramework>
     <Nullable>enable</Nullable><ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>Lexi</AssemblyName><RootNamespace>Lexi</RootNamespace>
-    <Version>3.2.1</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
+    <Version>3.2.2</Version><ApplicationIcon>Assets/icon.ico</ApplicationIcon>
     <ApplicationManifest Condition="$([MSBuild]::IsOSPlatform('Windows'))">app.manifest</ApplicationManifest>
     <AvaloniaUseCompiledBindingsByDefault>false</AvaloniaUseCompiledBindingsByDefault>
     <EnableDefaultItems>true</EnableDefaultItems>
@@ -46,7 +46,7 @@
     <Content Include="native/fsrs-optimizer/bin/lexi-fsrs-optimizer"
              Condition="Exists('native/fsrs-optimizer/bin/lexi-fsrs-optimizer')"
              Link="lexi-fsrs-optimizer" CopyToOutputDirectory="PreserveNewest" />
-    <Compile Remove="publish/**;tests/**;Core/**;Domain/**;Application/**;Infrastructure/**;Models/**;Platform/**;Services/AiService.cs;Services/DictionaryService.cs;Services/VocabularyService.cs;Services/VocabularyService.Memory.cs;Services/VocabularyService.MemoryLegacyDue.cs;Services/VocabularyService.Archive.cs;Services/VocabularyService.Quotes.cs;Services/DatabaseSafety.cs;Services/ExportService.cs;Services/QuoteExportService.cs;Services/ArchiveTransferService*.cs" />
+    <Compile Remove="publish/**;tests/**;Core/**;Domain/**;Application/**;Infrastructure/**;Models/**;Platform/**;Services/AiService.cs;Services/DictionaryService.cs;Services/VocabularyService.cs;Services/VocabularyService.Memory.cs;Services/VocabularyService.Storage.cs;Services/VocabularyService.MemoryLegacyDue.cs;Services/VocabularyService.Archive.cs;Services/VocabularyService.Quotes.cs;Services/DatabaseSafety.cs;Services/ExportService.cs;Services/QuoteExportService.cs;Services/ArchiveTransferService*.cs" />
     <ProjectReference Include="Core/Lexi.Core.csproj" />
     <ProjectReference Include="Infrastructure/Lexi.Infrastructure.csproj" />
     <InternalsVisibleTo Include="MacPlatformTests" />
