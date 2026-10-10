@@ -114,12 +114,15 @@ public partial class MainWindow
         var wrongVisible = !_reviewRevealed || _reviewLastRating != StudyRating.Forgot;
         ReviewUnsureBtn.IsVisible = !_reviewRevealed;
         ReviewUnfamiliarBtn.IsVisible = wrongVisible;
-        // 列数固定为 3：隐藏的按钮仍然参与网格测量，缩列会让 Grid 越界崩溃。
-        ReviewRatingBar.ColumnDefinitions = new ColumnDefinitions("*,*,*");
+        // Keep six columns so hidden controls retain valid indices in every state.
+        // Three ratings occupy two each; answer actions occupy equal halves.
+        ReviewRatingBar.ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*");
         Grid.SetColumn(ReviewRememberBtn, 0);
-        Grid.SetColumn(ReviewUnsureBtn, _reviewRevealed ? 2 : 1);
-        Grid.SetColumn(ReviewUnfamiliarBtn, 2);
-        Grid.SetColumnSpan(ReviewRememberBtn, _reviewRevealed ? 2 : 1);
+        Grid.SetColumn(ReviewUnsureBtn, 2);
+        Grid.SetColumn(ReviewUnfamiliarBtn, _reviewRevealed ? 3 : 4);
+        Grid.SetColumnSpan(ReviewRememberBtn, _reviewRevealed ? (wrongVisible ? 3 : 6) : 2);
+        Grid.SetColumnSpan(ReviewUnsureBtn, 2);
+        Grid.SetColumnSpan(ReviewUnfamiliarBtn, _reviewRevealed ? 3 : 2);
     }
 
     private void RenderReviewCard(bool resetPose = true)

@@ -93,6 +93,6 @@ public partial class MainWindow
         }
         if (records.Count == 0) activity.Children.Add(PlanLabel(PlanText("暂无当日活动记录。旧记录缺日期时显示未知。", "No activity recorded today. Missing legacy dates stay unknown."), 13, true));
         page.Children.Add(PlanPanel(activity));
-        _dailyPlanPage.Children.Add(new ScrollViewer { Content = page, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _dailyPlanPage.Children.Add(new ScrollViewer { Content = page, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
     }
 }

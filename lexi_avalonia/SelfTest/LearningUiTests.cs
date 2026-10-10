@@ -231,7 +231,21 @@ public static class LearningUiTests
             var ieltsPlanRound = Field<StudyRound<string>>("_focusRound");
             while (ieltsPlanRound.CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
             await InvokeAsync("RateFocusedWordAsync", StudyRating.Known);
+            foreach (var width in new[] { 840, 1000, 1280 })
+            {
+                window.Width=width; await Task.Delay(100);
+                var bar=C<Grid>("WordFocusActions"); var next=C<Button>("FocusNextBtn"); var wrong=C<Button>("FocusWrongBtn");
+                var left=next.TranslatePoint(new Point(next.Bounds.Width/2,0),bar)!.Value.X;
+                var right=wrong.TranslatePoint(new Point(wrong.Bounds.Width/2,0),bar)!.Value.X;
+                Check(next.IsVisible && wrong.IsVisible && Math.Abs(left+right-bar.Bounds.Width)<1 && Math.Abs(left-bar.Bounds.Width/4)<1, "focus answer buttons are symmetric at width "+width);
+            }
+            await Snapshot("v321-focus-answer-symmetric");
+            window.Width=1000;
             await InvokeAsync("ReclassifyFocusAsync");
+            await Task.Delay(100);
+            var singleBar=C<Grid>("WordFocusActions"); var singleNext=C<Button>("FocusNextBtn");
+            Check(!C<Button>("FocusWrongBtn").IsVisible && Math.Abs(singleNext.TranslatePoint(new Point(singleNext.Bounds.Width/2,0),singleBar)!.Value.X-singleBar.Bounds.Width/2)<1, "single focus next action is centered after forgotten reclassification");
+            await Snapshot("v321-focus-single-next-centered");
             Check(liveIelts.ForgotWordIds.Count == 1 && ieltsPlanRound.Known == 0 && ieltsPlanRound.Forgot == 1,
                 "plan answer reclassification rolls back known and records forgotten word locally");
             await InvokeAsync("AdvanceFocusAsync");

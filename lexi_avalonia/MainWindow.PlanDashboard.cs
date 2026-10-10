@@ -136,7 +136,7 @@ public partial class MainWindow
         foreach (var plan in stopped) stoppedRows.Children.Add(BuildStudyPlanCard(plan));
         history.Children.Add(new Expander { Name = "StoppedPlansExpander", Header = PlanText("已停止的计划", "Stopped plans") + $" · {stopped.Count}", Content = stoppedRows, HorizontalAlignment = HorizontalAlignment.Stretch });
         page.Children.Add(PlanPanel(history));
-        _studyPlanPage.Children.Add(new ScrollViewer { Content = page, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
+        _studyPlanPage.Children.Add(new ScrollViewer { Content = page, VerticalScrollBarVisibility = ScrollBarVisibility.Hidden, HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled });
     }
 
     private Border BuildStudyPlanCard(DailyStudyPlan plan)

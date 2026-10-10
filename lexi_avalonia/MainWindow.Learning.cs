@@ -170,13 +170,13 @@ public partial class MainWindow
         _focusWrongButton.Click += async (_, _) => await ReclassifyFocusAsync();
         _focusFeedback = new TextBlock { FontSize = 12, TextAlignment = TextAlignment.Center, Opacity = .65, TextWrapping = TextWrapping.Wrap };
         _focusActions = new Grid { Name = "WordFocusActions", RowDefinitions = new RowDefinitions("Auto,*"),
-            ColumnDefinitions = new ColumnDefinitions("*,*,*"), MinHeight = 100, Margin = new Thickness(30, 0, 30, 20), IsVisible = false };
-        Grid.SetColumnSpan(_focusFeedback, 3); _focusActions.Children.Add(_focusFeedback);
-        foreach (var (button, column) in new[] { (_focusKnownButton, 0), (_focusUnsureButton, 1), (_focusForgotButton, 2) })
-        { Grid.SetRow(button, 1); Grid.SetColumn(button, column); _focusActions.Children.Add(button); }
-        Grid.SetRow(_focusStartRecallButton, 1); Grid.SetColumn(_focusStartRecallButton, 0); Grid.SetColumnSpan(_focusStartRecallButton, 3);
+            ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*"), MinHeight = 100, Margin = new Thickness(30, 0, 30, 20), IsVisible = false };
+        Grid.SetColumnSpan(_focusFeedback, 6); _focusActions.Children.Add(_focusFeedback);
+        foreach (var (button, column) in new[] { (_focusKnownButton, 0), (_focusUnsureButton, 2), (_focusForgotButton, 4) })
+        { Grid.SetRow(button, 1); Grid.SetColumn(button, column); Grid.SetColumnSpan(button, 2); _focusActions.Children.Add(button); }
+        Grid.SetRow(_focusStartRecallButton, 1); Grid.SetColumn(_focusStartRecallButton, 0); Grid.SetColumnSpan(_focusStartRecallButton, 6);
         Grid.SetRow(_focusNextButton, 1); Grid.SetRow(_focusWrongButton, 1);
-        Grid.SetColumn(_focusNextButton, 0); Grid.SetColumnSpan(_focusNextButton, 2); Grid.SetColumn(_focusWrongButton, 2);
+        Grid.SetColumn(_focusNextButton, 0); Grid.SetColumnSpan(_focusNextButton, 3); Grid.SetColumn(_focusWrongButton, 3); Grid.SetColumnSpan(_focusWrongButton, 3);
         _focusActions.Children.Add(_focusStartRecallButton);
         _focusActions.Children.Add(_focusNextButton); _focusActions.Children.Add(_focusWrongButton);
         Grid.SetRow(_focusActions, 2); LookupPageHost.Children.Add(_focusActions);
@@ -294,8 +294,9 @@ public partial class MainWindow
         { button.IsVisible = frontRecall; button.IsEnabled = frontRecall && !_focusRatingBusy; }
         _focusNextButton.IsEnabled = showNext && !_focusRatingBusy;
         _focusWrongButton.IsEnabled = showWrong && !_focusRatingBusy;
-        _focusActions.ColumnDefinitions = new ColumnDefinitions("*,*,*");
-        Grid.SetColumnSpan(_focusFeedback!, 3);
+        _focusActions.ColumnDefinitions = new ColumnDefinitions("*,*,*,*,*,*");
+        Grid.SetColumnSpan(_focusFeedback!, 6);
+        Grid.SetColumnSpan(_focusNextButton, showWrong ? 3 : 6);
         ((TextBlock)((StackPanel)_focusStartRecallButton.Content!).Children[0]).Text = T("开始回忆") + "  Space";
         ((TextBlock)((StackPanel)_focusNextButton.Content!).Children[0]).Text = T(_focusRound.IsFinished ? "完成" : "下一词") + "  Space";
         ((TextBlock)((StackPanel)_focusWrongButton.Content!).Children[0]).Text = T("记错了") + "  E";

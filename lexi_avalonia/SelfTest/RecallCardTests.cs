@@ -77,6 +77,11 @@ public static class RecallCardTests
                 && Label("ReviewUnfamiliarBtn") == "记错了  E", "answer footer switches to Next Space and Wrong E");
             check(C<TextBlock>("ReviewRemainingText").Text == "已完成 0/2 · 剩余 2" && Round().Unsure == 1 && Round().Completed == 0,
                 "unsure does not count as remembered and stays in this round");
+            await Task.Delay(80);
+            var ratingBar=C<Grid>("ReviewRatingBar"); var nextAction=C<Button>("ReviewRememberBtn"); var wrongAction=C<Button>("ReviewUnfamiliarBtn");
+            var nextCenter=nextAction.TranslatePoint(new Point(nextAction.Bounds.Width/2,0),ratingBar)!.Value.X;
+            var wrongCenter=wrongAction.TranslatePoint(new Point(wrongAction.Bounds.Width/2,0),ratingBar)!.Value.X;
+            check(Math.Abs(nextCenter+wrongCenter-ratingBar.Bounds.Width)<1 && Math.Abs(nextCenter-ratingBar.Bounds.Width/4)<1, "review answer actions are symmetric about page center");
             await Snapshot("review-back-long");
             var button = C<Button>("ReviewRememberBtn"); var corner = button.TranslatePoint(new Point(button.Bounds.Width, button.Bounds.Height), w);
             check(button.IsEffectivelyVisible && corner.HasValue && corner.Value.Y < 600 && corner.Value.X < 840, "long answer keeps rating actions inside 840x600");
@@ -128,6 +133,8 @@ public static class RecallCardTests
             check(C<TextBlock>("ReviewHintText").Text!.Contains("已改判为忘记") && Round().Completed == 0 && Round().Forgot == 1,
                 "reclassification returns the word to this round");
             check(!C<Button>("ReviewUnfamiliarBtn").IsVisible, "forgot cannot be reclassified twice");
+            await Task.Delay(80);
+            check(Math.Abs(C<Button>("ReviewRememberBtn").TranslatePoint(new Point(C<Button>("ReviewRememberBtn").Bounds.Width/2,0),C<Grid>("ReviewRatingBar"))!.Value.X-C<Grid>("ReviewRatingBar").Bounds.Width/2)<1, "single review next action is centered after forgotten reclassification");
 
             // 模糊与忘记的词必须在本轮再次出现，并且要攒够 3 次「认识」才算完全记住。
             Press(Key.Space); await Task.Delay(450);

@@ -173,7 +173,7 @@ public partial class MainWindow
         facts.Children.Add(StatLabel(StatText($"总有效复习 {_statisticsSnapshot.Reviews} 次。新词初学聚合不计为长期复习；改判使用最终有效结果，撤销记录不纳入。词数按既有稳定词身份去重，不按词形跨词库合并。",$"{_statisticsSnapshot.Reviews} valid reviews. First learning is excluded from long-term review counts; revisions use the final valid result and undone records are excluded. Words use the existing stable identity, without merging matching spellings across sources."),12));
         facts.Children.Add(StatLabel(StatText("时长只记录正在显示且处于活动状态窗口中的卡片或拼写练习。60秒无按键、点击或滚动即暂停；休眠间隔不计时。旧版未记录时长，显示暂无记录。拼写正确率与到期完成率缺少完整历史分母，暂不展示数值。","Time counts flashcard or spelling practice in a visible, active window. It pauses after 60 seconds without a key, click or scroll; sleep gaps are excluded. Older duration records are unavailable. Historical denominators for spelling accuracy and due-review completion are unavailable."),12));
         body.Children.Add(StatCard(facts));
-        _statisticsScroll=new ScrollViewer { Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Auto,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled };
+        _statisticsScroll=new ScrollViewer { Content=body,VerticalScrollBarVisibility=ScrollBarVisibility.Hidden,HorizontalScrollBarVisibility=ScrollBarVisibility.Disabled };
         _statisticsPage.Children.Clear();_statisticsPage.Children.Add(_statisticsScroll);
         var currentScroll=_statisticsScroll;Dispatcher.UIThread.Post(()=>{if(_statisticsScroll==currentScroll)currentScroll.Offset=offset;},DispatcherPriority.Loaded);
         _statisticsConfiguring=false;

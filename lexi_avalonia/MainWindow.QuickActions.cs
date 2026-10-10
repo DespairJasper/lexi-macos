@@ -20,7 +20,8 @@ public partial class MainWindow
     private ScrollViewer? _quotesPage;
     private StackPanel? _quotesList;
     private TextBox? _quoteSearch;
-    private TextBlock? _quotesSummary;
+    private TextBlock? _quotesSummary, _quotesTitle;
+    private Button? _quoteAddButton, _quoteExportButton, _quotePreviousButton, _quoteNextButton;
     private int _quotePageIndex;
     private const int QuotePageSize=50;
     private string QuickText(string zh,string en)=>_settings.UiLanguage=="en"?en:zh;
@@ -143,17 +144,29 @@ public partial class MainWindow
         _quotesNav=new Button {Name="NavQuotes",Content=QuickText("金句本","Quotes"),Classes={"nav"}};Grid.SetRow(_quotesNav,5);sidebar.Children.Add(_quotesNav);
         _quotesNav.Click+=(_,_)=>ShowPage("quotes");
         var content=new StackPanel {Spacing=16,MaxWidth=850,HorizontalAlignment=HorizontalAlignment.Stretch};
-        content.Children.Add(new TextBlock {Text=QuickText("金句本","Quotes"),FontSize=28,FontWeight=FontWeight.SemiBold});
+        _quotesTitle=new TextBlock {Name="QuotesTitle",Text=QuickText("金句本","Quotes"),FontSize=28,FontWeight=FontWeight.SemiBold};content.Children.Add(_quotesTitle);
         var tools=new WrapPanel();_quoteSearch=new TextBox {Name="QuoteSearchInput",Watermark=QuickText("搜索原句、译文、来源或备注","Search sentences, translations, sources or notes"),Width=350,Margin=new Thickness(0,0,8,8)};tools.Children.Add(_quoteSearch);
-        var add=new Button {Name="NewQuoteBtn",Content=QuickText("添加金句","Add quote"),Margin=new Thickness(0,0,8,8)};add.Click+=(_,_)=>OpenQuoteEditor(null);tools.Children.Add(add);
-        var export=new Button {Name="ExportQuotesBtn",Content=QuickText("导出全部金句","Export all quotes"),Margin=new Thickness(0,0,8,8)};export.Click+=async(_,_)=>await ExportQuotesAsync();tools.Children.Add(export);content.Children.Add(tools);
+        var add=_quoteAddButton=new Button {Name="NewQuoteBtn",Content=QuickText("添加金句","Add quote"),Margin=new Thickness(0,0,8,8)};add.Click+=(_,_)=>OpenQuoteEditor(null);tools.Children.Add(add);
+        var export=_quoteExportButton=new Button {Name="ExportQuotesBtn",Content=QuickText("导出全部金句","Export all quotes"),Margin=new Thickness(0,0,8,8)};export.Click+=async(_,_)=>await ExportQuotesAsync();tools.Children.Add(export);content.Children.Add(tools);
         _quotesSummary=new TextBlock {Name="QuotesSummary",FontSize=12,Opacity=.7};content.Children.Add(_quotesSummary);
         _quotesList=new StackPanel {Name="QuotesList",Spacing=12};content.Children.Add(_quotesList);
-        var pages=new StackPanel {Orientation=Orientation.Horizontal,Spacing=12};var previous=new Button {Content=QuickText("上一页","Previous")};var next=new Button {Content=QuickText("下一页","Next")};
+        var pages=new StackPanel {Orientation=Orientation.Horizontal,Spacing=12};var previous=_quotePreviousButton=new Button {Name="QuotesPreviousBtn",Content=QuickText("上一页","Previous")};var next=_quoteNextButton=new Button {Name="QuotesNextBtn",Content=QuickText("下一页","Next")};
         previous.Click+=(_,_)=>{if(_quotePageIndex>0){--_quotePageIndex;RenderQuotes();}};next.Click+=(_,_)=>{if(QuoteArchive.GetQuotes(_quoteSearch.Text??"",1,(_quotePageIndex+1)*QuotePageSize).Count>0){++_quotePageIndex;RenderQuotes();}};pages.Children.Add(previous);pages.Children.Add(next);content.Children.Add(pages);
         _quoteSearch.TextChanged+=(_,_)=>{_quotePageIndex=0;RenderQuotes();};
         _quotesPage=new ScrollViewer {Name="PageQuotes",Content=content,Margin=new Thickness(36,24),IsVisible=false,HorizontalScrollBarVisibility=Avalonia.Controls.Primitives.ScrollBarVisibility.Disabled};
         ((Panel)PageSettings.Parent!).Children.Add(_quotesPage);
+    }
+    private void RefreshQuotesLanguage()
+    {
+        if (_quotesNav == null) return;
+        _quotesNav.Content = QuickText("金句本", "Quotes");
+        _quotesTitle!.Text = QuickText("金句本", "Quotes");
+        _quoteSearch!.Watermark = QuickText("搜索原句、译文、来源或备注", "Search sentences, translations, sources or notes");
+        _quoteAddButton!.Content = QuickText("添加金句", "Add quote");
+        _quoteExportButton!.Content = QuickText("导出全部金句", "Export all quotes");
+        _quotePreviousButton!.Content = QuickText("上一页", "Previous");
+        _quoteNextButton!.Content = QuickText("下一页", "Next");
+        RenderQuotes();
     }
     private void RenderQuotes()
     {
