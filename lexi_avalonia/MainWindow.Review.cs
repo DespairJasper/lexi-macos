@@ -276,6 +276,10 @@ public partial class MainWindow
                 var updated = _allWords.FirstOrDefault(w => w.Id == word.Id);
                 if (updated != null) _reviewHandled[word.Id] = updated.Archive.Revision;
             }
+            // 先把评分条恢复可用再揭示：RevealReviewAnswer 会把键盘焦点交给「下一词」按钮，
+            // 而焦点不会落到（继承到）已禁用状态的控件上——旧顺序让这个 Focus() 静默失败，
+            // 表现为鼠标能点「下一词」，聚焦按钮上的空格键却没人接收。
+            ReviewRatingBar.IsEnabled = true;
             RevealReviewAnswer();
             SetStatus(rating switch
             {

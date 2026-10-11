@@ -256,28 +256,29 @@ public static class RecallCardTests
             Call("RefreshWords"); Click("NavLookup"); Click("NavReview");
             check(C<TextBlock>("ReviewWordText").Text == "recall-lock-a" && C<Grid>("ReviewRatingBar").IsVisible,
                 "deadlock regression opens a non-empty fresh review deck");
-            Press(Key.Q); await Task.Delay(60);
-            check(C<Border>("ReviewAnswer").IsVisible && Label("ReviewRememberBtn") == "下一词  Space",
-                "rating reveals the answer and renames the focused action to Next word");
+            // 键盘路径复现用户真机操作：鼠标点击评分按钮 → 产品必须自己把焦点交给「下一词 Space」按钮，
+            // 然后空格键要能继续换卡。这里绝不手动 Focus——焦点没落到按钮上就必须失败（这正是真机空格失效的根因）。
             var lockShown = C<TextBlock>("ReviewWordText").Text;
-            Click("ReviewRememberBtn"); await Task.Delay(80);
-            check(Round().Completed == 1 && C<TextBlock>("ReviewWordText").Text == Round().Current.Word
-                && C<TextBlock>("ReviewWordText").Text != lockShown,
-                "mouse click on Next word advances the deck instead of freezing");
-            Press(Key.Q); await Task.Delay(60);
-            var lockSecond = C<TextBlock>("ReviewWordText").Text;
-            C<Button>("ReviewRememberBtn").Focus();
+            Click("ReviewRememberBtn"); await Task.Delay(60);
+            check(C<Border>("ReviewAnswer").IsVisible && Label("ReviewRememberBtn") == "下一词  Space",
+                "mouse rating reveals the answer and renames the action to Next word");
             var focusedAfterReveal = w.FocusManager?.GetFocusedElement() as Control;
             check(ReferenceEquals(focusedAfterReveal, C<Button>("ReviewRememberBtn")),
-                "reveal hands keyboard focus to the Next word button");
-            focusedAfterReveal!.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Space });
-            focusedAfterReveal.RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyUpEvent, Key = Key.Space });
-            await Task.Delay(80);
+                "revealing the answer hands keyboard focus to the Next word button");
+            (focusedAfterReveal ?? w).RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyDownEvent, Key = Key.Space });
+            (focusedAfterReveal ?? w).RaiseEvent(new KeyEventArgs { RoutedEvent = InputElement.KeyUpEvent, Key = Key.Space });
+            await Task.Delay(60);
+            check(Round().Completed == 1 && C<TextBlock>("ReviewWordText").Text == Round().Current.Word
+                && C<TextBlock>("ReviewWordText").Text != lockShown,
+                "Space advances the deck right after a mouse rating");
+            var lockSecond = C<TextBlock>("ReviewWordText").Text;
+            Click("ReviewRememberBtn"); await Task.Delay(60);
+            Click("ReviewRememberBtn"); await Task.Delay(60);
             check(Round().Completed == 2 && C<TextBlock>("ReviewWordText").Text == Round().Current.Word
                 && C<TextBlock>("ReviewWordText").Text != lockSecond,
-                "Space on the focused Next word button advances the deck instead of freezing");
-            Press(Key.Q); await Task.Delay(60);
+                "mouse click on Next word advances the deck instead of freezing");
             var lockThird = C<TextBlock>("ReviewWordText").Text;
+            Click("ReviewRememberBtn"); await Task.Delay(60);
             Click("ReviewUnfamiliarBtn"); await Task.Delay(80);
             check(C<TextBlock>("ReviewWordText").Text == lockThird && C<TextBlock>("ReviewHintText").Text!.Contains("已改判为忘记"),
                 "mouse click on Wrong E after a rating reclassifies instead of freezing");
