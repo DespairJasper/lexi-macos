@@ -118,9 +118,10 @@ bash scripts/package_dmg.sh --no-build
 
 `release.sh` 依次执行回归、签名打包、包内隔离验收、许可证与隐私检查，并生成绑定实际应用的合格证明；DMG 打包与安装均验证该证明。测试应使用隔离数据目录，避免向日常学习数据灌入模拟记录。
 
-## 3.2.3 复习卡修复
+## 3.2.3 复习修复
 
 - 修复每日计划学过的词在第二天复习时显示内部标识（如 `vocab:03_动物保护:378`）而不是单词、音标与释义的问题。启动早期在 IELTS 目录加载完成前装填的到期队列不再固化这份回退内容，目录就绪后复习卡自动补全为真实词条；恢复未完成复习轮、撤销与改判共用同一解析路径。
+- 修复复习页评分后「下一词 / 记错了」按钮与空格键失效（表现为整个页面卡死）的问题：揭示答案后按钮点击按当前状态分派到换卡 / 改判，不再被评分入口的「已评分」守卫吞掉；键盘路径与数据写入路径不变。
 - 沿用数据目录、数据库 schema、FSRS 与 Context 参数逻辑、签名身份及自动更新检查。覆盖安装后继续正常使用。
 
 [3.2.3 详细发布说明](docs/macos/releases/v3.2.3.md)
@@ -193,7 +194,7 @@ bash scripts/package_dmg.sh --no-build
 | 第三代 · 3.2.0 | 冰川蓝界面、计划汇总与每日复习 / 拼写、双语学习统计、活动图与遗忘曲线动画 |
 | 第三代 · 3.2.1 | 学习答案按钮对称与居中、金句本即时双语切换、计划与统计页隐藏滚动条 |
 | 第三代 · 3.2.2 | 已确认进度快照回收、旧库缩容、自动备份节流与容量管理 |
-| 第三代 · 3.2.3 | 修复计划来源的复习卡显示内部标识、音标与释义缺失的问题 |
+| 第三代 · 3.2.3 | 修复计划来源的复习卡显示内部标识、音标与释义缺失的问题；修复复习评分后「下一词」点击与空格失效的问题 |
 
 [3.2.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.3) · [3.2.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.2) · [3.2.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.1) · [3.2.0 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.0) · [3.1.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.3) · [3.1.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.2) · [3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
 

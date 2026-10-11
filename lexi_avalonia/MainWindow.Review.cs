@@ -43,9 +43,20 @@ public partial class MainWindow
 
     private void BindReviewEvents()
     {
-        ReviewRememberBtn.Click += async (_, _) => await OnReviewRatingAsync(StudyRating.Known);
+        // 揭示答案后按钮会被改名成「下一词 / 记错了」，而且焦点就在按钮上：Avalonia 的 Button
+        // 会把聚焦时按下的 Space 消化成 Click，所以 Click 必须按当前状态分派到换卡/改判，
+        // 不能一律回评分入口——那里有 _reviewRevealed 守卫，会把点击静默吞掉，表现为整页卡死。
+        ReviewRememberBtn.Click += async (_, _) =>
+        {
+            if (_reviewRevealed) await AdvanceReviewAsync();
+            else await OnReviewRatingAsync(StudyRating.Known);
+        };
         ReviewUnsureBtn.Click += async (_, _) => await OnReviewRatingAsync(StudyRating.Unsure);
-        ReviewUnfamiliarBtn.Click += async (_, _) => await OnReviewRatingAsync(StudyRating.Forgot);
+        ReviewUnfamiliarBtn.Click += async (_, _) =>
+        {
+            if (_reviewRevealed) await ReclassifyReviewAsync();
+            else await OnReviewRatingAsync(StudyRating.Forgot);
+        };
         ReviewBackBtn.Click += (_, _) => ShowPage("lookup");
         ReviewUndoBtn.Click += (_, _) => UndoReviewFromLearningPage();
         ReviewMasterBtn.Click += async (_, _) => await MasterReviewFromLearningPageAsync();
