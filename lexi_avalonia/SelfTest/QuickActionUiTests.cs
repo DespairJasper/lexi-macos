@@ -68,7 +68,21 @@ public static class QuickActionUiTests
             Check(CurrentCard().IsActive,"selection card owns focus before shortcut correction");
             foreach(var action in new[]{QuickAction.Lookup,QuickAction.Translate,QuickAction.SaveQuote,QuickAction.Translate})
             {
+                // 每轮纠正都会重建卡片，而 macOS 键窗口激活是异步的。产品只在卡片
+                // 确为 key window 时才把它当作纠正目标（否则按快捷键语义去抓前台选区，
+                // 对应真实的 source=PID 只会是前台应用）。这里等产品自己的前置条件成立
+                // 再模拟按键：有界轮询，断言本身不变。
+                for(var wait=0;wait<80&&!CurrentCard().IsActive;wait++)await Task.Delay(25);
+                var preActive=CurrentCard().IsActive;
                 await main.HandleQuickActionAsync(action,Environment.ProcessId);await Task.Delay(100);
+                if(!(CurrentCard().Mode==action&&CurrentCard().OriginalInput.Text==original))
+                {
+                    var c=CurrentCard();
+                    Console.WriteLine($"[diag] action={action} preActive={preActive} mode={c.Mode} text=<{c.OriginalInput.Text}> active={c.IsActive}");
+                    await Task.Delay(2000);
+                    var settled=CurrentCard();
+                    Console.WriteLine($"[diag] settled mode={settled.Mode} text=<{settled.OriginalInput.Text}> active={settled.IsActive} same={ReferenceEquals(c,settled)}");
+                }
                 Check(CurrentCard().Mode==action&&CurrentCard().OriginalInput.Text==original,$"correcting shortcut to {action} retains the full original selection");
                 Check(CurrentCard().SelectionSource=="Test editor",$"correcting shortcut to {action} preserves its source");
             }

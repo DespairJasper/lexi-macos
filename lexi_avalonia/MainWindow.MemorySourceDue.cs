@@ -58,30 +58,42 @@ public partial class MainWindow
         if (_memorySourceReviewWords.TryGetValue(key.Key, out var cached))
         {
             cached.NextReviewDate = dueAtUtc.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+            // 3.2.3 修复：这个缓存可能是在 IELTS 目录加载完成前建立的——启动早期的
+            // RefreshWords → UpdateReviewBadge 就会装填一次到期队列，那时只能按原始标识回退。
+            // 目录就绪后每次取用都补全显示内容，复习卡才不会一直显示 "vocab:…:378" 之类的内部 ID。
+            MemoryApplySourceReviewContent(key, cached);
             return cached;
         }
 
-        var catalog = key.Source == WordSource.Ielts
-            ? _ieltsCatalog?.AllWords.FirstOrDefault(w => string.Equals(w.Id, key.SourceId, StringComparison.Ordinal))
-            : null;
-        var form = catalog?.Word ?? key.SourceId;
-        var archive = key.Source == WordSource.Form
-            ? _allWords.FirstOrDefault(w => string.Equals(WordKeyResolver.FormC(w.Word), key.SourceId, StringComparison.Ordinal))
-            : null;
         var item = new WordItem
         {
             Id = id,
-            Word = form,
-            Phonetic = catalog?.Phonetic ?? archive?.Phonetic ?? "",
-            Translation = catalog?.Meaning ?? archive?.Translation ?? "",
-            Definition = catalog is null ? archive?.Definition ?? "" : catalog.Example,
-            Notes = catalog?.Extra ?? "",
             Status = "learning",
             NextReviewDate = dueAtUtc.ToLocalTime().ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
             // Keep Archive.Uuid empty: source identity must never be inferred as an archive key.
         };
+        MemoryApplySourceReviewContent(key, item);
         _memorySourceReviewWords[key.Key] = item;
         return item;
+    }
+
+    /// <summary>
+    /// 把来源词身份解析成可显示内容（IELTS 目录 / 档案回退）。目录尚未加载时按原始标识回退，
+    /// 之后可以用同一个词条重复调用补全——3.2.3 起缓存不再固化这份回退文案。
+    /// </summary>
+    private void MemoryApplySourceReviewContent(WordKey key, WordItem item)
+    {
+        var catalog = key.Source == WordSource.Ielts
+            ? _ieltsCatalog?.AllWords.FirstOrDefault(w => string.Equals(w.Id, key.SourceId, StringComparison.Ordinal))
+            : null;
+        var archive = key.Source == WordSource.Form
+            ? _allWords.FirstOrDefault(w => string.Equals(WordKeyResolver.FormC(w.Word), key.SourceId, StringComparison.Ordinal))
+            : null;
+        item.Word = catalog?.Word ?? key.SourceId;
+        item.Phonetic = catalog?.Phonetic ?? archive?.Phonetic ?? "";
+        item.Translation = catalog?.Meaning ?? archive?.Translation ?? "";
+        item.Definition = catalog is null ? archive?.Definition ?? "" : catalog.Example;
+        item.Notes = catalog?.Extra ?? "";
     }
 
     private WordItem? MemoryResolveReviewIdentity(string identity)
@@ -89,7 +101,12 @@ public partial class MainWindow
         if (!long.TryParse(identity, NumberStyles.Integer, CultureInfo.InvariantCulture, out var id)) return null;
         if (id >= 0) return _allWords.FirstOrDefault(w => w.Id == id);
         if (_memorySourceReviewKeys.TryGetValue(id, out var cached)
-            && _memorySourceReviewWords.TryGetValue(cached.Key, out var existing)) return existing;
+            && _memorySourceReviewWords.TryGetValue(cached.Key, out var existing))
+        {
+            // 撤销 / 恢复队列也会从这里取回词条：同样补全一次，不返回启动早期缓存下来的回退文案。
+            MemoryApplySourceReviewContent(cached, existing);
+            return existing;
+        }
 
         // A resumed queue may contain a card which has since moved into the future. Rebuild
         // identity from all stored card keys, not only the currently due subset.

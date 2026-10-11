@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using Avalonia.Controls;
 using Microsoft.Data.Sqlite;
@@ -26,6 +27,9 @@ public static class MemorySourceDueUiTests
         T Field<T>(string name) => (T)typeof(MainWindow).GetField(name, flags)!.GetValue(window)!;
         void Set(string name, object? value) => typeof(MainWindow).GetField(name, flags)!.SetValue(window, value);
         object? Call(string name, params object[] args) => typeof(MainWindow).GetMethod(name, flags)!.Invoke(window, args);
+        long SourceReviewId(string wordKey) => (long)typeof(MainWindow)
+            .GetMethod("MemorySourceReviewId", BindingFlags.Static | BindingFlags.NonPublic)!
+            .Invoke(null, new object[] { wordKey })!;
         async Task Invoke(string name, params object[] args) => await (Task)Call(name, args)!;
 
         var originalArchive = Field<IVocabularyArchive>("_vocabService");
@@ -103,6 +107,47 @@ public static class MemorySourceDueUiTests
                 check(Count("SELECT COUNT(*) FROM fsrs_cards WHERE word_key=$key", resolved.Key) == 0,
                     "the form-keyed FSRS card never leaks into the IELTS identity");
             }
+
+            // 3.2.3 回归：真实启动顺序下先装填一次到期队列（RefreshWords → UpdateReviewBadge），
+            // 此时 IELTS 目录还没加载，来源卡只能按原始标识回退；目录就绪后缓存必须补全为目录词条，
+            // 否则复习页会一直显示 "vocab:…:378" 这类内部 ID（音标与释义也为空）。
+            var catalog = Field<IeltsCatalog?>("_ieltsCatalog")
+                ?? throw new InvalidOperationException("catalogue is required for the review-identity regression.");
+            var entry = catalog.Find("atmosphere")
+                ?? throw new InvalidOperationException("catalogue fixture word is missing.");
+            var ieltsKey = WordKeyResolver.FromIelts(entry);
+            const string ieltsPresentation = "source-due-ielts-presentation";
+            memory.BeginSession(StudyMode.FirstLearn, WordSource.Ielts, "", 1);
+            memory.OnPresented(ieltsKey, ieltsPresentation, isRecall: true);
+            memory.OnRated(ieltsKey, ieltsPresentation, StudyRating.Known, 0, 1, null);
+            check(memory.CommitWord(ieltsKey, StudyMode.FirstLearn) is not null,
+                "ielts fixture commits a canonical for a real catalogue word");
+            check(Count("SELECT COUNT(*) FROM fsrs_cards WHERE word_key=$key", ieltsKey.Key) == 1,
+                "ielts fixture created one FSRS card for the catalogue identity");
+            Sql("UPDATE fsrs_cards SET next_review_at_utc='2000-01-01T00:00:00.0000000Z'");
+            Field<Dictionary<long, WordKey>>("_memorySourceReviewKeys").Clear();
+            Field<Dictionary<string, WordItem>>("_memorySourceReviewWords").Clear();
+            Set("_ieltsCatalog", null);
+            Call("UpdateReviewBadge");
+            var cache = Field<Dictionary<string, WordItem>>("_memorySourceReviewWords");
+            var stale = cache[ieltsKey.Key];
+            check(stale.Id == SourceReviewId(ieltsKey.Key) && stale.Word == entry.Id,
+                "regression precondition: before the catalogue exists the review cache falls back to the raw key");
+            Set("_ieltsCatalog", catalog);
+            var deckWords = Call("GetPendingReviewWords") as List<WordItem> ?? [];
+            var filled = deckWords.FirstOrDefault(w => w.Id == stale.Id);
+            check(filled is not null && filled.Word == entry.Word && filled.Translation == entry.Meaning
+                && filled.Phonetic == entry.Phonetic,
+                "3.2.3: filling the review deck completes the cached catalogue card instead of showing its raw key");
+            check(!string.Equals(filled?.Word, entry.Id, StringComparison.Ordinal),
+                "3.2.3: the review card never renders the internal catalogue id");
+            var rebuilt = Call("MemoryResolveReviewIdentity", stale.Id.ToString(CultureInfo.InvariantCulture)) as WordItem;
+            check(rebuilt is not null && rebuilt.Word == entry.Word,
+                "3.2.3: the resume/undo identity path also returns the completed catalogue card");
+            Call("ShowPage", "review");
+            var finalRound = Field<StudyRound<WordItem>>("_reviewRound");
+            check(finalRound.HasCurrent && window.FindControl<TextBlock>("ReviewWordText")?.Text == finalRound.Current.Word,
+                "the review page renders the resolved word text from the deck");
         }
         finally
         {
