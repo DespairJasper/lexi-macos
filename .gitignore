@@ -47,3 +47,9 @@ private-update-backup*/
 study-activity.json
 study-activity.json.*
 .planning/
+
+# 本机好友连接与私有服务端部署；公开源码只提供客户端示例
+lexi_avalonia/Assets/social-public.json
+supabase/
+private-config/
+.local/

@@ -7,12 +7,14 @@ public partial class MainWindow
     private CrossStoreJournal? _memoryJournal;
     private int _planRatingRecognitionBefore;
     private Action? _memoryPendingCompletion;
+    private bool _socialPendingFirstLearning;
     private bool MemoryTryCompletePending()
     {
         if (_memoryPendingCompletion is not { } complete) return false;
         try
         {
             MemoryReplayJournal();
+            SocialPlanProgressDelivered();
             _memoryPendingCompletion = null;
             complete();
         }
@@ -62,8 +64,15 @@ public partial class MainWindow
                 .Any(row => string.Equals(row.PayloadJson, snapshot.PayloadJson, StringComparison.Ordinal)))
                 _memoryStore.EnqueueMutations([snapshot]);
             MemoryReplayJournal();
+            SocialPlanProgressDelivered();
             return true;
         }
         catch (Exception ex) { SetStatus(T("学习计划保存失败：") + ex.Message); return false; }
+    }
+
+    private void SocialPlanProgressDelivered()
+    {
+        SocialObserveSaved(Lexi.Social.SocialFactProjection.SavedCause(_socialPendingFirstLearning, false));
+        _socialPendingFirstLearning = false;
     }
 }

@@ -13,6 +13,9 @@ public partial class MainWindow
     // make the word eligible again during the same calendar day.
     private readonly Dictionary<long, int> _reviewHandled = [];
     private readonly StudyRound<WordItem> _reviewRound = new();
+    private List<WordItem> _reviewAvailableWords = [];
+    private int _reviewBatchSize = 20;
+    private bool _reviewUpdatingBatchControl;
     private DateTime _reviewDay = DateTime.Today;
     private WordItem? _reviewWord;
     private bool _reviewRevealed;
@@ -60,7 +63,18 @@ public partial class MainWindow
         ReviewBackBtn.Click += (_, _) => ShowPage("lookup");
         ReviewUndoBtn.Click += (_, _) => UndoReviewFromLearningPage();
         ReviewMasterBtn.Click += async (_, _) => await MasterReviewFromLearningPageAsync();
-        ReviewRestartBtn.Click += (_, _) => ShowPage("lookup");
+        ReviewRestartBtn.Click += (_, _) =>
+        {
+            if (_reviewRound.Total > 0 && _reviewRound.IsFinished) RenderReviewPreview();
+            else ShowPage("lookup");
+        };
+        ReviewBatchCount.ValueChanged += (_, _) =>
+        {
+            if (_reviewUpdatingBatchControl) return;
+            _reviewBatchSize = Math.Max(1, (int)Math.Round(ReviewBatchCount.Value ?? 20));
+            UpdateReviewPreviewBatchText();
+        };
+        ReviewStartAllBtn.Click += (_, _) => StartReviewBatch(_reviewAvailableWords);
         PageReview.KeyDown += async (_, e) =>
         {
             if (e.Source is TextBox || _reviewBusy || !FocusCanNavigate) return;
@@ -86,9 +100,131 @@ public partial class MainWindow
     private void OpenReviewDeck()
     {
         ++_reviewEpoch;
-        var words = GetPendingReviewWords();
+        RenderReviewPreview();
+    }
+
+    private void RenderReviewPreview()
+    {
+        _reviewAvailableWords = GetPendingReviewWords();
+        var dueCount = _reviewAvailableWords.Count;
+
+        _reviewUpdatingBatchControl = true;
+        ReviewBatchCount.Maximum = Math.Max(1, dueCount);
+        ReviewBatchCount.Value = Math.Min(_reviewBatchSize, Math.Max(1, dueCount));
+        _reviewUpdatingBatchControl = false;
+
+        ReviewPreviewHeading.Text = PlanText("今日复习预览", "Today’s review preview");
+        ReviewRemainingText.Text = dueCount == 0
+            ? T("今日无到期单词")
+            : PlanText($"今日有 {dueCount} 个待复习词", $"{dueCount} words are due today");
+        ReviewPreviewSummary.Text = dueCount == 0
+            ? PlanText("今天没有到期词。完成一批后，可回到这里继续选择下一批。", "No words are due today. Return here after a batch to choose what to review next.")
+            : PlanText($"今天共有 {dueCount} 个到期词。选择每批数量后开始；计划入口只包含该计划中已学且到期的词。",
+                $"{dueCount} words are due today. Choose a batch size; plan entries include only learned words from that plan that are due.");
+        ReviewBatchHeading.Text = PlanText("每批复习词数", "Words per batch");
+        ReviewBatchDescription.Text = PlanText("计划入口也使用这个批量数。", "The same batch size applies when reviewing a plan.");
+        ReviewWordsHeading.Text = PlanText("待复习词预览", "Words due for review");
+        ReviewWordPreview.Text = dueCount == 0
+            ? PlanText("暂无待复习词。", "No words are due.")
+            : string.Join(" · ", _reviewAvailableWords.Take(18).Select(w => w.Word));
+        ReviewWordPreviewMore.Text = dueCount > 18
+            ? PlanText($"另有 {dueCount - 18} 个词。", $"And {dueCount - 18} more.")
+            : "";
+        ReviewPlansHeading.Text = PlanText("按学习计划复习", "Review by study plan");
+
+        var groups = ReviewWordsByPlan(_reviewAvailableWords, out var unassigned);
+        ReviewPlansDescription.Text = groups.Count == 0 && unassigned.Count == 0
+            ? PlanText("目前没有计划词条。", "There are no plan words due today.")
+            : PlanText("按到期词数量从多到少排列。点击计划立即开始该计划复习；一个词属于多个计划时会分别计入，计划外词汇单列。",
+                "Plans are sorted by due-word count. Click one to review its due words; words in multiple plans count in each, and unassigned words are listed separately.");
+        ReviewPlanRows.Children.Clear();
+        var index = 0;
+        foreach (var group in groups)
+        {
+            var words = group.Words;
+            var button = PlanButton(
+                $"{group.Plan.Name}  ·  {words.Count} {PlanText("个到期词", "due")}",
+                $"ReviewPlanDue{index++}", () => StartReviewBatch(words));
+            button.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            button.IsEnabled = _databaseAvailable && FocusCanNavigate;
+            ReviewPlanRows.Children.Add(button);
+        }
+        if (unassigned.Count > 0)
+        {
+            var words = unassigned;
+            var button = PlanButton(
+                PlanText($"计划外词汇  ·  {words.Count} 个到期词", $"Unassigned words  ·  {words.Count} due"),
+                "ReviewUnassignedDue", () => StartReviewBatch(words));
+            button.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            button.IsEnabled = _databaseAvailable && FocusCanNavigate;
+            ReviewPlanRows.Children.Add(button);
+        }
+
+        ReviewStartAllBtn.IsEnabled = dueCount > 0 && _databaseAvailable && FocusCanNavigate;
+        ReviewBatchCount.IsEnabled = dueCount > 0 && _databaseAvailable && FocusCanNavigate;
+        ReviewPreviewHost.IsVisible = true;
+        ReviewCardHost.IsVisible = false;
+        ReviewEmptyCard.IsVisible = false;
+        ReviewRatingBar.IsVisible = false;
+        ReviewHintText.Text = "";
+        ReviewUndoBtn.IsVisible = ReviewMasterBtn.IsVisible = false;
+        UpdateReviewPreviewBatchText();
+    }
+
+    private List<(DailyStudyPlan Plan, List<WordItem> Words)> ReviewWordsByPlan(
+        IReadOnlyList<WordItem> dueWords, out List<WordItem> unassigned)
+    {
+        var keysByWordId = new Dictionary<long, string>();
+        foreach (var word in dueWords)
+            if (MemoryTryReviewKey(word, out var key)) keysByWordId[word.Id] = key.Key;
+
+        var dueArchiveIds = dueWords.Where(word => word.Id > 0).Select(word => word.Id).ToHashSet();
+        var dueKeys = keysByWordId.Values.ToHashSet(StringComparer.Ordinal);
+        var assignedKeys = new HashSet<string>(StringComparer.Ordinal);
+        var groups = new List<(DailyStudyPlan Plan, List<WordItem> Words)>();
+        foreach (var plan in _studyPlans)
+        {
+            var planDueKeys = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var word in plan.Words)
+            {
+                if (!plan.CompletedWordIds.Contains(word.Id)) continue;
+                if (plan.Source == DailyStudyPlanSource.Archive &&
+                    (!long.TryParse(word.Id, System.Globalization.NumberStyles.None,
+                        System.Globalization.CultureInfo.InvariantCulture, out var archiveId) || !dueArchiveIds.Contains(archiveId)))
+                    continue;
+                if (!MemoryTryPlanKey(plan, word.Id, out var key)) continue;
+                if (dueKeys.Contains(key.Key)) planDueKeys.Add(key.Key);
+            }
+            if (planDueKeys.Count == 0) continue;
+            var words = dueWords.Where(w => keysByWordId.TryGetValue(w.Id, out var key) && planDueKeys.Contains(key)).ToList();
+            if (words.Count == 0) continue;
+            assignedKeys.UnionWith(planDueKeys);
+            groups.Add((plan, words));
+        }
+
+        groups = groups.OrderByDescending(group => group.Words.Count)
+            .ThenBy(group => group.Plan.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+        unassigned = dueWords.Where(word => !keysByWordId.TryGetValue(word.Id, out var key) || !assignedKeys.Contains(key)).ToList();
+        return groups;
+    }
+
+    private void UpdateReviewPreviewBatchText()
+    {
+        var available = _reviewAvailableWords.Count;
+        var batch = Math.Min(available, Math.Max(1, (int)Math.Round(ReviewBatchCount.Value ?? _reviewBatchSize)));
+        ReviewStartAllBtn.Content = PlanText($"开始复习本批 · {batch} / {available} 词", $"Start this batch · {batch} / {available} words");
+    }
+
+    private void StartReviewBatch(IReadOnlyList<WordItem> scope)
+    {
+        if (scope.Count == 0 || !FocusCanNavigate || !_databaseAvailable) return;
+        var batchSize = Math.Min(scope.Count, Math.Max(1, (int)Math.Round(ReviewBatchCount.Value ?? _reviewBatchSize)));
+        var words = scope.Take(batchSize).ToList();
+        if (words.Count == 0) return;
+
+        ++_reviewEpoch;
         _reviewRound.Reset(words, StudyMode.Review);
-        // 开轮（规格书 §1）：每个开轮点只开一次会话，随后装填本轮第一张卡。
+        // The memory layer keeps the existing review identity and recovery behavior; only this round's queue is scoped.
         MemoryBeginSession(StudyMode.Review, WordSource.Archive, "", words.Count);
         MemoryPresentReviewCard();
         RenderReviewCard();
@@ -117,7 +253,9 @@ public partial class MainWindow
     // 评价按钮的中英文标签也随界面语言刷新，行内下划线颜色保持不变。
     private void ApplyReviewActionLabels()
     {
-        ReviewRestartBtn.Content = T("返回阅读");
+        ReviewRestartBtn.Content = _reviewRound.Total > 0 && _reviewRound.IsFinished
+            ? PlanText("选择下一批", "Choose next batch")
+            : T("返回阅读");
         ReviewMasterBtn.Content = T("熟") + "  Del";
         ReviewRememberBtn.Content = RatingContent(T(_reviewRevealed ? "下一词" : "认识"), _reviewRevealed ? "Space" : "Q", "#268D98");
         ReviewUnsureBtn.Content = RatingContent(T("模糊"), "W", "#D6AD4E");
@@ -139,6 +277,8 @@ public partial class MainWindow
     private void RenderReviewCard(bool resetPose = true)
     {
         StopLearningSpeech();
+        ReviewPreviewHost.IsVisible = false;
+        ReviewUndoBtn.IsVisible = ReviewMasterBtn.IsVisible = true;
         NavReviewBadge.Text = GetPendingReviewWords().Count.ToString();
         _reviewWord = _reviewRound.HasCurrent ? _reviewRound.Current : null;
         _reviewRevealed = false;

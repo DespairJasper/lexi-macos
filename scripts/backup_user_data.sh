@@ -13,6 +13,7 @@ mkdir -p "$DEST_ROOT"
 FINAL="$DEST_ROOT/$STAMP-backup"
 TMP="$(mktemp -d "$DEST_ROOT/.$STAMP-backup.tmp.XXXXXX")"
 DB="$DATA_DIR/vocab.sqlite3"
+SOCIAL_DB="$DATA_DIR/social.sqlite3"
 APP="${LEXI_APP_BUNDLE:-/Applications/Lexi.app}"
 
 # 运行判定必须覆盖"任意路径下的 Lexi.app + 带参数启动"：
@@ -55,6 +56,21 @@ if [ "$SRC_COUNTS" != "$BAK_COUNTS" ]; then
 fi
 echo "词库一致快照 ✓ (canonical/cards/words = $SRC_COUNTS)"
 
+# 社交资料数据库保存本机绑定与同步状态；OAuth 凭据仍留在 macOS Keychain。
+# 不能用 cp 拼 SQLite 主库，使用 .backup 同样安全处理 WAL。
+if [ -f "$SOCIAL_DB" ]; then
+    /usr/bin/sqlite3 "$SOCIAL_DB" ".backup '$DEST/social.sqlite3'"
+    SOCIAL_INTEGRITY="$(/usr/bin/sqlite3 "$DEST/social.sqlite3" 'PRAGMA integrity_check;')"
+    if [ "$SOCIAL_INTEGRITY" != "ok" ]; then
+        echo "错误: 社交数据备份 integrity_check 未通过：$SOCIAL_INTEGRITY" >&2
+        exit 1
+    fi
+    echo "社交资料一致快照 ✓ (social.sqlite3)"
+elif [ -e "$SOCIAL_DB" ]; then
+    echo "错误: social.sqlite3 存在但不是普通文件，拒绝忽略本地登录关联数据。" >&2
+    exit 1
+fi
+
 # 源库的 WAL/SHM 现状（只记录，不移动）：让恢复方能判断备份时刻的日志状态。
 for suffix in -wal -shm; do
     if [ -f "$DB$suffix" ]; then
@@ -96,6 +112,8 @@ info = {
     'created_at_utc': time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime()),
     'source_db_bytes': (snapshot / 'vocab.sqlite3').stat().st_size,
     'source_db_sha256': __import__('hashlib').sha256((snapshot / 'vocab.sqlite3').read_bytes()).hexdigest(),
+    'source_social_db_bytes': (snapshot / 'social.sqlite3').stat().st_size if (snapshot / 'social.sqlite3').exists() else None,
+    'source_social_db_sha256': __import__('hashlib').sha256((snapshot / 'social.sqlite3').read_bytes()).hexdigest() if (snapshot / 'social.sqlite3').exists() else None,
     'app_bundle': str(app),
     'app_mtime': app.stat().st_mtime if app.exists() else None,
 }

@@ -13,6 +13,12 @@ locate_dotnet() {
     # 1. 优先检查源码树内部 .tools/dotnet
     if [ -x "$root_dir/.tools/dotnet/dotnet" ]; then
         candidate="$root_dir/.tools/dotnet/dotnet"
+    # 1b. 已由调用方（如 _env.sh）显式指定的 SDK，直接用，不再另行探测
+    elif [ -n "${DOTNET_BIN:-}" ] && [ -x "$DOTNET_BIN" ]; then
+        candidate="$DOTNET_BIN"
+    # 1c. 工作区固定的隔离工具链（本项目的标准 SDK，位于开发副本上一级）
+    elif [ -x "$root_dir/../toolchain/dotnet/dotnet" ]; then
+        candidate="$root_dir/../toolchain/dotnet/dotnet"
     # 2. 检查环境变量 DOTNET_ROOT
     elif [ -n "${DOTNET_ROOT:-}" ] && [ -x "$DOTNET_ROOT/dotnet" ]; then
         candidate="$DOTNET_ROOT/dotnet"
@@ -44,6 +50,8 @@ locate_dotnet() {
         echo "错误: 未能在本地找到可用的 .NET SDK (需要 .NET 8.0)！" >&2
         echo "已检索路径:" >&2
         echo "  - $root_dir/.tools/dotnet/dotnet" >&2
+        echo "  - \$DOTNET_BIN (若已设置)" >&2
+        echo "  - $root_dir/../toolchain/dotnet/dotnet" >&2
         echo "  - 系统 PATH" >&2
         echo "  - $HOME/.dotnet/dotnet" >&2
         echo "  - /usr/local/share/dotnet/dotnet" >&2

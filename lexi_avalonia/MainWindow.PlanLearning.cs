@@ -213,6 +213,7 @@ public partial class MainWindow
             if (_planLearningSession.ReclassifyAsForgot(SaveStudyPlans,
                 id => MemoryRevised(MemorySurface.Plan, id, _focusLastRating, StudyRating.Forgot)) is { } result)
             {
+                SocialObserveSaved(Lexi.Social.QualificationCause.Correction);
                 // 改判：同一 presentation 追加修正事件，presentationId 不变（规格书 §2）。
                 ShowPlanRating(StudyRating.Forgot, _focusRatedWord!, result);
             }
@@ -233,6 +234,7 @@ public partial class MainWindow
         {
             if (_planLearningSession.Undo(SaveStudyPlans, id => MemoryUndone(MemorySurface.Plan, id)))
             {
+                SocialObserveSaved(Lexi.Social.QualificationCause.Correction);
                 // 撤销：追加 Undone 事件；该词若已在本会话定稿，再失效它的 canonical（规格书 §2 / §4）。
                 // 计划 JSON 的撤销必须先做（MemoryUndone 要用撤销后的当前计划词），所以这里无法像
                 // Review/Focus 那样把长期层当提交点；但失败同样绝不显示撤销成功——不渲染完成状态，

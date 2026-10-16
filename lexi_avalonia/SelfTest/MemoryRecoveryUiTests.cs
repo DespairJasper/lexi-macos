@@ -1,6 +1,7 @@
 using System.Reflection;
 using System.Text.Json;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Microsoft.Data.Sqlite;
 
 namespace Lexi;
@@ -17,6 +18,7 @@ public static class MemoryRecoveryUiTests
         void Set(string name, object? value) => typeof(MainWindow).GetField(name, flags)!.SetValue(window, value);
         object? Call(string name, params object[] args) => typeof(MainWindow).GetMethod(name, flags)!.Invoke(window, args);
         async Task Invoke(string name, params object[] args) => await (Task)Call(name, args)!;
+        void StartReviewBatch() => window.FindControl<Button>("ReviewStartAllBtn")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         var originalArchive = Field<IVocabularyArchive>("_vocabService");
         var originalPlanStore = Field<DailyStudyPlanStore>("_studyPlanStore");
         var originalPlans = Field<List<DailyStudyPlan>>("_studyPlans");
@@ -41,7 +43,7 @@ public static class MemoryRecoveryUiTests
             fixture.AddWord("recovery-round-two", "", "恢复乙", "");
             var words = fixture.GetAllWords();
             fixture.ExecuteBatch(words.Select(w => w.Id).ToArray(), "today");
-            Call("RefreshWords"); Call("ShowPage", "review"); Call("OpenReviewDeck");
+            Call("RefreshWords"); Call("ShowPage", "review"); StartReviewBatch();
             var round = Field<StudyRound<WordItem>>("_reviewRound");
             check(round.Total == 2 && round.HasCurrent, "recovery probe starts two real review cards in isolated database");
             var memory = Field<LearningMemoryCoordinator>("_memory");
@@ -67,6 +69,7 @@ public static class MemoryRecoveryUiTests
             Set("_reviewRevealed", false); Set("_reviewCompleted", false);
             Field<Dictionary<long, int>>("_reviewHandled").Clear();
             Call("OpenReviewDeck");
+            StartReviewBatch();
             var recovered = Field<LearningMemoryCoordinator>("_memory");
             check(recovered.CurrentSessionId == session && round.Current.Id == currentId && round.CurrentStreak == streak,
                 "UI rebind restores same session, current word and reinforcement streak");
@@ -99,7 +102,7 @@ public static class MemoryRecoveryUiTests
             fixture.AddWord("recovery-correction", "", "改判用例", "");
             var correction = fixture.GetAllWords().Single(w => w.Word == "recovery-correction");
             fixture.ExecuteBatch([correction.Id], "today");
-            Call("RefreshWords"); Call("OpenReviewDeck");
+            Call("RefreshWords"); Call("OpenReviewDeck"); StartReviewBatch();
             check(round.HasCurrent && round.Current.Id == correction.Id, "correction fixture is the actual visible review card");
             var correctionKey = WordKey.Archive(correction.Archive.Uuid).Key;
             await Invoke("OnReviewRatingAsync", StudyRating.Known);
@@ -222,7 +225,7 @@ public static class MemoryRecoveryUiTests
             Sql("UPDATE words SET next_review_date='2999-01-01' WHERE id NOT IN (" + syncOne.Id + "," + syncTwo.Id + ")"
                 + "; UPDATE fsrs_cards SET next_review_at_utc='2999-01-01T00:00:00.0000000Z'");
             fixture.ExecuteBatch([syncOne.Id, syncTwo.Id], "today");
-            Call("RefreshWords"); Call("ShowPage", "review");
+            Call("RefreshWords"); Call("ShowPage", "review"); StartReviewBatch();
             var syncRound = Field<StudyRound<WordItem>>("_reviewRound");
             check(syncRound.Total == 2 && syncRound.HasCurrent,
                 "checkpoint fixture really starts a two-card review round");
@@ -281,16 +284,20 @@ public static class MemoryRecoveryUiTests
             Sql("UPDATE words SET next_review_date='2999-01-01' WHERE id <> " + doomedWord.Id
                 + " AND status <> 'mastered'"
                 + "; UPDATE fsrs_cards SET next_review_at_utc='2999-01-01T00:00:00.0000000Z'");
-            Call("RefreshWords"); Call("ShowPage", "review");
+            Call("RefreshWords"); Call("ShowPage", "review"); StartReviewBatch();
             check(Field<StudyRound<WordItem>>("_reviewRound").HasCurrent
-                && Field<StudyRound<WordItem>>("_reviewRound").Total == 1,
+                && Field<StudyRound<WordItem>>("_reviewRound").Total == 1
+                && Field<StudyRound<WordItem>>("_reviewRound").Current.Word == "recovery-doomed",
                 "the doomed fixture really owns a pending (not finished) checkpoint");
             var staleSession = Field<ILearningMemoryStore>("_memoryStore").GetSessionCheckpoint("review")!.SessionId;
             fixture.ExecuteBatch([doomedWord.Id], "delete");
+            fixture.AddWord("recovery-after-doomed", "", "失效后恢复", "");
+            var replacementWord = fixture.GetAllWords().Single(w => w.Word == "recovery-after-doomed");
+            fixture.ExecuteBatch([replacementWord.Id], "today");
             Set("_memoryRunId", Guid.NewGuid().ToString("N"));
             Call("RebindMemory"); Call("RefreshWords");
             var restoreThrew = false;
-            try { Call("ShowPage", "review"); }
+            try { Call("ShowPage", "review"); StartReviewBatch(); }
             catch (Exception ex) { restoreThrew = true; check(false, "unresolvable checkpoint must not throw: " + ex.Message); }
             check(!restoreThrew, "a checkpoint whose word no longer exists can no longer lock the review surface");
             var afterDrop = Field<ILearningMemoryStore>("_memoryStore").GetSessionCheckpoint("review");
@@ -302,7 +309,7 @@ public static class MemoryRecoveryUiTests
             // —— 长期层被停用后，开轮必须照常（开轮不是真实 retrieval 的持久化承诺）——
             Call("MarkMemoryDisabled", "injected disabled layer");
             var openThrew = false;
-            try { Call("ShowPage", "lookup"); Call("ShowPage", "review"); }
+            try { Call("ShowPage", "lookup"); Call("ShowPage", "review"); StartReviewBatch(); }
             catch (Exception ex) { openThrew = true; check(false, "disabled layer must not block opening a round: " + ex.Message); }
             check(!openThrew, "a disabled long-term layer never blocks opening the review deck");
             check(Field<bool>("_memoryDisabled"),

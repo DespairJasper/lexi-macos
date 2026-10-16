@@ -39,7 +39,7 @@ public partial class MainWindow
         page.Children.Add(PlanButton(PlanText("← 学习计划", "← Study plans"), "DailyPlanBackBtn", () => ShowPage("plans")));
         var heading = new StackPanel { Spacing = 5 };
         heading.Children.Add(PlanLabel(plan.Name, 28));
-        heading.Children.Add(PlanLabel(UiText.Redisplay(plan.SourceLabel) + " · " + PlanText($"每日 {plan.DailyWordCount} 词", $"{plan.DailyWordCount} words/day") + " · " + PlanText("按自己的节奏，多次复习与拼写。", "Review and spell as often as you need."), 13, true));
+        heading.Children.Add(PlanLabel(PlanSourceDisplay(plan) + " · " + PlanText($"每日 {plan.DailyWordCount} 词", $"{plan.DailyWordCount} words/day") + " · " + PlanText("按自己的节奏，多次复习与拼写。", "Review and spell as often as you need."), 13, true));
         page.Children.Add(heading);
         var batch = DailyStudyPlanRules.GetTodayBatch(plan, PlanToday);
         var words = DailyPlanPracticeWords(plan);

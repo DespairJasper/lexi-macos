@@ -67,12 +67,12 @@ public partial class MainWindow
             }
             else if (source.Id == "archive") words = _allWords.Select(ArchiveLearningWord).ToList();
             else if (source.Id == "due") words = GetPendingReviewWords().Select(ArchiveLearningWord).ToList();
-            else if (source.Id == "ielts") words = _ieltsCatalog!.AllWords.ToList();
-            else if (source.Id == "synonyms") words = _ieltsCatalog!.AllWords.SelectMany(w => w.Synonyms.Select((synonym, i) => new LearningWord
+            else if (source.Id == "ielts") words = _ieltsCatalog!.Sections.Where(s => !s.Kind.StartsWith("exam:", StringComparison.Ordinal)).SelectMany(s => s.Entries).ToList();
+            else if (source.Id == "synonyms") words = _ieltsCatalog!.Sections.Where(s => !s.Kind.StartsWith("exam:", StringComparison.Ordinal)).SelectMany(s => s.Entries).SelectMany(w => w.Synonyms.Select((synonym, i) => new LearningWord
             { Id = w.Id + ":synonym:" + i, Words = [synonym], Meaning = w.Meaning, Extra = w.Word })).ToList();
             else words = _ieltsCatalog!.Sections.Single(s => s.Id == source.Id).Entries;
             if (epoch != _typingLoadEpoch || _currentPage != "typing" || _isForceClose) return;
-            StartTypingRound(words, T(source.Title));
+            StartTypingRound(words, TypingSourceTitle(source));
         }
         catch (Exception ex) { SetStatus(T("词库读取失败：") + ex.Message); }
         finally { if (epoch == _typingLoadEpoch) _typingStart.IsEnabled = true; }
@@ -130,7 +130,7 @@ public partial class MainWindow
     private void ReplayTypingWord(bool showPhonetic = false)
     {
         if (_typingSession.Current is not { } word) return;
-        var original = _planTypingActive ? null : _ieltsCatalog?.Find(word.Word);
+        var original = _planTypingActive ? null : _ieltsCatalog?.AllWords.FirstOrDefault(w => w.Id == word.Id) ?? _ieltsCatalog?.Find(word.Word);
         var recording = IeltsCatalog.ResolveAsset(word.AudioPath) ??
             (string.Equals(original?.Word, word.Word, StringComparison.OrdinalIgnoreCase) ? IeltsCatalog.ResolveAsset(original?.AudioPath) : null);
         _wordAudio.Play(word.Word, recording);
@@ -281,7 +281,7 @@ public partial class MainWindow
         if (_typingSource == null) return;
         void Refresh(ComboBox combo, IEnumerable<string> items)
         { var index = combo.SelectedIndex; combo.ItemsSource = items.ToList(); combo.SelectedIndex = index; }
-        Refresh(_typingSource, _typingSources.Select(s => T(s.Title)));
+        Refresh(_typingSource, _typingSources.Select(TypingSourceTitle));
         Refresh(_typingMode, new[] { T("淡写"), T("默写") });
         RefreshRoundControls(_typingRoundOptions); RefreshRoundControls(_ieltsRoundOptions);
         if (_typingPlaying) { if (_typingSession.Current == null) RenderTypingStats(); else RenderTypingLetters(); }

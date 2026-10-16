@@ -2,6 +2,7 @@ using System.Reflection;
 using System.Text.Json;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
+using Avalonia.Interactivity;
 using Microsoft.Data.Sqlite;
 
 namespace Lexi;
@@ -41,8 +42,9 @@ public static class MemoryRestartTests
             var ids = fixture.GetAllWords().Where(w => w.Word is "restart-one" or "restart-two").Select(w => w.Id).ToArray();
             fixture.ExecuteBatch(ids, "today");
             Call(window, "RefreshWords");
-            // ShowPage("review") 内部已经 OpenReviewDeck；再显式开一次会重开一轮、作废刚恢复的队列。
+            // Review 页面先展示预览；点击开始本批后，MemoryBeginSession 会尝试恢复上一进程的队列。
             Call(window, "ShowPage", "review");
+            window.FindControl<Button>("ReviewStartAllBtn")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
             var round = Round(window);
             Require(round.Total == 2 && round.HasCurrent, "phase A did not start a real two-card review round");
@@ -96,6 +98,7 @@ public static class MemoryRestartTests
                 ?? throw new InvalidDataException("phase A state is missing.");
             Call(window, "RefreshWords");
             Call(window, "ShowPage", "review");
+            window.FindControl<Button>("ReviewStartAllBtn")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
 
             var store = MemoryStore(window);
             var sessionId = Store(window).CurrentSessionId;

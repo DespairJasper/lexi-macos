@@ -1,6 +1,27 @@
 using Lexi;
 using System.Text.Json;
 void Check(bool value, string message) { if (!value) throw new Exception("FAIL: " + message); Console.WriteLine("PASS: " + message); }
+if (Environment.GetEnvironmentVariable("LEXI_EXAM_BOOKS_ONLY") == "1")
+{
+    var multi = ExamCatalog.Load();
+    Check(multi.Books.Count == 20 && new[] { "cet4", "cet6", "kaoyan", "gmat", "toefl", "gre" }
+        .Select(id => multi.Books.Count(b => b.TopicId == id)).SequenceEqual(new[] { 5, 4, 4, 3, 2, 2 }), "all twenty upstream books have the expected topic counts");
+    Check(multi.Books.Take(6).Select(b => b.AllWords.Count()).SequenceEqual(new[] { 3739, 2078, 4533, 3254, 9212, 7199 }), "the original six book counts stay unchanged");
+    var all = multi.Books.SelectMany(b => b.AllWords).ToList();
+    Check(all.Count == 66974 && all.Select(w => w.Id).Distinct(StringComparer.Ordinal).Count() == all.Count, "all book entries keep distinct stable source identities");
+    Check(multi.Books.All(b => b.Title.Length > 0 && b.EnglishTitle.Length > 0 && b.Sections.All(s => s.Entries.Count is > 0 and <= 100)), "actual bilingual book titles and bounded units are present");
+    foreach (var topic in multi.Books.GroupBy(b => b.TopicId))
+    {
+        var first = topic.First(); var forms = first.AllWords.ToDictionary(w => WordKeyResolver.FormC(w.Word), StringComparer.Ordinal);
+        foreach (var book in topic.Skip(1))
+        {
+            var common = book.AllWords.First(w => forms.ContainsKey(WordKeyResolver.FormC(w.Word)));
+            Check(WordKeyResolver.FromIelts(common) != WordKeyResolver.FromIelts(forms[WordKeyResolver.FormC(common.Word)]), book.BookId + " overlapping spellings stay separate from the base book");
+        }
+    }
+    Console.WriteLine("PASS scoped multibook domain tests");
+    return;
+}
 LearningWord W(string text) => new() { Id = text, Words = [text] };
 var hintedPrefix = TypingFeedbackModel.Build("apple", "ap", true, TypingOutcome.Pending);
 Check(new string(hintedPrefix.Select(letter => letter.Character).ToArray()) == "apple" &&
@@ -34,6 +55,15 @@ session.Reset([W("well-being")], false);
 Check(session.Submit("well") == TypingOutcome.Pending && session.Submit("wel") == TypingOutcome.Pending, "允许退格编辑");
 Check(session.Submit("well-beingX") == TypingOutcome.Retry, "超长不绕过检查");
 session.Reset([], true); Check(session.Outcome == TypingOutcome.Finished, "空词库安全完成");
+var exams = ExamCatalog.Load();
+Check(exams.Books.Count == 20 && exams.Books.Count(b => b.TopicId == "kaoyan") == 4, "all twenty upstream exam books are available, including four postgraduate books");
+Check(exams.Books.Take(6).Select(b => b.AllWords.Count()).SequenceEqual(new[] { 3739, 2078, 4533, 3254, 9212, 7199 }), "six pinned base books have verified word counts");
+Check(exams.Books.All(b => b.Sections.All(s => s.Entries.Count is > 0 and <= 100 && s.EnglishTitle.StartsWith("Unit "))), "exam chapters are bounded and have English interface labels");
+var examWords = exams.Books.SelectMany(b => b.AllWords).ToList();
+Check(examWords.Select(w => w.Id).Distinct().Count() == examWords.Count && examWords.All(w => w.Meaning.Length > 0), "exam words have unique stable IDs and translations");
+var commonForm = exams.Books[0].AllWords.First(w => exams.Books[1].AllWords.Any(other => other.Word.Equals(w.Word, StringComparison.OrdinalIgnoreCase)));
+var otherForm = exams.Books[1].AllWords.First(w => w.Word.Equals(commonForm.Word, StringComparison.OrdinalIgnoreCase));
+Check(WordKeyResolver.FromIelts(commonForm) != WordKeyResolver.FromIelts(otherForm), "overlapping exam spellings keep separate memory identities");
 var catalog = IeltsCatalog.Load();
 Check(catalog.Sections.Count(s => s.Kind == "vocabulary") == 22 && catalog.Sections.Where(s => s.Kind == "vocabulary").Sum(s => s.Entries.Count) == 3674, "22章3674完整词条");
 Check(catalog.Sections.Single(s => s.Id == "listening179").Entries.Count == 179, "179听力词");
@@ -41,6 +71,11 @@ Check(catalog.Sections.Where(s => s.Kind == "reading").Sum(s => s.Entries.Count)
 Check(catalog.Sentences.Count == 100 && catalog.Sentences.All(s => s.Chinese.Length > 0 && s.BookAnswer.Length > 0), "100句写作及书中答案");
 Check(catalog.Find("atmosphere")!.Example.Length > 0 && catalog.Find("jeopardize") != null, "例句及所有词形索引");
 Check(catalog.AllWords.Select(w => w.Id).Distinct().Count() == catalog.AllWords.Count(), "稳定词条ID无碰撞");
+var mergedCatalog = IeltsCatalog.Load();
+var examOnly = examWords.First(w => mergedCatalog.Find(w.Word) == null);
+mergedCatalog.Sections.AddRange(exams.Books.SelectMany(b => b.Sections));
+Check(mergedCatalog.Find(examOnly.Word) == null && mergedCatalog.AllWords.Any(w => w.Id == examOnly.Id), "new exam assets remain available by ID without changing ordinary IELTS lookup identities");
+
 Check(catalog.AllWords.Where(w => w.AudioPath.Length > 0).All(w => IeltsCatalog.ResolveAsset(w.AudioPath) != null), "所有单词录音引用存在");
 Check(IeltsCatalog.ResolveAsset("../../../outside") == null, "资源路径防越界");
 using var manifest = JsonDocument.Parse(File.ReadAllText(Path.Combine(IeltsCatalog.AssetDirectory, "manifest.json")));

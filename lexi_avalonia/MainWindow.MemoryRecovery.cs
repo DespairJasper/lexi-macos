@@ -40,6 +40,8 @@ public partial class MainWindow
         _memorySurface = !string.IsNullOrEmpty(planId) ? MemorySurface.Plan
             : mode == StudyMode.Review ? MemorySurface.Review : MemorySurface.Focus;
         _memoryRecoveryScope = $"{source}:{planId}";
+        if (_memorySurface == MemorySurface.Focus && source == WordSource.Ielts && ActiveExamBook is { } book)
+            _memoryRecoveryScope += ":exam:" + book.Id;
         var memory = Memory;
         if (memory is null || _memoryStore is null || !string.IsNullOrEmpty(memory.CurrentSessionId)) return false;
         var checkpoint = _memoryStore.GetSessionCheckpoint(MemoryCheckpointSurface);

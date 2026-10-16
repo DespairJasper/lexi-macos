@@ -19,6 +19,7 @@ public sealed class LearningWord
 
 public sealed class LearningSection
 {
+    public string EnglishTitle { get; set; } = "";
     public string Id { get; set; } = "";
     public string Kind { get; set; } = "";
     public string Title { get; set; } = "";
@@ -60,7 +61,7 @@ public sealed class IeltsCatalog
     public LearningWord? Find(string? word)
     {
         if (string.IsNullOrWhiteSpace(word)) return null;
-        _index ??= AllWords.SelectMany(w => w.Words.Select(form => (form, w)))
+        _index ??= Sections.Where(s => !s.Kind.StartsWith("exam:", StringComparison.Ordinal)).SelectMany(s => s.Entries).SelectMany(w => w.Words.Select(form => (form, w)))
             .GroupBy(pair => pair.form, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.First().w, StringComparer.OrdinalIgnoreCase);
         return _index.GetValueOrDefault(word.Trim());

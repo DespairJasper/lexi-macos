@@ -447,7 +447,7 @@ public partial class MainWindow
             var focusIdentity = MemoryFocusIdentity(word);
             MemoryRated(MemorySurface.Focus, focusIdentity, rating, recognitionBefore, result.Streak,
                 result.Completed ? MemoryFocusCommitMode(word) : null);
-            var catalogWord = _wordFocusSnapshot?.Page == "ielts" ? _ieltsCatalog?.Find(word) : null;
+            var catalogWord = _wordFocusSnapshot?.Page == "ielts" ? FindLearningWord(word) : null;
             if (FindArchive(word) == null && catalogWord != null)
             {
                 // 只在词表里认词时不自动建立个人档案；模糊/忘记记入错词本。

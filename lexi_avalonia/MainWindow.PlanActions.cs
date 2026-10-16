@@ -88,7 +88,7 @@ public partial class MainWindow
     {
         if (_planReadFailed) { SetStatus(T("学习计划读取失败，已暂停写入以保护原文件。")); return false; }
         if (!MemoryDrainPendingBeforeJsonEdit()) return false;
-        try { _studyPlanStore.Save(pending); _studyPlans = pending; return true; }
+        try { _studyPlanStore.Save(pending); _studyPlans = pending; SocialObserveSaved(Lexi.Social.QualificationCause.PlanChange); return true; }
         catch (Exception ex) { SetStatus(T("学习计划保存失败：") + ex.Message); return false; }
     }
 
@@ -107,7 +107,7 @@ public partial class MainWindow
     {
         if (_planReadFailed || plan.Status != DailyStudyPlanStatus.Stopped || !_studyPlans.Any(p => ReferenceEquals(p, plan))) return false;
         if (!DailyStudyPlanRules.Resume(plan)) return false;
-        if (!SaveStudyPlans()) { plan.Status = DailyStudyPlanStatus.Stopped; return false; }
+        if (!SaveStudyPlansCore(true)) { plan.Status = DailyStudyPlanStatus.Stopped; return false; }
         _planFeedback.Text = T("计划已恢复，将从原进度继续。"); RenderStudyPlanLists(); return true;
     }
 

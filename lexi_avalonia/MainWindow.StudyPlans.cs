@@ -36,6 +36,7 @@ public partial class MainWindow
         PlanCancelOverlapBtn.Click += (_, _) => CloseStudyPlanDialog();
         PlanCreateConfirmBtn.Click += (_, _) => TryCreateStudyPlan();
         PlanContinueOverlapBtn.Click += (_, _) => CommitStudyPlan();
+        PlanExamInput.SelectionChanged += (_, _) => { if (!_planDialogConfiguring) PopulatePlanBooks(); };
         PlanBookInput.SelectionChanged += (_, _) => { if (!_planDialogConfiguring) PopulatePlanUnits(); };
         PlanUnitInput.SelectionChanged += (_, _) => { if (!_planDialogConfiguring) SetPlanCandidates(); };
         PlanWordSearch.TextChanged += (_, _) => { _planChoicePage = 0; RenderPlanChoices(); };
@@ -67,8 +68,11 @@ public partial class MainWindow
         _planDraftSource = source; _draftStudyPlan = null; _planSelectedIds.Clear();
         PlanWordSearch.Text = ""; PlanNameInput.Text = ""; PlanDailyCountInput.Value = 20; PlanRandomInput.IsChecked = false;
         PlanIeltsSelectors.IsVisible = source == DailyStudyPlanSource.Ielts;
-        PlanBookInput.ItemsSource = new[] { T("词汇真经"), T("听力 179"), T("阅读同义替换"), T("英美拼写规范") };
-        PlanBookInput.SelectedIndex = Math.Clamp(_ieltsKind.SelectedIndex, 0, 3);
+        PlanExamInput.ItemsSource = PlanExamTitles();
+        PlanExamInput.SelectedIndex = _activeExamId == null ? 0 : Array.IndexOf(PlanExamTopicIds, _activeExamId) + 1;
+        PlanBookInput.ItemsSource = PlanBookTitles();
+        PlanBookInput.SelectedIndex = _activeExamId == null ? Math.Clamp(_ieltsKind.SelectedIndex, 0, 3)
+            : SelectedPlanExamBooks.IndexOf(ActiveExamBook!);
         _planDialogConfiguring = false;
         if (source == DailyStudyPlanSource.Ielts) PopulatePlanUnits();
         else SetPlanCandidates();
@@ -78,7 +82,9 @@ public partial class MainWindow
     private void PopulatePlanUnits()
     {
         var kind = PlanBookInput.SelectedIndex switch { 1 => "listening", 2 => "reading", 3 => "spelling", _ => "vocabulary" };
-        var sections = _ieltsCatalog!.Sections.Where(s => s.Kind == kind).ToList();
+        var sections = SelectedPlanExamTopic != null
+            ? SelectedPlanExamBooks[PlanBookInput.SelectedIndex].Sections
+            : _ieltsCatalog!.Sections.Where(s => s.Kind == kind).ToList();
         var whole = new LearningSection { Id = "plan-whole-book", Title = T("整本词书"),
             Entries = sections.SelectMany(s => s.Entries).DistinctBy(w => w.Id).ToList() };
         _planDialogConfiguring = true;
@@ -143,7 +149,7 @@ public partial class MainWindow
         if (_editingStudyPlan is { } editing)
         {
             var preview = DailyStudyPlanRules.Adjust(editing, editing.Name, daily, editing.RandomOrder, editing.ShuffleSeed);
-            PlanSourceSummary.Text = editing.SourceLabel + " · " + TF($"总进度 {editing.CompletedWordIds.Count}/{editing.Words.Count}")
+            PlanSourceSummary.Text = PlanSourceDisplay(editing) + " · " + TF($"总进度 {editing.CompletedWordIds.Count}/{editing.Words.Count}")
                 + "\n" + T("已学进度保留；词数和顺序调整从下一批生效。");
             PlanEstimate.Text = TF($"每日 {daily} 词 · 预计剩余 {DailyStudyPlanRules.EstimatedDaysRemaining(preview)} 天");
             return;
@@ -178,6 +184,7 @@ public partial class MainWindow
         var pending = _studyPlans.Append(_draftStudyPlan).ToList();
         try { _studyPlanStore.Save(pending); _studyPlans = pending; }
         catch (Exception ex) { PlanDialogError.Text = T("学习计划保存失败：") + ex.Message; return; }
+        SocialObserveSaved(Lexi.Social.QualificationCause.PlanChange);
         _draftStudyPlan = null; PlanDialogOverlay.IsVisible = false;
         _planFeedback.Text = T("计划已创建。新的归档词不会加入既有计划。"); RenderStudyPlanLists();
     }
@@ -193,15 +200,16 @@ public partial class MainWindow
     private void StopStudyPlan(DailyStudyPlan plan)
     {
         var priorStatus = plan.Status; DailyStudyPlanRules.Stop(plan);
-        if (!SaveStudyPlans()) { plan.Status = priorStatus; return; } RenderStudyPlanLists();
+        if (!SaveStudyPlansCore(true)) { plan.Status = priorStatus; return; } RenderStudyPlanLists();
     }
-    private bool SaveStudyPlans()
+    private bool SaveStudyPlans() => SaveStudyPlansCore(false);
+    private bool SaveStudyPlansCore(bool intentionalPlanChange)
     {
         if (_planReadFailed) { SetStatus(T("学习计划读取失败，已暂停写入以保护原文件。")); return false; }
         // 计划 JSON 的**任何一次新编辑之前**都必须先排空待办：撤销 / 改判 / 计划列表编辑都走这里。
         // 否则更早的未交付快照会在之后被重放，把这次新编辑覆盖掉（CrossStoreJournal 的契约）。
         if (!MemoryDrainPendingBeforeJsonEdit()) return false;
-        try { _studyPlanStore.Save(_studyPlans); return true; }
+        try { _studyPlanStore.Save(_studyPlans); SocialObserveSaved(Lexi.Social.SocialFactProjection.SavedCause(false, intentionalPlanChange)); return true; }
         catch (Exception ex) { SetStatus(T("学习计划保存失败：") + ex.Message); return false; }
     }
     private IBrush PlanModalBrush()
@@ -220,10 +228,12 @@ public partial class MainWindow
         if (_studyPlanPage != null)
         {
             _planDialogConfiguring = true;
+            var examIndex = PlanExamInput.SelectedIndex;
             var bookIndex = PlanBookInput.SelectedIndex;
             var unit = PlanUnitInput.SelectedItem as LearningSection;
             var units = (PlanUnitInput.ItemsSource as IEnumerable<LearningSection>)?.ToList();
-            PlanBookInput.ItemsSource = new[] { T("词汇真经"), T("听力 179"), T("阅读同义替换"), T("英美拼写规范") };
+            PlanExamInput.ItemsSource = PlanExamTitles(); PlanExamInput.SelectedIndex = Math.Max(0, examIndex);
+            PlanBookInput.ItemsSource = PlanBookTitles();
             PlanBookInput.SelectedIndex = bookIndex;
             if (units != null)
             {
@@ -231,7 +241,7 @@ public partial class MainWindow
                 PlanUnitInput.ItemsSource = null; PlanUnitInput.ItemsSource = units; PlanUnitInput.SelectedItem = unit;
             }
             _planDialogConfiguring = false;
-            _planSourceLabel = _editingStudyPlan?.SourceLabel ?? (_planDraftSource == DailyStudyPlanSource.Archive ? T("词汇档案") : PlanBookInput.SelectedItem + " · " + unit?.Title);
+            _planSourceLabel = (_editingStudyPlan == null ? null : PlanSourceDisplay(_editingStudyPlan)) ?? (_planDraftSource == DailyStudyPlanSource.Archive ? T("词汇档案") : PlanBookInput.SelectedItem + " · " + unit?.Title);
             RenderStudyPlanLists(); UpdatePlanEstimate(); RefreshPlanActionsLanguage(); RefreshPlanLearningLanguage();
         }
     }

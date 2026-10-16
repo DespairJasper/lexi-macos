@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Interactivity;
+using Avalonia.LogicalTree;
 using Avalonia.Media.Imaging;
 using Avalonia.VisualTree;
 
@@ -20,6 +21,14 @@ public static class LanguageTests
         object? Call(string name, params object[] args) => typeof(MainWindow).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, args);
         void Check(bool ok, string label) { if (!ok) throw new Exception(label); log.Add("PASS " + label); }
         void Click(Button b) => b.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+        static IEnumerable<string> LogicalTexts(ILogical root)
+        {
+            foreach (var child in root.LogicalChildren)
+            {
+                if (child is TextBlock text) yield return text.Text ?? "";
+                foreach (var nested in LogicalTexts(child)) yield return nested;
+            }
+        }
         async Task Snapshot(string name)
         {
             await Task.Delay(150);
@@ -88,6 +97,18 @@ public static class LanguageTests
             using (var store = new VocabularyService()) Check(store.LoadSettings().UiLanguage == "en", "English persists independently of API settings");
             await Snapshot("language-en-editor");
             Click(C<Button>("DialogEditCancelBtn"));
+            var editOverlay = C<Border>("DialogEditOverlay");
+            for (var attempt = 0; editOverlay.IsVisible && attempt < 40; attempt++) await Task.Delay(25);
+            Check(!editOverlay.IsVisible, "archive editor finishes closing before page navigation");
+            Click(window.GetVisualDescendants().OfType<Button>().Single(button => button.Name == "NavSocial"));
+            var socialPage = window.GetVisualDescendants().OfType<ScrollViewer>().Single(viewer => viewer.Name == "SocialPage");
+            Check(socialPage.IsVisible, "Study together page opens after switching to English");
+            var socialBody = (StackPanel)typeof(MainWindow).GetField("_socialBody", BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(window)!;
+            var socialTexts = LogicalTexts(socialBody).ToArray();
+            Check(socialTexts.Contains("Study together")
+                && socialTexts.Contains("Follow your own study plans and build a shared streak, one day at a time.")
+                && !socialTexts.Any(text => text.Any(character => character is >= '\u4e00' and <= '\u9fff')),
+                "opening the hidden Study together page after switching to English keeps every visible label English");
             Click(C<Button>("NavSettings"));
             Check(C<Button>("BackupNowBtn").Content?.ToString() == "Back up now" && C<CheckBox>("SettingsRememberKeyBox").Content!.ToString()!.Contains("macOS Keychain"), "English backup and Keychain labels");
             Check(C<TextBlock>("DiagnosticsText").Text!.Contains("Layout:") && C<TextBlock>("DataIdentityText").Text!.Contains("Vocabulary"), "English diagnostics and data summary");

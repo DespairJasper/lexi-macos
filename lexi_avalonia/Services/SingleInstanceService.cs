@@ -6,12 +6,17 @@ namespace Lexi;
 
 public sealed class SingleInstanceService : IDisposable
 {
-    private static readonly string Scope = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
-        Environment.UserDomainName + "|" + Environment.UserName + "|" +
-        System.Diagnostics.Process.GetCurrentProcess().SessionId + "|" +
-        Path.GetFullPath(VocabularyService.GetDefaultDatabasePath()).ToUpperInvariant())))[..24];
-    private static readonly string MutexName = @"Local\LexiNative_" + Scope;
-    private static readonly string PipeName = "LexiNative_" + Scope;
+    private readonly string _mutexName;
+    private readonly string _pipeName;
+    public SingleInstanceService()
+    {
+        var path = StoragePathIdentity.Resolve(VocabularyService.GetDefaultDatabasePath());
+        if (OperatingSystem.IsWindows()) path = path.ToUpperInvariant();
+        var scope = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(
+            Environment.UserDomainName + "|" + Environment.UserName + "|" +
+            System.Diagnostics.Process.GetCurrentProcess().SessionId + "|" + path)))[..24];
+        _mutexName = @"Local\LexiNative_" + scope; _pipeName = "LexiNative_" + scope;
+    }
     private Mutex? _mutex;
     private readonly CancellationTokenSource _stop = new();
     private bool _owns;
@@ -26,13 +31,13 @@ public sealed class SingleInstanceService : IDisposable
     }
     public bool CheckAndAcquire(bool wakeExisting = true)
     {
-        _mutex = new Mutex(false, MutexName);
+        _mutex = new Mutex(false, _mutexName);
         try { _owns = _mutex.WaitOne(0); }
         catch (AbandonedMutexException) { _owns = true; }
         if (!_owns)
         {
             if (!wakeExisting) return false;
-            using var client = new NamedPipeClientStream(".", PipeName, PipeDirection.Out);
+            using var client = new NamedPipeClientStream(".", _pipeName, PipeDirection.Out);
             client.Connect(5000);
             client.Write("SHOW"u8);
             client.Flush();
@@ -47,7 +52,7 @@ public sealed class SingleInstanceService : IDisposable
         {
             try
             {
-                using var server = new NamedPipeServerStream(PipeName, PipeDirection.In, 1,
+                using var server = new NamedPipeServerStream(_pipeName, PipeDirection.In, 1,
                     PipeTransmissionMode.Byte, PipeOptions.Asynchronous | PipeOptions.CurrentUserOnly);
                 await server.WaitForConnectionAsync(token);
                 using var timeout = CancellationTokenSource.CreateLinkedTokenSource(token);

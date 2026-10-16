@@ -32,6 +32,10 @@ public static class LearningUiTests
     public static async Task RunAsync(MainWindow window)
     {
         var folder = Environment.GetEnvironmentVariable("LEXI_DATA_DIR") ?? throw new InvalidOperationException("Isolated test data required");
+        if (Environment.GetEnvironmentVariable("LEXI_EXAM_BOOKS_ONLY") == "1")
+        {
+            await ExamBooksUiTests.RunAsync(window); return;
+        }
         var report = new List<string>();
         void Check(bool ok, string message)
         {
@@ -59,9 +63,19 @@ public static class LearningUiTests
             Click("NavIelts"); await Task.Delay(220);
             Check(C<Grid>("PageIelts").IsVisible && !C<Grid>("LookupPageHost").IsVisible, "IELTS is an integrated exclusive native page");
             Check(C<ComboBox>("IeltsSection").ItemCount == 22 && C<StackPanel>("IeltsRows").Children.Count == 30, "22 chapters with bounded pages");
+            Check(window.GetLogicalDescendants().OfType<Button>().Any(b => b.Name == "NavExams"), "exam topics have a grouped navigation entry");
             // Plan creation and progress use their own manager, frozen words and JSON store.
             T Field<T>(string name) => (T)typeof(MainWindow).GetField(name, BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
             async Task InvokeAsync(string name, params object[] args) => await (Task)Call(name, args)!;
+            foreach (var examBook in Field<ExamCatalog>("_examCatalog").Books)
+            {
+                var source = examBook.AllWords.First(w => w.Example.Length > 0 && w.Extra.Length > 0);
+                var dueWord = (WordItem)Call("MemorySourceReviewWord", WordKeyResolver.FromIelts(source), DateTime.UtcNow)!;
+                Check(dueWord.AiResult?.Examples.Single().English == source.Example
+                    && dueWord.AiResult?.Phrases.Single().English == source.Extra,
+                    examBook.EnglishTitle + " review expansion uses its exact source examples and phrases");
+            }
+
             async Task SelectPlanWords(params string[] words)
             {
                 Click("PlanClearSelectionBtn");
@@ -717,7 +731,10 @@ public static class LearningUiTests
             Click("TypingRestartBtn"); Check(session.Count == 2, "restart does not duplicate spelling variants");
             var store = (IVocabularyArchive)typeof(MainWindow).GetField("_vocabService",BindingFlags.Instance|BindingFlags.NonPublic)!.GetValue(window)!;
             store.AddWord("apple", "", "苹果", ""); store.ExecuteBatch([store.GetAllWords().Single(w => w.Word == "apple").Id], "today"); Call("RefreshWords"); Click("NavReview");
-            Check(Audio.Calls.Last().Text == "apple", "review card automatically pronounces due word");
+            Click("ReviewStartAllBtn");
+            Check(!string.IsNullOrWhiteSpace(C<TextBlock>("ReviewWordText").Text)
+                && Audio.Calls.Last().Text == C<TextBlock>("ReviewWordText").Text,
+                "starting a review batch automatically pronounces its displayed due word");
             Call("ExitWordFocus"); Click("NavIelts");
             var dictionary = typeof(MainWindow).GetField("_dictService", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
             var gate = dictionary.GetType().GetField("_gate", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(dictionary)!;
@@ -745,6 +762,85 @@ public static class LearningUiTests
             await staleLookup;
             var expansion = typeof(MainWindow).GetField("_currentExpansion", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window);
             Check(navigationSafe && expansion == null && C<TextBlock>("ResultWordText").Text == "apple", $"pending IELTS card preserves newer navigation ({navigationSafe}); stale query preserves current expansion ({expansion == null})");
+            Call("ExitWordFocus");
+            var books = Field<ExamCatalog>("_examCatalog").Books;
+            var PlanExamTopicIdsForTest = new[] { "cet4", "cet6", "kaoyan", "gmat", "toefl", "gre" };
+            foreach (var book in books)
+            {
+                Click("NavExams"); Click("NavExam_" + book.TopicId);
+                C<ComboBox>("IeltsKind").SelectedIndex = books.Where(b => b.TopicId == book.TopicId).ToList().IndexOf(book);
+                Check(C<Grid>("PageIelts").IsVisible && C<ScrollViewer>("ExamNavigation").IsVisible && !C<Grid>("MainNavigation").IsVisible,
+                    book.EnglishTitle + " opens in the grouped sidebar");
+                Check(C<ComboBox>("IeltsSection").ItemCount == book.Sections.Count
+                    && C<StackPanel>("IeltsRows").Children.Count == 30, book.EnglishTitle + " reuses paged IELTS vocabulary rows");
+                Check(C<ComboBox>("IeltsKind").SelectedItem?.ToString() == book.EnglishTitle
+                    && C<ComboBox>("IeltsSection").SelectedItem?.ToString() == "Unit 01"
+                    && C<Button>("NavExams").Content?.ToString() == "Exam topics"
+                    && C<Button>("NavExamsBack").Content?.ToString() == "← Main navigation",
+                    book.EnglishTitle + " has English navigation, book and chapter labels");
+                var selectedWord = book.Sections[0].Entries[0];
+                Check(((LearningWord)Call("FindLearningWord", selectedWord.Word)!).Id == selectedWord.Id,
+                    book.EnglishTitle + " selects its own memory source for overlapping spellings");
+                Click("ExamPlanCreateBtn");
+                Check(C<ComboBox>("PlanExamInput").SelectedIndex == Array.IndexOf(PlanExamTopicIdsForTest, book.TopicId) + 1
+                    && C<ComboBox>("PlanBookInput").SelectedIndex == books.Where(b => b.TopicId == book.TopicId).ToList().IndexOf(book)
+                    && Field<List<DailyStudyPlanWord>>("_planCandidates").Select(w => w.Id).SequenceEqual(book.Sections[0].Entries.Select(w => w.Id)),
+                    book.EnglishTitle + " plan defaults to the current chapter and freezes the correct IDs");
+                C<ComboBox>("PlanUnitInput").SelectedIndex = 0;
+                Check(Field<List<DailyStudyPlanWord>>("_planCandidates").Count == book.AllWords.Count()
+                    && C<ComboBox>("PlanUnitInput").SelectedItem?.ToString() == "Entire book",
+                    book.EnglishTitle + " whole-book plan includes every word and English labels");
+                Click("PlanCancelBtn");
+                C<ComboBox>("IeltsPracticeMode").SelectedIndex = 1;
+                C<NumericUpDown>("IeltsCount").Value = 1; C<CheckBox>("IeltsAll").IsChecked = false; C<ComboBox>("IeltsOrder").SelectedIndex = 0;
+                Click("IeltsPracticeStartBtn"); await Task.Delay(50);
+                Check(Field<TypingSession>("_typingSession").Current?.Id == selectedWord.Id
+                    && Field<TypingSession>("_typingSession").Hints, book.EnglishTitle + " uses the IELTS hinted spelling session");
+                Call("StopTypingRound"); Click("NavExam_" + book.TopicId);
+                C<ComboBox>("IeltsPracticeMode").SelectedIndex = 2;
+                Click("IeltsPracticeStartBtn"); await Task.Delay(50);
+                Check(!Field<TypingSession>("_typingSession").Hints, book.EnglishTitle + " uses the IELTS dictation session");
+                Call("StopTypingRound"); Click("NavExam_" + book.TopicId);
+                C<ComboBox>("IeltsPracticeMode").SelectedIndex = 0;
+                C<ComboBox>("IeltsOrder").SelectedIndex = 0;
+                await InvokeAsync("StartIeltsCardsAsync", new List<LearningWord> { selectedWord });
+                Check(Field<bool>("_wordFocusActive") && C<TextBlock>("ResultWordText").Text == selectedWord.Word,
+                    book.EnglishTitle + " opens the shared recognition card");
+                Check(((LearningWord)Call("FindLearningWord", selectedWord.Word)!).Id == selectedWord.Id,
+                    book.EnglishTitle + " card retains its exam identity after lookup navigation");
+                var keyArgs = new object[] { selectedWord.Word, default(WordKey) };
+                Check((bool)Call("MemoryTryFocusKey", keyArgs)! && (WordKey)keyArgs[1] == WordKeyResolver.FromIelts(selectedWord),
+                    book.EnglishTitle + " recognition resolves its stable exam FSRS key");
+                Check(Field<string>("_memoryRecoveryScope") == "Ielts::exam:" + book.Id,
+                    book.EnglishTitle + " unfinished rounds are isolated from IELTS and other topics");
+                if (Field<StudyRound<string>>("_focusRound").CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
+                await InvokeAsync("RateFocusedWordAsync", StudyRating.Unsure);
+                await InvokeAsync("AdvanceFocusCardAsync");
+                for (var recognition = 0; recognition < 3 && Field<StudyRound<string>>("_focusRound").HasCurrent; recognition++)
+                {
+                    if (Field<StudyRound<string>>("_focusRound").CurrentStep == StudyStep.Learn) await InvokeAsync("CompleteFocusLearnAsync");
+                    await InvokeAsync("RateFocusedWordAsync", StudyRating.Known);
+                    if (Field<StudyRound<string>>("_focusRound").HasCurrent) await InvokeAsync("AdvanceFocusCardAsync");
+                }
+                using (var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = store.DatabasePath, Mode = SqliteOpenMode.ReadOnly, Pooling = false }.ToString()))
+                {
+                    db.Open(); using var query = db.CreateCommand(); query.CommandText = "SELECT COUNT(*) FROM canonical_reviews WHERE word_key=$key";
+                    query.Parameters.AddWithValue("$key", WordKeyResolver.FromIelts(selectedWord).Key);
+                    Check(Convert.ToInt32(query.ExecuteScalar()) > 0, book.EnglishTitle + " recognition persists through the existing canonical memory pipeline");
+                }
+                Call("ExitWordFocus");
+            }
+            Click("NavExam_cet4"); C<ComboBox>("IeltsKind").SelectedIndex = 0; Click("LanguageToggleBtn");
+            Check(C<ComboBox>("IeltsKind").SelectedItem?.ToString() == "四级英语词汇（正序版）"
+                && C<ComboBox>("IeltsSection").SelectedItem?.ToString() == "第 01 单元", "exam book and unit labels switch back to Chinese");
+            Click("LanguageToggleBtn");
+            Check(C<ComboBox>("IeltsKind").SelectedItem?.ToString() == "CET-4 Vocabulary (Alphabetical)"
+                && C<ComboBox>("IeltsSection").SelectedItem?.ToString() == "Unit 01", "exam book and unit labels switch live to English");
+            await Snapshot("exam-cet4-english");
+            Click("NavExamsBack");
+            Check(C<Grid>("MainNavigation").IsVisible && C<Button>("NavSocial").IsEffectivelyVisible, "return to main navigation preserves account and together-learning entry");
+            Click("NavIelts");
+            Check(C<ComboBox>("IeltsKind").ItemCount == 6, "IELTS retains all six original resource categories");
             var desktop = (IClassicDesktopStyleApplicationLifetime)Application.Current!.ApplicationLifetime!;
             var dockQuitAllowed = false;
             desktop.ShutdownRequested += (_, _) => dockQuitAllowed = (bool)typeof(MainWindow).GetField("_isForceClose", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;

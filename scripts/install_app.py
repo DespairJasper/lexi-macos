@@ -45,6 +45,18 @@ def require_data_backup(backup_dir):
     if snapshot.is_symlink():
         # 符号链接不是快照而是**活指针**：安装若写坏正式库，"备份"会同时被写坏。
         raise RuntimeError(f"拒绝安装：备份里的 vocab.sqlite3 是符号链接（{os.readlink(snapshot)}），不是快照。")
+    data_dir = Path(os.environ.get(
+        "LEXI_USER_DATA_DIR",
+        str(Path.home() / "Library" / "Application Support" / "Lexi"),
+    ))
+    source_social = data_dir / "social.sqlite3"
+    backup_social = folder / "social.sqlite3"
+    if source_social.exists() and (not backup_social.is_file() or backup_social.is_symlink()):
+        raise RuntimeError(
+            f"拒绝安装：当前数据目录 {data_dir} 有 social.sqlite3，但安装前快照缺少有效的 social.sqlite3；"
+            "请重新运行 backup_user_data.sh。")
+    if backup_social.exists() and backup_social.is_symlink():
+        raise RuntimeError(f"拒绝安装：备份里的 social.sqlite3 是符号链接，不是快照。")
     check = subprocess.run(["/usr/bin/shasum", "-a", "256", "-c", manifest.name],
                            cwd=str(folder), capture_output=True, text=True)
     if check.returncode != 0:
@@ -60,6 +72,8 @@ def require_data_backup(backup_dir):
         raise RuntimeError(f"拒绝安装：SNAPSHOT.json 无法解析：{exc}") from exc
     if info.get("source_db_sha256") != hashlib.sha256(snapshot.read_bytes()).hexdigest():
         raise RuntimeError("拒绝安装：SNAPSHOT.json 记录的库哈希与备份内容不符。")
+    if backup_social.exists() and info.get("source_social_db_sha256") != hashlib.sha256(backup_social.read_bytes()).hexdigest():
+        raise RuntimeError("拒绝安装：SNAPSHOT.json 记录的 social.sqlite3 哈希与备份内容不符。")
     if SOURCE.exists():
         source_mtime = SOURCE.stat().st_mtime
         if info.get("app_mtime") is None or info.get("app_mtime", 0) > source_mtime:

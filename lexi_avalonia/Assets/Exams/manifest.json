@@ -1,0 +1,212 @@
+{
+  "commit": "3992bcb94c800a2fd38a9fd6ff95b2353e755363",
+  "unitSize": 100,
+  "books": [
+    {
+      "topic": "cet4",
+      "bookId": "CET4_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164635506_CET4_2.zip",
+      "sha256": "ca6661bcaac6330f64054283974b199b378950b755f57c7573e4a06541b07b82",
+      "sourceRows": 3739,
+      "words": 3739,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "cet6",
+      "bookId": "CET6_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1524052554766_CET6_2.zip",
+      "sha256": "fe12c5a331510e86da4a187a829d9d72e2785588e60ce45d830f349c30fc3866",
+      "sourceRows": 2078,
+      "words": 2078,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "kaoyan",
+      "bookId": "KaoYan_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164654696_KaoYan_2.zip",
+      "sha256": "8f0670da980d55aee3e63a140633d33f78df04738ad18dbc6cfd552b63da0a5d",
+      "sourceRows": 4533,
+      "words": 4533,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "gmat",
+      "bookId": "GMAT_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164662073_GMAT_2.zip",
+      "sha256": "dcdf82b03d715a5c1fd5a087b45ae57b2d3e40cafa3aba2f15ee6a73220385b9",
+      "sourceRows": 3254,
+      "words": 3254,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "toefl",
+      "bookId": "TOEFL_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164640451_TOEFL_2.zip",
+      "sha256": "9c2a8951561d0572cbd3e7b4c9deeb20924290842aa255cd66a583ee69419542",
+      "sourceRows": 9213,
+      "words": 9212,
+      "repeatedFormsRemoved": 1,
+      "removedIds": [
+        "exam:TOEFL_2:4937"
+      ]
+    },
+    {
+      "topic": "gre",
+      "bookId": "GRE_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164637271_GRE_2.zip",
+      "sha256": "18364c0f103c4c89a5a62df702a99265de56f385798a1e9c38be4346744b8644",
+      "sourceRows": 7199,
+      "words": 7199,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "cet4",
+      "bookId": "CET4luan_1",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1523620217431_CET4luan_1.zip",
+      "sha256": "813942f51a25448ace9fa2f629a108b92b322eef36efa4cdbcb0facfb00b66a9",
+      "sourceRows": 1162,
+      "words": 1162,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "cet6",
+      "bookId": "CET6luan_1",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164660466_CET6luan_1.zip",
+      "sha256": "b91c6b870b7954e0107252a6b0eada12f4d17832071d2094b38c5556ca290b98",
+      "sourceRows": 1228,
+      "words": 1228,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "kaoyan",
+      "bookId": "KaoYanluan_1",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164661106_KaoYanluan_1.zip",
+      "sha256": "2a78d514bc78436b6d7bf20d1c37ec8e5a8ebc4448c6633050d893fc91200824",
+      "sourceRows": 1341,
+      "words": 1340,
+      "repeatedFormsRemoved": 1,
+      "removedIds": [
+        "exam:KaoYanluan_1:1145"
+      ]
+    },
+    {
+      "topic": "cet4",
+      "bookId": "CET4luan_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1524052539052_CET4luan_2.zip",
+      "sha256": "a57da774dcabcf154567c0526fd8871d9c61cb6536f993b146330f0c2fd73b37",
+      "sourceRows": 3739,
+      "words": 3739,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "cet4",
+      "bookId": "CET4_3",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164643060_CET4_3.zip",
+      "sha256": "2732588a69be6f97e831f47baf08fb8f91f699df01607b7cfcf346c8ad2d5f3c",
+      "sourceRows": 2607,
+      "words": 2607,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "cet6",
+      "bookId": "CET6_3",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164633851_CET6_3.zip",
+      "sha256": "053bbcfecc82ca3cea7d4bcafdb0fea56c019b8e61d544fab462cd2bf72d983f",
+      "sourceRows": 2345,
+      "words": 2345,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "kaoyan",
+      "bookId": "KaoYan_3",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164658897_KaoYan_3.zip",
+      "sha256": "42030fb17f85e13e096c8df5c84f748cc6119601ff2638d20b7712707767454a",
+      "sourceRows": 3728,
+      "words": 3728,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "cet4",
+      "bookId": "CET4_1",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164649209_CET4_1.zip",
+      "sha256": "7523b595df648c7ad8cf9447e4f8b0af3d311e738f472161c413ec777d20a9ef",
+      "sourceRows": 1162,
+      "words": 1162,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "cet6",
+      "bookId": "CET6_1",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164668667_CET6_1.zip",
+      "sha256": "3b80d1a86a57b1eb4c599e0c2c88940a3c00e6f4b3738d85d648aeba159f573c",
+      "sourceRows": 1228,
+      "words": 1228,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "kaoyan",
+      "bookId": "KaoYan_1",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164669833_KaoYan_1.zip",
+      "sha256": "650696c93758b984f280adc12f7cc970474781ab80465827cb13fb28ce841381",
+      "sourceRows": 1341,
+      "words": 1340,
+      "repeatedFormsRemoved": 1,
+      "removedIds": [
+        "exam:KaoYan_1:630"
+      ]
+    },
+    {
+      "topic": "gmat",
+      "bookId": "GMATluan_2",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164629611_GMATluan_2.zip",
+      "sha256": "b2ea7a5342b6f4d5f259cbdbde608ed77117d8613ea74bdd8c7e856a6d6a9793",
+      "sourceRows": 3254,
+      "words": 3254,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "toefl",
+      "bookId": "TOEFL_3",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164667985_TOEFL_3.zip",
+      "sha256": "76f054ed12f5c384e37673e0b299a12a77e37e9b1121bf8dd0edd34c8d390b90",
+      "sourceRows": 4264,
+      "words": 4264,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "gre",
+      "bookId": "GRE_3",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164677706_GRE_3.zip",
+      "sha256": "bad48a21470f62b7c21abf7da6dabedb82a6b8580be1d40b6c410e6da44e0381",
+      "sourceRows": 6515,
+      "words": 6515,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    },
+    {
+      "topic": "gmat",
+      "bookId": "GMAT_3",
+      "source": "https://raw.githubusercontent.com/kajweb/dict/3992bcb94c800a2fd38a9fd6ff95b2353e755363/book/1521164672691_GMAT_3.zip",
+      "sha256": "4c001b265c4f324aeaf19f0112e8d73325255426bb77e0f20a6696edfdc16eae",
+      "sourceRows": 3047,
+      "words": 3047,
+      "repeatedFormsRemoved": 0,
+      "removedIds": []
+    }
+  ]
+}

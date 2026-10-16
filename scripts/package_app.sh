@@ -99,9 +99,16 @@ for published in "$PUBLISH_TMP/"*; do
             mkdir -p "$APP_BUNDLE/Contents/Resources/$published_name"
             cp -R "$published/." "$APP_BUNDLE/Contents/Resources/$published_name/"
             ;;
+        social-public.json)
+            cp "$published" "$APP_BUNDLE/Contents/Resources/social-public.json"
+            ;;
         *) cp -R "$published" "$APP_BUNDLE/Contents/MacOS/" ;;
     esac
 done
+if [ ! -s "$APP_BUNDLE/Contents/Resources/social-public.json" ]; then
+    echo "错误: 未找到发布包内的社交公开配置文件。" >&2
+    exit 1
+fi
 # Preserve the application's existing resource paths without duplicating or signing media.
 ln -s ../Resources/Assets "$APP_BUNDLE/Contents/MacOS/Assets"
 ln -s ../Resources/Notices "$APP_BUNDLE/Contents/MacOS/Notices"

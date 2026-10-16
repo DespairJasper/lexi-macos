@@ -57,6 +57,7 @@ public partial class MainWindow
         try
         {
             _ieltsCatalog = IeltsCatalog.Load();
+            ConfigureExamTopics();
             try { _learningProgress = LearningProgress.Load(LearningProgressPath); }
             catch (Exception ex)
             {
@@ -68,7 +69,7 @@ public partial class MainWindow
             ConfigureStudyPlans();
             var host = (Panel)LookupPageHost.Parent!;
             host.Children.Add(_ieltsPage!); host.Children.Add(_typingPage!); host.Children.Add(_studyPlanPage!); host.Children.Add(_dailyPlanPage!);
-            NavIelts.Click += (_, _) => { if (FocusCanNavigate) ShowPage("ielts"); };
+            NavIelts.Click += (_, _) => OpenExamTopic(null);
             NavPlans.Click += (_, _) => { if (FocusCanNavigate) ShowPage("plans"); };
             NavTyping.Click += (_, _) => { if (FocusCanNavigate) ShowPage("typing"); };
             var vocabTyping = LearningButton("打字练习", "VocabTypingBtn");
@@ -87,7 +88,7 @@ public partial class MainWindow
     {
         _ieltsPage = new Grid { Name = "PageIelts", RowDefinitions = new RowDefinitions("Auto,Auto,*,Auto"), Margin = new Thickness(28, 24, 28, 16), IsVisible = false, RowSpacing = 14 };
         var hero = new StackPanel { Spacing = 6 };
-        hero.Children.Add(LearningLabel("IELTS 学习专题", 26));
+        _examPageTitle = LearningLabel("IELTS 学习专题", 26); hero.Children.Add(_examPageTitle);
         _ieltsSummary = ContentText("", 12); _ieltsSummary.Classes.Add("muted"); hero.Children.Add(_ieltsSummary);
         _ieltsPage.Children.Add(hero);
         var tools = new StackPanel { Spacing = 10 };
@@ -114,6 +115,8 @@ public partial class MainWindow
         _ieltsShowMeaning = new CheckBox { Name = "IeltsShowMeaning", Content = T("显示释义"), IsChecked = true, Margin = new Thickness(0, 0, 14, 0) };
         _ieltsErrorsOnly = new CheckBox { Name = "IeltsErrorsOnly", Content = T("仅看错词"), Margin = new Thickness(0, 0, 14, 0) };
         var copyErrors = LearningButton("复制错词", "IeltsCopyErrorsBtn");
+        var plan = LearningButton("创建专题计划", "ExamPlanCreateBtn");
+        plan.Click += (_, _) => OpenStudyPlanDraft(DailyStudyPlanSource.Ielts); actions.Children.Add(plan);
         actions.Children.Add(_ieltsShowMeaning); actions.Children.Add(_ieltsErrorsOnly); actions.Children.Add(copyErrors);
         tools.Children.Add(actions); ConfigureChapterAudio(tools); Grid.SetRow(tools, 1); _ieltsPage.Children.Add(tools);
         _ieltsRows = new StackPanel { Name = "IeltsRows", Spacing = 12 };
@@ -130,7 +133,7 @@ public partial class MainWindow
         _ieltsSection.SelectionChanged += (_, _) =>
         {
             if (_learningConfiguring) return;
-            if (_ieltsSection.SelectedItem is LearningSection section) { _learningProgress.SelectedSection = section.Id; SaveLearningProgress(); }
+            if (_activeExamId == null && _ieltsSection.SelectedItem is LearningSection section) { _learningProgress.SelectedSection = section.Id; SaveLearningProgress(); }
             _ieltsListPage = 0; RenderIeltsPage();
         };
         _ieltsSearch.TextChanged += (_, _) => { _ieltsFilterTimer.Stop(); _ieltsFilterTimer.Start(); };
@@ -156,7 +159,7 @@ public partial class MainWindow
         synonyms.Click += (_, _) => BeginSynonymPractice();
         copyErrors.Click += async (_, _) =>
         {
-            if (Clipboard != null) await Clipboard.SetTextAsync(string.Join("\n", _ieltsCatalog!.AllWords.Where(w => _learningProgress.Errors.Contains(w.Id)).Select(w => w.Word + " " + w.Meaning)));
+            if (Clipboard != null) await Clipboard.SetTextAsync(string.Join("\n", CurrentTopicWords().Where(w => _learningProgress.Errors.Contains(w.Id)).Select(w => w.Word + " " + w.Meaning)));
             SetStatus(T("错词已复制。"));
         };
         ConfigureSynonymPractice(); PopulateIeltsSections();
@@ -165,16 +168,16 @@ public partial class MainWindow
     private void PopulateIeltsSections()
     {
         var kind = _ieltsKind.SelectedIndex switch { 1 => "listening", 2 => "reading", 3 => "spelling", _ => "vocabulary" };
-        var sections = _ieltsCatalog!.Sections.Where(s => s.Kind == kind).ToList();
+        var sections = ActiveExamBook?.Sections ?? _ieltsCatalog!.Sections.Where(s => s.Kind == kind).ToList();
         var guard = _learningConfiguring; _learningConfiguring = true;
         _ieltsSection.ItemsSource = sections;
         _ieltsSection.SelectedItem = sections.FirstOrDefault(s => s.Id == _learningProgress.SelectedSection) ?? sections.First();
-        _ieltsSection.IsVisible = _ieltsKind.SelectedIndex < 4;
+        _ieltsSection.IsVisible = IsTopicVocabulary;
         _learningConfiguring = guard;
     }
     private List<LearningWord> IeltsFilteredWords()
     {
-        if (_ieltsKind.SelectedIndex >= 4) return [];
+        if (!IsTopicVocabulary) return [];
         var words = (_ieltsSection.SelectedItem as LearningSection)?.Entries ?? [];
         var query = _ieltsSearch.Text?.Trim() ?? "";
         return words.Where(w => (!_ieltsErrorsOnly.IsChecked.GetValueOrDefault() || _learningProgress.Errors.Contains(w.Id))
@@ -183,12 +186,12 @@ public partial class MainWindow
     private void RenderIeltsPage()
     {
         if (_ieltsRows == null || _ieltsCatalog == null || _learningConfiguring) return;
-        _ieltsWordActions.IsVisible = _ieltsKind.SelectedIndex < 4;
-        _ieltsRoundOptions.View.IsVisible = _ieltsPracticeMode.IsVisible = _ieltsKind.SelectedIndex < 4;
-        _ieltsSearch.IsVisible = _ieltsKind.SelectedIndex != 5;
+        _ieltsWordActions.IsVisible = IsTopicVocabulary;
+        _ieltsRoundOptions.View.IsVisible = _ieltsPracticeMode.IsVisible = IsTopicVocabulary;
+        _ieltsSearch.IsVisible = _activeExamId != null || _ieltsKind.SelectedIndex != 5;
         _synonymPanel.IsVisible = false;
-        if (_ieltsKind.SelectedIndex == 4) { RenderWritingPage(); return; }
-        if (_ieltsKind.SelectedIndex == 5) { RenderIeltsResources(); return; }
+        if (_activeExamId == null && _ieltsKind.SelectedIndex == 4) { RenderWritingPage(); return; }
+        if (_activeExamId == null && _ieltsKind.SelectedIndex == 5) { RenderIeltsResources(); return; }
         var words = IeltsFilteredWords();
         _ieltsListPage = Math.Clamp(_ieltsListPage, 0, Math.Max(0, (words.Count - 1) / 30));
         _ieltsRows.Children.Clear();
@@ -252,7 +255,7 @@ public partial class MainWindow
         var snapshot = CaptureFocusSnapshot();
         ShowPage("lookup"); LookupInput.Text = words[0].Word;
         var navigationVersion = _learningNavigationVersion;
-        var lookup = PerformLookupAsync();
+        var lookup = PerformLookupCoreAsync(words[0]);
         var lookupVersion = _lookupVersion;
         await lookup;
         // A newer query or navigation owns the UI, even if the user returns here.
@@ -275,6 +278,7 @@ public partial class MainWindow
         ++_learningNavigationVersion;
         NavPlans.Classes.Set("active", page == "plans");
         NavIelts.Classes.Set("active", page == "ielts"); NavTyping.Classes.Set("active", page == "typing");
+        RefreshExamNavigationActive(page);
         if (page != "typing") { _typingAdvanceCts?.Cancel(); _typingAdvanceCts = null; Classes.Set("typing-focus", false); }
     }
     private void ShowTypingPractice()
@@ -311,16 +315,16 @@ public partial class MainWindow
             if (control is Button button) button.Content = T(text);
             else if (control is TextBlock label) label.Text = T(text);
         }
-        NavIelts.Content = T("IELTS 专题"); NavTyping.Content = T("打字练习");
+        RefreshExamTopicLanguage(); NavIelts.Content = "IELTS"; NavTyping.Content = T("打字练习");
         if (_ieltsKind != null)
         {
             var index = _ieltsKind.SelectedIndex;
             _learningConfiguring = true;
-            _ieltsKind.ItemsSource = new[] { T("词汇真经"), T("听力 179"), T("阅读同义替换"), T("英美拼写规范"), T("写作 100 句"), T("语法与听力资料") };
-            _ieltsKind.SelectedIndex = index; _learningConfiguring = false;
+            _ieltsKind.ItemsSource = TopicKinds();
+            _ieltsKind.SelectedIndex = Math.Clamp(index, 0, _ieltsKind.ItemCount - 1); _learningConfiguring = false;
             var practiceMode = _ieltsPracticeMode.SelectedIndex;
             _ieltsPracticeMode.ItemsSource = new[] { T("单词卡认词"), T("淡写"), T("默写") }; _ieltsPracticeMode.SelectedIndex = practiceMode;
-            _ieltsRoundOptions.View.IsVisible = _ieltsPracticeMode.IsVisible = _ieltsKind.SelectedIndex < 4;
+            _ieltsRoundOptions.View.IsVisible = _ieltsPracticeMode.IsVisible = IsTopicVocabulary;
             _ieltsSearch.Watermark = T("搜索单词、释义或同义词");
             _ieltsShowMeaning.Content = T("显示释义"); _ieltsErrorsOnly.Content = T("仅看错词");
             if (_currentPage == "ielts") RenderIeltsPage();

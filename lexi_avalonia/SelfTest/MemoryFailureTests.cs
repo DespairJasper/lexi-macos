@@ -1,5 +1,6 @@
 using System.Reflection;
 using Avalonia.Controls;
+using Avalonia.Interactivity;
 using Microsoft.Data.Sqlite;
 
 namespace Lexi;
@@ -10,6 +11,7 @@ public static class MemoryFailureTests
     {
         object? Call(string name, params object[] args) => typeof(MainWindow).GetMethod(name, BindingFlags.NonPublic | BindingFlags.Instance)!.Invoke(window, args);
         T Field<T>(string name) => (T)typeof(MainWindow).GetField(name, BindingFlags.NonPublic | BindingFlags.Instance)!.GetValue(window)!;
+        void StartReviewBatch() => window.FindControl<Button>("ReviewStartAllBtn")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
         var store = Field<IVocabularyArchive>("_vocabService");
         using var db = new SqliteConnection(new SqliteConnectionStringBuilder { DataSource = store.DatabasePath, Pooling = false }.ToString());
         db.Open();
@@ -20,6 +22,7 @@ public static class MemoryFailureTests
         store.ExecuteBatch([word.Id], "today");
         Call("RefreshWords");
         Call("OpenReviewDeck");
+        StartReviewBatch();
         var before = store.GetAllWords().Single(w => w.Id == word.Id);
         Sql("CREATE TEMP TRIGGER fail_canonical BEFORE INSERT ON main.canonical_reviews BEGIN SELECT RAISE(ABORT,'injected canonical failure'); END");
         // TEMP triggers are connection-local: use a persistent trigger on this isolated fixture.
@@ -103,7 +106,7 @@ public static class MemoryFailureTests
         Sql("UPDATE words SET next_review_date='2999-01-01' WHERE id <> " + manual.Id
             + "; UPDATE fsrs_cards SET next_review_at_utc='2999-01-01T00:00:00.0000000Z'");
         store.ExecuteBatch([manual.Id], "today");
-        Call("RefreshWords"); Call("OpenReviewDeck");
+        Call("RefreshWords"); Call("OpenReviewDeck"); StartReviewBatch();
         var manualRound = Field<StudyRound<WordItem>>("_reviewRound");
         check(manualRound.HasCurrent && manualRound.Total == 1 && manualRound.Current.Id == manual.Id,
             "manual-override fixture really is the only front card before rating");

@@ -94,6 +94,9 @@ public partial class MainWindow
         item.Translation = catalog?.Meaning ?? archive?.Translation ?? "";
         item.Definition = catalog is null ? archive?.Definition ?? "" : catalog.Example;
         item.Notes = catalog?.Extra ?? "";
+        // Exam review cards must use this exact book entry, including overlapping IELTS forms.
+        if (catalog != null && key.SourceId.StartsWith("exam:", StringComparison.Ordinal))
+            item.AiResult = CreateIeltsExpansion(catalog);
     }
 
     private WordItem? MemoryResolveReviewIdentity(string identity)
@@ -171,7 +174,8 @@ public partial class MainWindow
                         pending.Add(WordKeyResolver.Resolve(WordKeyResolver.FormC(wordId),
                             session.PrimarySource == WordSource.Ielts ? WordKeyResolver.IeltsPageKind : null,
                             form => _allWords.FirstOrDefault(w => WordKeyResolver.FormC(w.Word) == form),
-                            form => _ieltsCatalog?.Find(form)).Key);
+                            form => _examCatalog.Books.FirstOrDefault(b => saved.Scope == "Ielts::exam:" + b.Id)?.AllWords
+                                .FirstOrDefault(w => WordKeyResolver.FormC(w.Word) == form) ?? _ieltsCatalog?.Find(form)).Key);
                 }
             }
     }

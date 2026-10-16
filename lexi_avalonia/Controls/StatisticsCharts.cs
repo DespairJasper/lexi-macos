@@ -104,7 +104,6 @@ public sealed class StatisticsCurve : Control
         {
             DrawLine(context,Prediction.Where(p=>p.Days<=30).Select(p=>Map(p.Days,p.Rate)).ToArray(),new Pen(new SolidColorBrush(Color.Parse("#357B9B")),2.5));
             var observed=Observations.Where(p=>p.Days<=30).ToArray();
-            DrawLine(context,observed.Select(p=>Map(p.Days,p.Rate)).ToArray(),new Pen(new SolidColorBrush(Color.Parse("#79BDD4")),2));
             foreach(var p in observed)context.DrawEllipse(new SolidColorBrush(Color.Parse("#79BDD4")),new Pen(Brushes.White,1.5),Map(p.Days,p.Rate),4,4);
         }
         if(Prediction.Count==0&&Observations.Count==0)context.DrawText(Label(Text("完成学习后显示真实记录与模型预测","Study to see your observations and model prediction")),new Point(plot.X+12,plot.Y+68));
@@ -116,7 +115,7 @@ public sealed class StatisticsCurve : Control
         var prediction=Prediction.OrderBy(p=>Math.Abs(p.Days-day)).FirstOrDefault();var observation=Observations.Where(p=>p.Days<=30).OrderBy(p=>Math.Abs(p.Days-day)).FirstOrDefault();
         var tip=Text($"间隔约 {day:0.#} 天",$"About {day:0.#} days after study");
         if(Prediction.Count>0)tip+="\n"+Text($"模型预计可回忆 {prediction.Rate:P0}",$"Predicted recall {prediction.Rate:P0}");
-        if(observation!=null)tip+="\n"+Text($"最近的观察组：{observation.Rate:P0}（{observation.Samples} 次有效复习）",$"Nearest observed group: {observation.Rate:P0} ({observation.Samples} valid reviews)");
+        if(observation!=null)tip+="\n"+Text($"最近的观察组：平均间隔 {observation.Days:0.#} 天，成功回忆 {observation.Rate:P0}（{observation.Samples} 次有效复习）",$"Nearest observed group: mean gap {observation.Days:0.#} days, recall {observation.Rate:P0} ({observation.Samples} valid reviews)");
         ToolTip.SetTip(this,tip);
     }
 }

@@ -8,6 +8,7 @@ using Avalonia.Layout;
 using Avalonia.Media;
 using Avalonia.Markup.Xaml.MarkupExtensions;
 using Avalonia.Threading;
+using Lexi.Social;
 namespace Lexi;
 
 public partial class MainWindow
@@ -97,7 +98,7 @@ public partial class MainWindow
         _statisticsFlushing=true;
         try { var result=await Task.Run(()=>store.Append(pending));
             _statisticsActivityFailed=!result.Success;
-            if(result.Success) { var ids=pending.Select(a=>a.ActivityId).ToHashSet();_statisticsPending.RemoveAll(a=>ids.Contains(a.ActivityId)); }
+            if(result.Success) { var ids=pending.Select(a=>a.ActivityId).ToHashSet();_statisticsPending.RemoveAll(a=>ids.Contains(a.ActivityId)); SocialObserveSaved(Lexi.Social.QualificationCause.Correction); }
         } finally { _statisticsFlushing=false; }
     }
     private void StatisticsStopTracking()
@@ -105,7 +106,7 @@ public partial class MainWindow
         StatisticsTick();_statisticsPending.AddRange(_statisticsTracker.Drain());_statisticsStopped=true;_statisticsTimer?.Stop();_statisticsHeatmap?.StopAnimation();_statisticsCurve?.StopAnimation();
         if(_statisticsPending.Count==0)return;
         EnsureStatisticsActivityStore();var result=_statisticsActivityStore!.Append(_statisticsPending);
-        _statisticsActivityFailed=!result.Success;if(result.Success)_statisticsPending.Clear();
+        _statisticsActivityFailed=!result.Success;if(result.Success) { _statisticsPending.Clear(); SocialObserveSaved(Lexi.Social.QualificationCause.Correction); }
     }
     private void RefreshStatisticsLanguage() { if(_statisticsPage!=null) { this.FindControl<Button>("NavStatistics")!.Content=StatText("学习统计","Statistics"); RenderStatisticsPage();if(_currentPage=="statistics")ReplayStatistics(); } }
     private void StatisticsEnterPage() { RefreshStatistics();ReplayStatistics(); }
@@ -126,7 +127,10 @@ public partial class MainWindow
                 var cards=rows.Select(r=>r.WordKey).Distinct(StringComparer.Ordinal).Select(k=>_memoryStore.GetCard(k)).Where(c=>c!=null&&double.IsFinite(c.Stability)&&c.Stability>0).ToArray();
                 var scheduler=_memoryPersonalization!=null?new Fsrs6Scheduler(_memoryPersonalization.Weights):new Fsrs6Scheduler();
                 _statisticsPredictionCount=cards.Length;
-                if(cards.Length>0)_statisticsPrediction=Enumerable.Range(0,121).Select(i=>(Days:i/4d,Rate:cards.Average(c=>scheduler.Retrievability(c!.Stability,i/4d)))).ToArray();
+                // Same 121-point average-stability protocol, now built by the shared pure builder so
+                // the statistics page and the friend overlay can never drift apart.
+                _statisticsPrediction=SocialCurve.Build(cards.Select(c=>c!.Stability),scheduler.Retrievability)
+                    .Select(p=>(Days:p.Days,Rate:p.Rate)).ToArray();
             } catch(Exception ex) { Debug.WriteLine("[statistics] prediction unavailable: "+ex.GetType().Name); }
         }
         RenderStatisticsPage();
@@ -214,19 +218,20 @@ public partial class MainWindow
     private Border BuildStatisticsCurveCard()
     {
         var panel=new StackPanel{Spacing=10};panel.Children.Add(StatLabel(StatText("遗忘曲线","Forgetting curve"),16,"#243F50"));
-        panel.Children.Add(StatLabel(StatText("深蓝：当前模型预测 · 浅蓝圆点与线：真实复习观察","Dark blue: current model prediction · Light blue dots and line: observed reviews"),12));
+        panel.Children.Add(StatLabel(StatText("深蓝曲线：当前模型预测 · 浅蓝散点：真实复习观察","Dark blue curve: current model prediction · Light blue dots: observed reviews"),12));
         _statisticsCurve=new StatisticsCurve{Name="StatisticsCurve",Prediction=_statisticsPrediction,Observations=_statisticsSnapshot.Observations,Text=StatText};panel.Children.Add(_statisticsCurve);
         panel.Children.Add(StatLabel(StatText("横轴是距离上次学习多久；纵轴是还能想起单词的可能性。例如80%表示100个相似词预计约80个能想起，是模型估计，不是考试分数。","The horizontal axis shows time since study. The vertical axis is the chance of remembering a word. At 80%, roughly 80 of 100 similar words may be recalled. This is a model estimate, not an exam score."),13,"#3F6579"));
         panel.Children.Add(StatLabel(_statisticsPredictionCount>0?StatText($"预测取 {_statisticsPredictionCount} 张当前词卡的平均值，假设这段时间不再学习。观察按真实复习间隔分组，认识与模糊计为成功回忆，忘记计为失败；仅展示0–30天，每组样本数见悬停。",$"Prediction averages {_statisticsPredictionCount} current word cards, assuming no further study. Observations group actual review gaps; Known and Unsure count as recall, Forgot as failure. The plot shows 0–30 days; hover for group sizes."):
             StatText("当前没有可用模型词卡；完成学习后才会生成预测。","No model cards are available yet. Predictions appear after completed learning."),12));
         if(_statisticsSnapshot.Observations.Count==0)panel.Children.Add(StatLabel(StatText("暂无观察数据：同一词至少需要一次先前学习和一次有效复习，才能知道真实间隔。","No observations yet: a word needs prior learning and a valid later review to establish its actual gap."),12));
+        panel.Children.Add(StatLabel(StatText("每个散点代表一个复习间隔组，不代表某一天。回忆率 = 成功回忆次数 ÷ 有效复习次数；每天复习多的记录贡献更多样本，样本少时波动更大。悬停可查看平均间隔和样本数。","Each dot represents a review-gap group, not a calendar day. Recall rate = successful recalls ÷ valid reviews. Days with more reviews contribute more samples; small groups fluctuate more. Hover for the mean gap and sample count."),12));
         var explain=StatButton(_statisticsExplanation?StatText("收起参数解释","Hide parameter explanation"):StatText("这条线怎么看 · 参数解释","How to read this · Parameters"));
         explain.Name="StatisticsCurveExplanation";explain.Click+=(_,_)=>{_statisticsExplanation=!_statisticsExplanation;RenderStatisticsPage();ReplayStatistics();};panel.Children.Add(explain);
         if(_statisticsExplanation) {
             panel.Children.Add(StatLabel(StatText("稳定性：记忆保持得多久。数值越大，曲线通常下降得越慢；它不是每天固定下降的百分点。","Stability: how long a memory lasts. Higher stability generally means a slower decline, not a fixed daily percentage loss."),13));
             panel.Children.Add(StatLabel(StatText("难度：模型认为这个词对你有多难，范围1–10。它会影响下一次复习后的记忆变化，不等于这个词客观上有多难。","Difficulty: how hard the model considers this word for you, from 1 to 10. It affects memory changes after review; it is not an objective word difficulty score."),13));
             panel.Children.Add(StatLabel(StatText("目标记住率：目前为90%。模型据此安排复习，意思是希望复习时约100个相似词中有90个还想得起，不承诺每次都达到90%。","Target retention is currently 90%. It guides scheduling: ideally around 90 of 100 similar words are still remembered when reviewed. It does not guarantee 90% at every review."),13));
-            panel.Children.Add(StatLabel(StatText("两条线可比较趋势，但不能把差异直接解释为进步或模型失准：不同间隔的词与样本量可能不同，少量观察波动很大。","Compare the trends carefully: a gap between the lines alone does not prove progress or poor model accuracy. Words and sample sizes differ across intervals, and small samples fluctuate."),13));
+            panel.Children.Add(StatLabel(StatText("预测线会随当前词卡的记忆稳定性和模型参数变化；少量复习对全体词卡的平均预测可能影响很小。散点来自累计历史观察，与当前预测涉及的词和样本量可能不同，两者差异不能直接解释为进步或模型失准。","The prediction changes with current card stability and model parameters; a few reviews may barely affect the average over all cards. Dots summarize accumulated historical observations and may involve different words and sample sizes, so a gap alone does not prove progress or poor model accuracy."),13));
         }
         return StatCard(panel);
     }

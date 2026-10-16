@@ -15,6 +15,9 @@ public partial class App : Application
     private void OnTrayQuit(object? sender, EventArgs e) => QuitApplication();
     public static SingleInstanceService? SingleInstance { get; set; }
     public static HotkeyService? Hotkey { get; set; }
+    private MainWindow? _socialActivationWindow;
+    private Uri? _socialPendingCallback;
+    private DateTimeOffset _socialPendingAt;
 
     public ICommand ShowHideCommand { get; }
     public ICommand QuitCommand { get; }
@@ -31,6 +34,8 @@ public partial class App : Application
     {
         AvaloniaXamlLoader.Load(this);
         UiText.Apply("zh-CN");
+        if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
+            activatable.Activated += (_, args) => SocialNativeActivated(args);
     }
 
     public override void OnFrameworkInitializationCompleted()
@@ -39,11 +44,19 @@ public partial class App : Application
         {
             var mainWindow = Environment.GetCommandLineArgs().Any(a => a is "--learning-test" or "--glacier-test") ? LearningUiTests.CreateWindow() : new MainWindow();
             desktop.MainWindow = mainWindow;
+            SocialWindowReady(mainWindow);
+            var profileReadySignalled = false;
+            mainWindow.Opened += (_, _) =>
+            {
+                if (profileReadySignalled) return;
+                new Lexi.Social.SocialProfileLauncher(Lexi.Social.SocialProfileLauncher.DefaultConfigurationPath).SignalReady();
+                profileReadySignalled = true;
+            };
             desktop.ShutdownRequested += (_, _) =>
             {
                 if (!mainWindow.IsRestoring) mainWindow.PrepareForApplicationShutdown();
             };
-            if (Environment.GetCommandLineArgs().Any(a => a is "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--glacier-test" or "--quick-test" or "--recovery-restart-a" or "--recovery-restart-b"))
+            if (Environment.GetCommandLineArgs().Any(a => a is "--social-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--glacier-test" or "--quick-test" or "--recovery-restart-a" or "--recovery-restart-b"))
             {
                 var started = false;
                 mainWindow.Opened += async (_, _) =>
@@ -51,7 +64,8 @@ public partial class App : Application
                     if (started) return;
                     started = true;
                     await System.Threading.Tasks.Task.Delay(300);
-                    if (Environment.GetCommandLineArgs().Contains("--quick-test")) await QuickActionUiTests.RunAsync(mainWindow);
+                    if (Environment.GetCommandLineArgs().Contains("--social-test")) await SocialUiTests.RunAsync(mainWindow);
+                    else if (Environment.GetCommandLineArgs().Contains("--quick-test")) await QuickActionUiTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--glacier-test")) await GlacierUiTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--learning-test")) await LearningUiTests.RunAsync(mainWindow);
                     else if (Environment.GetCommandLineArgs().Contains("--focus-test")) await FocusUiTests.RunAsync(mainWindow);
@@ -89,12 +103,6 @@ public partial class App : Application
             if (OperatingSystem.IsMacOS())
             {
                 InstallMacApplicationMenu(desktop);
-                if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
-                    activatable.Activated += (_, e) =>
-                    {
-                        if (e.Kind == ActivationKind.Reopen)
-                            Dispatcher.UIThread.Post(() => mainWindow.ShowAndActivate());
-                    };
                 // Register Lexi in the Accessibility list with the system prompt; automated runs stay silent.
                 if (!IsAutomatedTestRun())
                     Dispatcher.UIThread.Post(() => MacOSNative.RequestAccessibilityPermission(), DispatcherPriority.Background);
@@ -121,6 +129,29 @@ public partial class App : Application
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    internal void SocialNativeActivated(ActivatedEventArgs args)
+    {
+        if (args.Kind == ActivationKind.Reopen)
+        { Dispatcher.UIThread.Post(() => _socialActivationWindow?.ShowAndActivate()); return; }
+        if (args.Kind != ActivationKind.OpenUri || args is not ProtocolActivatedEventArgs protocol) return;
+        var uri = protocol.Uri;
+        if (uri is null || !uri.IsAbsoluteUri || uri.OriginalString.Length > 8192 ||
+            uri.Scheme != "com.lexi.app" || uri.Host != "auth" || uri.AbsolutePath != "/callback") return;
+        Dispatcher.UIThread.Post(async () =>
+        {
+            if (_socialActivationWindow is { } window) await window.SocialProtocolActivatedAsync(uri);
+            else { _socialPendingCallback = uri; _socialPendingAt = DateTimeOffset.UtcNow; }
+        });
+    }
+
+    internal void SocialWindowReady(MainWindow window)
+    {
+        _socialActivationWindow = window;
+        var callback = _socialPendingCallback; _socialPendingCallback = null;
+        if (callback is not null && DateTimeOffset.UtcNow - _socialPendingAt < TimeSpan.FromMinutes(2))
+            Dispatcher.UIThread.Post(async () => await window.SocialProtocolActivatedAsync(callback));
     }
 
     private void InstallMacApplicationMenu(IClassicDesktopStyleApplicationLifetime desktop)
@@ -155,7 +186,7 @@ public partial class App : Application
 
     // Self-test, smoke and visual runs must never raise a system permission dialog.
     internal static bool IsAutomatedTestRun() =>
-        Environment.GetCommandLineArgs().Any(a => a is "--self-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--glacier-test" or "--quick-test" or "--media-test" or "--recovery-restart-a" or "--recovery-restart-b");
+        Environment.GetCommandLineArgs().Any(a => a is "--self-test" or "--social-test" or "--ui-smoke" or "--visual-test" or "--language-test" or "--focus-test" or "--learning-test" or "--glacier-test" or "--quick-test" or "--media-test" or "--recovery-restart-a" or "--recovery-restart-b");
 
     public void ToggleMainWindow()
     {

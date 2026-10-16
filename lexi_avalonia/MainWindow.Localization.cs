@@ -76,5 +76,7 @@ public partial class MainWindow
         RefreshStudyPlanLanguage();
         RefreshStatisticsLanguage();
         RefreshQuotesLanguage();
+        RefreshSocialLanguage();
+        if (ReviewPreviewHost.IsVisible) RenderReviewPreview();
     }
 }

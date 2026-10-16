@@ -22,7 +22,7 @@ public partial class MainWindow
         var setup = new StackPanel { Spacing = 18, MaxWidth = 760, HorizontalAlignment = HorizontalAlignment.Stretch };
         _typingSources.AddRange(new[] { ("archive", "我的生词本"), ("due", "今日重逢"), ("dictionary", "全部离线词典"), ("ielts", "全部 IELTS 词汇"), ("synonyms", "全部 IELTS 同义替换") });
         _typingSources.AddRange(_ieltsCatalog!.Sections.Select(s => (s.Id, s.Title)));
-        _typingSource = new ComboBox { Name = "TypingSource", HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = _typingSources.Select(s => T(s.Title)).ToList(), SelectedIndex = 0 };
+        _typingSource = new ComboBox { Name = "TypingSource", HorizontalAlignment = HorizontalAlignment.Stretch, ItemsSource = _typingSources.Select(TypingSourceTitle).ToList(), SelectedIndex = 0 };
         _typingMode = new ComboBox { Name = "TypingMode", HorizontalAlignment = HorizontalAlignment.Stretch,
             ItemsSource = new[] { T("淡写"), T("默写") }, SelectedIndex = _learningProgress.TypingHints ? 0 : 1 };
         setup.Children.Add(LearningLabel("选择词库", 12)); setup.Children.Add(_typingSource);
@@ -107,7 +107,7 @@ public partial class MainWindow
         {
             _vocabService.AddWord(word.Word, word.Phonetic, word.Pos + " " + word.Meaning, word.Extra);
             RefreshWords();
-            if (_ieltsCatalog?.Find(word.Word) is { } source)
+            if ((_ieltsCatalog?.AllWords.FirstOrDefault(w => w.Id == word.Id) ?? _ieltsCatalog?.Find(word.Word)) is { } source)
             {
                 var item = _allWords.First(w => w.Word.Equals(word.Word, StringComparison.OrdinalIgnoreCase));
                 if (item.AiResult == null) _vocabService.SaveExpansion(item.Id, CreateIeltsExpansion(source));

@@ -171,7 +171,13 @@ public static class UiSmokeTests
             Call("OnSelectAllClicked");
             C<ComboBox>("BatchActionCombo").SelectedIndex = 3;
             Click("NavReview");
-            Check(C<Grid>("PageReview").IsVisible && !C<Grid>("PageVocab").IsVisible && C<TextBlock>("ReviewRemainingText").Text == "已完成 0/2 · 剩余 2", "today action fills independent recall deck without management controls");
+            Check(C<Grid>("PageReview").IsVisible && !C<Grid>("PageVocab").IsVisible
+                && C<Grid>("ReviewPreviewHost").IsVisible && C<TextBlock>("ReviewRemainingText").Text == "今日有 2 个待复习词",
+                "today action opens a due-word preview without management controls");
+            Click("ReviewStartAllBtn");
+            Check(C<Grid>("ReviewCardHost").IsVisible && !C<Grid>("ReviewPreviewHost").IsVisible
+                && C<TextBlock>("ReviewRemainingText").Text == "已完成 0/2 · 剩余 2",
+                "starting the selected review batch opens its independent recall deck");
             Click("NavVocab");
             C<CheckBox>("SelectAllCheckBox").IsChecked = true;
             Call("OnSelectAllClicked");

@@ -694,7 +694,7 @@ public partial class MainWindow
             key = WordKeyResolver.Resolve(WordKeyResolver.FormC(form),
                 _wordFocusSnapshot?.Page == WordKeyResolver.IeltsPageKind ? WordKeyResolver.IeltsPageKind : null,
                 word => FindArchive(WordKeyResolver.FormC(word)),
-                word => _ieltsCatalog?.Find(WordKeyResolver.FormC(word)));
+                word => FindLearningWord(WordKeyResolver.FormC(word)));
             return true;
         }
         catch (Exception ex)
@@ -842,6 +842,9 @@ public partial class MainWindow
             var applied = result
                 ?? throw new InvalidOperationException("No validated retrieval to finalize.");
             _committedWordKeys.Add(card.Key.Key);
+            if (surface == MemorySurface.Plan && mode == StudyMode.FirstLearn && applied.Applied)
+                _socialPendingFirstLearning = true;
+            else if (mutations is null) SocialObserveSaved(Lexi.Social.QualificationCause.Correction);
         });
     }
 

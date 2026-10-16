@@ -75,7 +75,7 @@ public partial class MainWindow
         title.Children.Add(_planOverview); heading.Children.Add(title);
         var create = new WrapPanel { VerticalAlignment = VerticalAlignment.Top };
         var archive = PlanButton(PlanText("创建词汇档案计划", "Create archive plan"), "ArchivePlanCreateBtn", () => OpenStudyPlanDraft(DailyStudyPlanSource.Archive), true);
-        var ielts = PlanButton(PlanText("创建 IELTS 计划", "Create IELTS plan"), "IeltsPlanCreateBtn", () => OpenStudyPlanDraft(DailyStudyPlanSource.Ielts));
+        var ielts = PlanButton(PlanText("创建专题计划", "Create exam plan"), "IeltsPlanCreateBtn", () => OpenStudyPlanDraft(DailyStudyPlanSource.Ielts));
         archive.IsEnabled = ielts.IsEnabled = !_planReadFailed;
         archive.Margin = new Thickness(0, 0, 8, 6); create.Children.Add(archive); create.Children.Add(ielts);
         if (Bounds.Width < 1120) { heading.RowDefinitions = new RowDefinitions("Auto,Auto"); Grid.SetRow(create, 1); create.Margin = new Thickness(0, 14, 0, 0); }
@@ -100,7 +100,7 @@ public partial class MainWindow
         var pct = total == 0 ? 0 : 100 * completed / total;
         top.Children.Add(PlanLabel(PlanText($"已完成 {completed} 词 · {pct}% · 按今日首次学习任务计数", $"Completed {completed} words · {pct}% · Today’s first-learning tasks"), 12, true));
         var filter = new WrapPanel { Margin = new Thickness(0, 2, 0, 2) };
-        foreach (var item in new[] { (0, PlanText("全部", "All")), (1, "IELTS"), (2, PlanText("词汇档案", "Archive")) })
+        foreach (var item in new[] { (0, PlanText("全部", "All")), (1, PlanText("考试专题", "Exam topics")), (2, PlanText("词汇档案", "Archive")) })
         {
             var index = item.Item1;
             var chip = PlanButton(item.Item2, "PlanFilter" + index, () => { _planFilter = index; RenderStudyPlanLists(); });
@@ -146,7 +146,7 @@ public partial class MainWindow
         var title = PlanButton(plan.Name, "PlanDetailBtn", () => OpenDailyPlanDetail(plan));
         title.Classes.Add("ghost"); title.Padding = new Thickness(0); title.HorizontalAlignment = HorizontalAlignment.Left; title.FontWeight = FontWeight.Medium; title.FontSize = 15;
         info.Children.Add(title);
-        info.Children.Add(PlanLabel(UiText.Redisplay(plan.SourceLabel) + " · " + PlanText($"每日 {plan.DailyWordCount} 词", $"{plan.DailyWordCount} words/day") + " · " + (plan.RandomOrder ? PlanText("随机顺序", "Random order") : PlanText("顺序学习", "Sequential order")), 11, true));
+        info.Children.Add(PlanLabel(PlanSourceDisplay(plan) + " · " + PlanText($"每日 {plan.DailyWordCount} 词", $"{plan.DailyWordCount} words/day") + " · " + (plan.RandomOrder ? PlanText("随机顺序", "Random order") : PlanText("顺序学习", "Sequential order")), 11, true));
         var batch = DailyStudyPlanRules.GetTodayBatch(plan, PlanToday); var done = DailyStudyPlanRules.TodayCompleted(plan, PlanToday);
         info.Children.Add(PlanLabel(plan.Status == DailyStudyPlanStatus.Completed ? PlanText("已完成", "Completed") + " · " + PlanDays(plan) : plan.Status == DailyStudyPlanStatus.Stopped ? PlanText("已停止", "Stopped") : PlanText($"今日 {done}/{batch.Count}", $"Today {done}/{batch.Count}"), 11, true));
         body.Children.Add(info);

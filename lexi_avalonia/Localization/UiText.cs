@@ -18,6 +18,7 @@ internal static class UiText
         Remember(chinese, english);
         return Language == "en" ? english : chinese;
     }
+    internal static string English(string chinese) => UiCatalog.English.GetValueOrDefault(chinese, chinese);
     internal static string Format(FormattableString value)
     {
         var chinese = value.ToString(CultureInfo.CurrentCulture);

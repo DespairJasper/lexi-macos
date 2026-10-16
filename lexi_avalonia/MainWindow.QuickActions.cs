@@ -138,7 +138,7 @@ public partial class MainWindow
     }
     private void ConfigureQuotesPage()
     {
-        var sidebar=(Grid)((Border)this.FindControl<Border>("SidebarShell")!).Child!;
+        var sidebar=MainNavigation;
         sidebar.RowDefinitions.Insert(5,new RowDefinition(GridLength.Auto));
         foreach(var child in sidebar.Children)if(Grid.GetRow(child)>=5)Grid.SetRow(child,Grid.GetRow(child)+1);
         _quotesNav=new Button {Name="NavQuotes",Content=QuickText("金句本","Quotes"),Classes={"nav"}};Grid.SetRow(_quotesNav,5);sidebar.Children.Add(_quotesNav);

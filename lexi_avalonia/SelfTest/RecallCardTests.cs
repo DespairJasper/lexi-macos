@@ -50,6 +50,7 @@ public static class RecallCardTests
             C<TextBox>("VocabSearchInput").Text = "does-not-match-anything";
             w.Width = 840; w.Height = 600;
             Click("NavReview");
+            Click("ReviewStartAllBtn");
             check(C<TextBlock>("ReviewWordText").Text == "recall-one" && C<TextBlock>("ReviewRemainingText").Text == "已完成 0/2 · 剩余 2",
                 "recall ignores archive filters, excludes future words and counts this round");
             check(!C<Border>("ReviewAnswer").IsVisible && C<TextBlock>("ReviewMeaningText").Text == "" && C<Grid>("ReviewRatingBar").IsVisible,
@@ -170,7 +171,7 @@ public static class RecallCardTests
             var beforeUndo = Stored("recall-one");
             // 模拟新的一天：清掉今天的同日去重记录，让这个词可以再次推进阶段。
             Sql($"DELETE FROM review_logs WHERE word_id = {beforeUndo.Id} AND action = 'batch_review' AND log_date = '{DateTime.Today:yyyy-MM-dd}'");
-            store.ExecuteBatch([beforeUndo.Id], "today"); Call("RefreshWords"); Click("NavLookup"); Click("NavReview");
+            store.ExecuteBatch([beforeUndo.Id], "today"); Call("RefreshWords"); Click("NavLookup"); Click("NavReview"); Click("ReviewStartAllBtn");
             Press(Key.Q); await Task.Delay(40);
             check(Stored("recall-one").Stage == beforeUndo.Stage + 1, "know it advances exactly one stage");
             Press(Key.Space, KeyModifiers.Alt);
@@ -195,7 +196,7 @@ public static class RecallCardTests
             Press(Key.Q); await Task.Delay(40);
             // 裁定 O-1（findings.md §P）：`today` 是显式手动覆盖，会把已建 FSRS 卡的词重新推回今日队列。
             store.ExecuteBatch([beforeUndo.Id], "today");
-            Call("RefreshWords"); Click("NavLookup"); Click("NavReview");
+            Call("RefreshWords"); Click("NavLookup"); Click("NavReview"); Click("ReviewStartAllBtn");
             // 非空转前置条件：队列真的被重建过（否则下面看到的 ReviewWordText 只是上一张卡残留的文本，
             // 空队列时 OnReviewRatingAsync 会直接 return，后面两条断言都会假绿）。
             check(Round().HasCurrent && Round().Current.Word == "recall-one" && C<Grid>("ReviewRatingBar").IsVisible,
@@ -210,7 +211,7 @@ public static class RecallCardTests
             check(Stored("recall-one").Stage == reviewedStage, "same-day rating preserves scheduling idempotence");
 
             // 页面切换取消未完成的动画后，重新打开不能留下半透明的卡。
-            Click("NavLookup"); Click("NavReview");
+            Click("NavLookup"); Click("NavReview"); Click("ReviewStartAllBtn");
             await Task.Delay(500);
             check(C<Border>("ReviewCard").Opacity == 1 && Math.Abs(CardY()) < 0.01, "page navigation cancels old animation without fading the reopened deck");
 
@@ -218,7 +219,7 @@ public static class RecallCardTests
             C<CheckBox>("OpaqueMaterialBox").IsChecked = true;
             C<CheckBox>("ReduceMotionBox").IsChecked = true;
             store.ExecuteBatch([beforeUndo.Id], "today");
-            Call("RefreshWords"); Click("NavLookup"); Click("NavReview");
+            Call("RefreshWords"); Click("NavLookup"); Click("NavReview"); Click("ReviewStartAllBtn");
             var instant = (Task)Call("AdvanceReviewAsync")!;
             check(instant.IsCompleted && C<Border>("ReviewCard").Opacity == 1 && Math.Abs(CardY()) < 0.01,
                 "reduced motion changes cards immediately without transient opacity");
@@ -253,7 +254,7 @@ public static class RecallCardTests
             store.AddWord("recall-lock-c", "/lɒk/", "卡死回归丙", "");
             var lockIds = store.GetAllWords().Where(x => x.Word.StartsWith("recall-lock-", StringComparison.Ordinal)).Select(x => x.Id).ToArray();
             store.ExecuteBatch(lockIds, "today");
-            Call("RefreshWords"); Click("NavLookup"); Click("NavReview");
+            Call("RefreshWords"); Click("NavLookup"); Click("NavReview"); Click("ReviewStartAllBtn");
             check(C<TextBlock>("ReviewWordText").Text == "recall-lock-a" && C<Grid>("ReviewRatingBar").IsVisible,
                 "deadlock regression opens a non-empty fresh review deck");
             // 键盘路径复现用户真机操作：鼠标点击评分按钮 → 产品必须自己把焦点交给「下一词 Space」按钮，

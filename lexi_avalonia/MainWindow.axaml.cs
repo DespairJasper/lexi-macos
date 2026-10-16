@@ -53,7 +53,7 @@ public partial class MainWindow : Window
         InitializeComponent();
 
         _dictService = ServiceFactory.OpenDictionary();
-        _vocabService = ServiceFactory.OpenArchive();
+        _vocabService = ServiceFactory.OpenArchive(secrets: App.IsAutomatedTestRun() ? new AutomatedRunSecrets() : null);
         _aiService = ServiceFactory.CreateAi();
         _settings = _vocabService.LoadSettings();
 
@@ -76,6 +76,7 @@ public partial class MainWindow : Window
         RefreshWords();
         ConfigureLearningPages();
         ConfigureStatistics();
+        ConfigureSocial();
         ConfigureUpdateCheck();
 
         ShowPage("lookup");
@@ -345,6 +346,7 @@ public partial class MainWindow : Window
         if (page == "plans") RenderStudyPlanLists();
         if (page == "dailyplan") RenderDailyPlanDetail();
         if (page == "statistics") StatisticsEnterPage();
+        if (page == "social") SocialEnterPage();
         if (page == "typing") ShowTypingPractice();
     }
 
@@ -358,6 +360,7 @@ public partial class MainWindow : Window
         "plans" => _studyPlanPage,
         "dailyplan" => _dailyPlanPage,
         "statistics" => _statisticsPage,
+        "social" => _socialPage,
         "typing" => _typingPage,
         "quotes" => _quotesPage,
         _ => null,
@@ -366,6 +369,8 @@ public partial class MainWindow : Window
     // 任一时刻只有一个页面可见（沿用原契约）；新页面随后淡入，避免两页半透明内容重影。
     private void ApplyPageVisibility(string page)
     {
+        if (_socialPage != null) _socialPage.IsVisible = page == "social";
+        _socialNav?.Classes.Set("active", page == "social");
         if (_quotesPage != null) _quotesPage.IsVisible = page == "quotes";
         _quotesNav?.Classes.Set("active",page == "quotes");
         if (_ieltsPage != null) _ieltsPage.IsVisible = page == "ielts";
@@ -395,7 +400,9 @@ public partial class MainWindow : Window
 
     #region Lookup & Offline Dictionary
 
-    private async Task PerformLookupAsync()
+    private Task PerformLookupAsync() => PerformLookupCoreAsync(null);
+
+    private async Task PerformLookupCoreAsync(LearningWord? topicWord)
     {
         if (_restoring || !_databaseAvailable) return;
         var requestVersion = ++_lookupVersion;
@@ -430,7 +437,7 @@ public partial class MainWindow : Window
                 Word = personal.Word, Phonetic = personal.Phonetic, Translation = personal.Translation,
                 Definition = personal.Definition, Found = true
             };
-            var ielts = _ieltsCatalog?.Find(query);
+            var ielts = topicWord ?? FindLearningWord(query);
             if (!res.Found && ielts != null) res = new LookupResult
             { Word = query, Translation = ielts.Pos + " " + ielts.Meaning, Phonetic = ielts.Phonetic, Definition = ielts.Extra, Found = true };
             if (requestVersion != _lookupVersion || _isForceClose) return;
