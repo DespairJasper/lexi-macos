@@ -225,8 +225,22 @@ internal static class SocialUiTests
                 "an unbound local dataset still reads the signed-in account's saved cloud profile");
             Check(restoredNickname.Text == "Saved cloud nickname" && profileOnlyHandler.AvatarReads == 1 && restoredAvatar is not null,
                 "the restored profile nickname and private avatar are loaded without a local binding");
+            var restoredFriends = (IReadOnlyList<SocialFriendView>?)typeof(MainWindow).GetField("_socialFriends", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window);
+            Check(profileOnlyHandler.Requests.ContainsKey("lexi_friends") && restoredFriends?.Single().Nickname == profileOnlyHandler.FriendName &&
+                LogicalTexts(window).Any(text => text.Contains(profileOnlyHandler.FriendName, StringComparison.Ordinal)),
+                "existing cloud friends are loaded and rendered even when the local study binding is missing");
+            Check(profileOnlyHandler.Requests.ContainsKey("lexi_invites") && LogicalButtons(window).Any(button => button.Name == "SocialOpenDetail"),
+                "an unbound study dataset can still show its cloud invitations and open an existing pair");
             Check(!profileOnlyHandler.Requests.ContainsKey("lexi_bind") && !profileOnlyHandler.Requests.ContainsKey("lexi_status"),
                 "restoring account profile never binds or uploads the current learning dataset");
+            Check(profileOnlyStore.GetBinding(actor) is null && profileOnlyHandler.Requests.Keys.All(name =>
+                name is "lexi_profile" or "lexi_friends" or "lexi_invites"),
+                "restoring cloud friends preserves the unbound dataset and never sends study data or changes permissions");
+            await (Task)Call("OpenDetailAsync", actor, restoredFriends!.Single())!;
+            Check(LogicalTexts(window).Any(text => text.Contains("一起苟过的日子", StringComparison.Ordinal)) &&
+                profileOnlyStore.GetBinding(actor) is null,
+                "an unbound dataset opens the complete cloud pair detail without requiring or creating a local cache owner");
+            Call("SocialStopCharts");
             profileOnlyClient.Dispose();
             Set("_socialClient", client);
             Set("_socialStore", store);
@@ -256,6 +270,17 @@ internal static class SocialUiTests
             var rendered = window.GetVisualDescendants().OfType<TextBlock>().Select(t => t.Text ?? "").ToList();
             Check(rendered.Any(t => t.Contains("小明") && t.Contains("28")), "the friend card shows the cloud-confirmed continuity and name");
             Check(store.GetSecondarySharing(actor).Time && store.GetSecondarySharing(actor).Curve, "the own aggregate follows own switches once the friend list is parsed");
+
+            // A later profile failure must not discard the already confirmed friend response.
+            directory.FailProfile = true;
+            await (Task)typeof(MainWindow).GetMethod("SocialLoadDirectoryAsync", BindingFlags.Instance | BindingFlags.NonPublic)!.Invoke(window, [actor, generation])!;
+            var profileFailureFriends = (IReadOnlyList<SocialFriendView>?)typeof(MainWindow).GetField("_socialFriends", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window);
+            var directoryMessage = (TextBlock)typeof(MainWindow).GetField("_socialMessage", BindingFlags.Instance | BindingFlags.NonPublic)!.GetValue(window)!;
+            Check(profileFailureFriends?.Single().Nickname == "小明" && LogicalTexts(window).Any(text => text.Contains("小明")),
+                "a confirmed friend stays visible when the cloud profile endpoint fails");
+            Check(directoryMessage.Text?.Contains("好友列表已更新") == true,
+                "a partial directory failure is reported without hiding confirmed friends");
+            directory.FailProfile = false;
 
             // Revoking one direction must stop secondary upload immediately.
             directory.ShareTime = false;
@@ -524,6 +549,7 @@ internal static class SocialUiTests
         public int Streak { get; set; } = 28;
         public bool ShareTime { get; set; } = true;
         public bool Fail { get; set; }
+        public bool FailProfile { get; set; }
         public bool Broken { get; set; }
         public bool Untimed { get; set; }
         public int AvatarReads { get; private set; }
@@ -539,9 +565,12 @@ internal static class SocialUiTests
             var name = request.RequestUri!.AbsolutePath.Replace("/rest/v1/rpc/", "", StringComparison.Ordinal);
             LastBody = request.Content is null ? null : await request.Content.ReadAsStringAsync(cancellation);
             Requests[name] = LastBody ?? "";
-            if (Fail && name is "lexi_friends" or "lexi_invites" or "lexi_profile") throw new HttpRequestException("isolated offline fixture");
+            if ((Fail && name is "lexi_friends" or "lexi_invites" or "lexi_profile") ||
+                (FailProfile && name == "lexi_profile")) throw new HttpRequestException("isolated offline fixture");
             var now = DateTimeOffset.UtcNow; var today = SocialDayRules.DateAt(now); var relationship = Guid.Parse("11111111-1111-1111-1111-111111111111");
             var friend = Guid.Parse("22222222-2222-2222-2222-222222222222");
+            object[] weekly = [new { date = today.AddDays(-1).ToString("yyyy-MM-dd"), self_new_words = 20, self_review_words = 36,
+                self_seconds = 1800.0, self_time_coverage = "complete", self_scope = "full" }];
             var state = new
             {
                 relationship_id = relationship, run_id = Guid.NewGuid(), date = today.ToString("yyyy-MM-dd"), server_now = now,
@@ -588,11 +617,7 @@ internal static class SocialUiTests
                     // blocker where today was treated as an error, so it is deliberately non-empty.
                     pending_days = new[] { today.AddDays(-2).ToString("yyyy-MM-dd"), today.ToString("yyyy-MM-dd") },
                     state,
-                    weekly = new object[]
-                    {
-                        new { date = today.AddDays(-1).ToString("yyyy-MM-dd"), self_new_words = 20, self_review_words = 36,
-                              self_seconds = 1800.0, self_time_coverage = "complete", self_scope = "full" }
-                    },
+                    weekly,
                     friend_share_counts = true, friend_share_time = true,
                     friend_share_curve = true,
                     common_days = new[] { today.AddDays(-1).ToString("yyyy-MM-dd"), today.ToString("yyyy-MM-dd") },

@@ -1,6 +1,9 @@
 using System.Globalization;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
+using Avalonia.Markup.Xaml.MarkupExtensions;
+using Avalonia.Media;
 using Lexi.Social;
 
 namespace Lexi;
@@ -50,6 +53,7 @@ public partial class MainWindow
         var curvePanel = new StackPanel { Spacing = 6 };
         curvePanel.Children.Add(SocialText("朋友们的记忆曲线", 16));
         curvePanel.Children.Add(SocialText("自己 + 全部已授权好友 · 对照当前状态。模型预测，不做记忆能力排名。"));
+        curvePanel.Children.Add(SocialTextPair("横轴：间隔天数 · 纵轴：模型估计回忆率。", "X axis: days since previous study · Y axis: estimated recall rate.", 12));
         var overlay = new SocialCurveOverlay { Series = _socialSeries,
             Text = (chinese, english) => UiText.Language == "en" ? english : chinese };
         _socialCurveOverlay = overlay;
@@ -60,8 +64,11 @@ public partial class MainWindow
             var captured = index;
             var button = new Button { Classes = { "secondary" }, FontSize = 11,
                 Name = "SocialToggleSeries-" + index };
-            if (legends[index].IsSelf) SocialLocalize(button, ownName is null ? T("我") : TF($"自己 · {ownName}"));
-            else button.Content = legends[index].Label;
+            var series = _socialSeries[index];
+            button.BorderBrush = new SolidColorBrush(Color.Parse(series.Color));
+            var chineseLabel = legends[index].IsSelf ? ownName is null ? T("我") : TF($"自己 · {ownName}") : legends[index].Label;
+            var englishLabel = legends[index].IsSelf ? ownName is null ? "You" : $"You · {ownName}" : legends[index].Label;
+            SocialLocalize(button, $"{chineseLabel} · {series.SampleCount}", $"{englishLabel} · {series.SampleCount}");
             button.Click += (_, _) => SocialToggleSeries(captured);
             legendRow.Children.Add(button);
         }
@@ -103,7 +110,10 @@ public partial class MainWindow
         host.Children.Add(new Border { Classes = { "card" }, Child = weeklyPanel });
 
         // ---- lifetime and the joint / non-joint comparison ----
-        var cache = _socialStore!.LoadJoint(actor, friend.RelationshipId);
+        // A restored cloud friendship can be viewed before this local study dataset is bound.
+        var cache = _socialStore?.GetBinding(actor)?.BoundAt is not null
+            ? _socialStore.LoadJoint(actor, friend.RelationshipId)
+            : new SocialStore.SocialJointCache(null, new Dictionary<DateOnly, JointDayKnowledge>());
         BuildSocialComparison(actor, friend, detail, cache, host);
     }
 
@@ -238,27 +248,160 @@ public partial class MainWindow
         }
         catch (Exception error) when (error is not OperationCanceledException) { /* a cache failure must not block the page */ }
         var projected = SocialJointDays.Project(today, friendship, detail.CoverageFrom, common, pending, cache.Days, local);
-        var panel = new StackPanel { Spacing = 6 };
-        panel.Children.Add(SocialText(TF($"和{friend.Nickname}，一起苟过的日子"), 16));
-        panel.Children.Add(SocialText(TF($"本次成为好友以来，一共苟过 {detail.State.LifetimeDays} 天（跨局累计 · 同日去重 · 云端确认）")));
-        panel.Children.Add(SocialText(TF($"这段关系当前连续 {detail.State.Streak} 天；累计天数与当前连续互相独立。")));
+        var allHistory = SocialStatistics.Build(projected, today);
+        var panel = new StackPanel { Spacing = 16 };
+        panel.Children.Add(SocialTextPair(TF($"和{friend.Nickname}，一起苟过的日子"), $"Study days with {friend.Nickname}", 18));
+
+        var summary = new UniformGrid { Columns = 4, Rows = 1, Margin = new Thickness(-6, 0, -6, 0) };
+        summary.Children.Add(SocialMetricCard("关系累计共学天数", "Shared days in this friendship", detail.State.LifetimeDays.ToString(CultureInfo.CurrentCulture),
+            TF($"本次成为好友以来，一共苟过 {detail.State.LifetimeDays} 天 · 云端确认"),
+            $"Since this friendship began · {detail.State.LifetimeDays} days confirmed by the cloud"));
+        summary.Children.Add(SocialMetricCard("当前连续天数", "Current streak", detail.State.Streak.ToString(CultureInfo.CurrentCulture),
+            "当前连续天数与累计共学天数分别计算。", "Current streak and total shared days are counted separately."));
+        summary.Children.Add(SocialMetricCard("可核对共同学习日", "Verifiable shared study days", allHistory.JointDays.ToString(CultureInfo.CurrentCulture),
+            "本人的学习记录与云端共同日期相符。", "Your study record matches a cloud confirmed shared day."));
+        summary.Children.Add(SocialMetricCard("可核对对照学习日", "Verifiable comparison days", allHistory.NonJointDays.ToString(CultureInfo.CurrentCulture),
+            "本人的学习记录可核对为非共同日。", "Your study record is confirmed as a non shared day."));
+        panel.Children.Add(summary);
+
+        var dayLookup = projected.ToDictionary(day => day.Date);
+        var timeline = Enumerable.Range(1, 30).Reverse().Select(offset =>
+        {
+            var date = today.AddDays(-offset);
+            if (dayLookup.TryGetValue(date, out var observed)) return observed;
+            if (pending.Contains(date)) return new SocialLocalDay(date, JointDayKnowledge.Pending, null, null);
+            if (common.Contains(date)) return new SocialLocalDay(date, JointDayKnowledge.Success, null, null);
+            return new SocialLocalDay(date, JointDayKnowledge.Unknown, null, null);
+        }).ToArray();
+        var timelineHeading = new StackPanel { Spacing = 4 };
+        timelineHeading.Children.Add(SocialTextPair("最近 30 个完整学习日", "Last 30 complete study days", 16));
+        timelineHeading.Children.Add(SocialTextPair("左右滑动卡槽；点击日期查看学习记录与云端状态。", "Scroll the date rail horizontally; select a day to view its record and cloud status.", 11));
+        panel.Children.Add(timelineHeading);
+
+        var slots = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 7 };
+        var initialSelection = timeline.LastOrDefault(day => day.Joint is JointDayKnowledge.Success or JointDayKnowledge.NonJoint or JointDayKnowledge.Pending)
+            ?? timeline[^1];
+        Button? selectedSlot = null;
+        var selectedDescription = SocialTextPair("", "", 12);
+        void SelectDay(SocialLocalDay day, Button button)
+        {
+            if (selectedSlot is not null)
+            {
+                selectedSlot.Classes.Remove("primary");
+                selectedSlot.Classes.Add("secondary");
+            }
+            selectedSlot = button;
+            selectedSlot.Classes.Remove("secondary");
+            selectedSlot.Classes.Add("primary");
+            var state = SocialDayState(day.Joint);
+            var minutesText = day.ActiveSeconds is { } seconds ? $"{Format(seconds / 60)} 分钟" : "未知";
+            var minutesEnglish = day.ActiveSeconds is { } active ? $"{Format(active / 60)} min" : "unknown";
+            var wordsText = day.Words is { } words ? $"{words} 词" : "未知";
+            var wordsEnglish = day.Words is { } count ? $"{count} words" : "unknown";
+            SocialLocalize(selectedDescription,
+                $"{day.Date:yyyy-MM-dd} · {state.Chinese} · 学习时长 {minutesText} · 学习词数 {wordsText}",
+                $"{day.Date:yyyy-MM-dd} · {state.English} · Study time {minutesEnglish} · Words {wordsEnglish}");
+        }
+        foreach (var day in timeline)
+        {
+            var state = SocialDayState(day.Joint);
+            var dateLabel = SocialText(day.Date.ToString("MM-dd", CultureInfo.InvariantCulture), 11);
+            dateLabel.FontWeight = FontWeight.Medium;
+            dateLabel.TextWrapping = TextWrapping.NoWrap;
+            var statusLabel = SocialTextPair(state.ShortChinese, state.ShortEnglish, 9);
+            statusLabel.TextWrapping = TextWrapping.NoWrap;
+            var stack = new StackPanel { Spacing = 4, HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Center };
+            stack.Children.Add(dateLabel);
+            stack.Children.Add(statusLabel);
+            var slot = new Button
+            {
+                Name = "SocialJointSlot-" + day.Date.ToString("yyyyMMdd", CultureInfo.InvariantCulture),
+                Width = 70, Height = 70, Padding = new Thickness(4), Classes = { "secondary" }, Content = stack
+            };
+            if (day.Joint == JointDayKnowledge.Success)
+                slot.Bind(Button.BorderBrushProperty, new DynamicResourceExtension("PrimaryGreen"));
+            else if (day.Joint == JointDayKnowledge.Pending)
+                slot.BorderBrush = new SolidColorBrush(Color.Parse("#C28B43"));
+            ToolTip.SetTip(slot, $"{day.Date:yyyy-MM-dd} · {state.Chinese}");
+            slot.Click += (_, _) => SelectDay(day, slot);
+            if (day.Date == initialSelection.Date) SelectDay(day, slot);
+            slots.Children.Add(slot);
+        }
+        var rail = new Border { Classes = { "drawer-slot" }, Padding = new Thickness(8), Child = new ScrollViewer
+        {
+            Height = 78, Content = slots,
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Hidden,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Disabled
+        } };
+        panel.Children.Add(rail);
+        panel.Children.Add(new Border { Classes = { "drawer-slot" }, Padding = new Thickness(12), Child = selectedDescription });
+
+        panel.Children.Add(SocialTextPair("分段统计", "Period comparisons", 16));
+        var periodCards = new WrapPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, ItemSpacing = 12, LineSpacing = 12 };
         foreach (var (label, from) in new (string, DateOnly?)[] { ("可用全部历史", null), ("最近 30 个完整学习日", today.AddDays(-30)),
             ("最近 90 个完整学习日", today.AddDays(-90)), ("最近 120 个完整学习日", today.AddDays(-120)) })
-        {
-            var stats = SocialStatistics.Build(projected, today, from);
-            var joint = stats.JointDays;
-            var comparison = stats.NonJointDays;
-            var minutesDifference = Format(stats.Seconds.MeanDifference);
-            var wordsDifference = Format(stats.Words.MeanDifference);
-            var percentage = Format(stats.Words.PercentDifference);
-            panel.Children.Add(SocialTextPair(
-                $"{label}：共同成功 {joint} 天 · 对照 {comparison} 天 · 时长日均差 {minutesDifference} 分钟/天 · 词数日均差 {wordsDifference} 词/天 · 相对 {percentage}%",
-                $"{UiText.English(label)}: {joint} shared-success days · {comparison} comparison days · {minutesDifference} min/day difference · {wordsDifference} words/day difference · {percentage}% relative difference",
-                13));
-        }
+            periodCards.Children.Add(SocialComparisonCard(label, UiText.English(label), SocialStatistics.Build(projected, today, from)));
+        panel.Children.Add(periodCards);
         panel.Children.Add(SocialText("只统计本人学习；待确认与无法核对的历史日期不计入任何一组。这不是因果结论，也不做排名。", 12));
         host.Children.Add(new Border { Classes = { "card" }, Child = panel });
     }
+
+    private Border SocialMetricCard(string titleChinese, string titleEnglish, string value,
+        string noteChinese, string noteEnglish)
+    {
+        var card = StatMetric(StatText(titleChinese, titleEnglish), value, StatText(noteChinese, noteEnglish));
+        var content = (StackPanel)card.Child!;
+        SocialLocalize((TextBlock)content.Children[0], titleChinese, titleEnglish);
+        SocialLocalize((TextBlock)content.Children[2], noteChinese, noteEnglish);
+        return card;
+    }
+
+    private Border SocialComparisonCard(string titleChinese, string titleEnglish, SocialStatisticsComparison stats)
+    {
+        var panel = new StackPanel { Spacing = 12 };
+        panel.Children.Add(SocialTextPair(titleChinese, titleEnglish, 14));
+        var days = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 12 };
+        days.Children.Add(SocialComparisonMetric("共同成功", "Shared study", stats.JointDays.ToString(CultureInfo.CurrentCulture), "天", "days", 21));
+        var comparison = SocialComparisonMetric("对照日期", "Comparison", stats.NonJointDays.ToString(CultureInfo.CurrentCulture), "天", "days", 21);
+        Grid.SetColumn(comparison, 1); days.Children.Add(comparison);
+        panel.Children.Add(days);
+
+        var differences = new Grid { ColumnDefinitions = new ColumnDefinitions("*,*"), ColumnSpacing = 12 };
+        differences.Children.Add(SocialComparisonMetric("时长日均差", "Mean time difference", Format(stats.Seconds.MeanDifference / 60), "分钟 / 天", "min / day", 16));
+        var wordDifference = SocialComparisonMetric("词数日均差", "Mean word difference", Format(stats.Words.MeanDifference), "词 / 天", "words / day", 16);
+        Grid.SetColumn(wordDifference, 1); differences.Children.Add(wordDifference);
+        panel.Children.Add(differences);
+        panel.Children.Add(SocialTextPair($"词数相对差 {Format(stats.Words.PercentDifference)}%",
+            $"Relative word difference {Format(stats.Words.PercentDifference)}%", 11));
+        var card = StatCard(panel);
+        card.Width = 330;
+        card.MinHeight = 174;
+        card.Padding = new Thickness(18);
+        return card;
+    }
+
+    private StackPanel SocialComparisonMetric(string titleChinese, string titleEnglish, string value,
+        string unitChinese, string unitEnglish, double size)
+    {
+        var panel = new StackPanel { Spacing = 3 };
+        panel.Children.Add(SocialTextPair(titleChinese, titleEnglish, 11));
+        var row = new StackPanel { Orientation = Avalonia.Layout.Orientation.Horizontal, Spacing = 5 };
+        var number = SocialText(value, size);
+        number.FontWeight = FontWeight.Medium;
+        number.Bind(TextBlock.ForegroundProperty, new DynamicResourceExtension("PrimaryGreen"));
+        row.Children.Add(number);
+        row.Children.Add(SocialTextPair(unitChinese, unitEnglish, 10));
+        panel.Children.Add(row);
+        return panel;
+    }
+
+    private static (string Chinese, string English, string ShortChinese, string ShortEnglish) SocialDayState(JointDayKnowledge state) => state switch
+    {
+        JointDayKnowledge.Success => ("共同学习", "Shared study", "共学", "Shared"),
+        JointDayKnowledge.NonJoint => ("对照日", "Comparison day", "对照", "Solo"),
+        JointDayKnowledge.Pending => ("待云端确认", "Pending cloud confirmation", "待确认", "Pending"),
+        _ => ("无法核对", "Unavailable", "未核", "Unknown")
+    };
 
     private static string Format(double? value) => value is { } number ? number.ToString("0.#", CultureInfo.CurrentCulture) : "—";
 }

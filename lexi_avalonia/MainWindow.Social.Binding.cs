@@ -135,39 +135,75 @@ public partial class MainWindow
     private async Task SocialLoadDirectoryAsync(Guid actor, long generation)
     {
         if (_socialClient?.UserId != actor || _socialSync is null) return;
+        IReadOnlyList<SocialFriendView> friends;
         try
         {
-            var friends = await _socialSync.FriendsAsync(actor, _socialCancellation.Token);
-            if (generation != _socialGeneration || _socialClient.UserId != actor) return;
-            var invites = await _socialSync.InvitesAsync(actor, _socialCancellation.Token);
-            if (generation != _socialGeneration || _socialClient.UserId != actor) return;
-            var profile = await _socialSync.ProfileAsync(actor, _socialCancellation.Token);
+            friends = await _socialSync.FriendsAsync(actor, _socialCancellation.Token);
             if (generation != _socialGeneration || _socialClient.UserId != actor) return;
             _socialFriends = friends;
+            // Friend permissions and their list are independent of invitations and our profile.
+            // A later profile/avatar failure must not erase a confirmed friend response.
+            if (_socialStore?.GetBinding(actor)?.BoundAt is not null)
+                _socialSync.ApplyOwnAggregate(actor, friends);
+            RenderSocialFriends(actor, friends);
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception error)
+        {
+            if (generation != _socialGeneration) return;
+            Debug.WriteLine("[social] friends directory unavailable: " + error.GetType().Name);
+            // The friends response governs sharing permissions. If it cannot be confirmed,
+            // revoke cached friends and dependent charts before another secondary upload.
+            _socialFriends = null; _socialInvites = null; _socialAvatar?.Dispose(); _socialAvatar = null; _socialAvatarPath = null;
+            SocialStopCharts();
+            _socialSeries.Clear();
+            _socialFriendHost?.Children.Clear(); _socialInviteHost?.Children.Clear(); _socialDetailHost?.Children.Clear();
+            SocialSuspendSecondarySharing(actor);
+            SocialSetMessage("好友列表暂时无法从云端确认；登录和本机学习数据未改动，请稍后重试。",
+                "Friends could not be confirmed from the cloud. Your login and local study data are unchanged; try again later.");
+            return;
+        }
+
+        var unavailable = new List<string>();
+        try
+        {
+            var invites = await _socialSync.InvitesAsync(actor, _socialCancellation.Token);
+            if (generation != _socialGeneration || _socialClient.UserId != actor) return;
             _socialInvites = invites;
+        }
+        catch (OperationCanceledException) { return; }
+        catch (Exception error)
+        {
+            if (generation != _socialGeneration) return;
+            Debug.WriteLine("[social] invitations unavailable: " + error.GetType().Name);
+            _socialInvites = null;
+            unavailable.Add("邀请状态");
+        }
+        RenderSocialInvitePanel(actor);
+
+        try
+        {
+            var profile = await _socialSync.ProfileAsync(actor, _socialCancellation.Token);
+            if (generation != _socialGeneration || _socialClient.UserId != actor) return;
             if (_socialAvatarPath != profile.AvatarPath)
             { _socialAvatar?.Dispose(); _socialAvatar = null; _socialAvatarPath = null; }
             _socialProfile = profile;
-            // Secondary uploads follow the switches the server just confirmed, never a local guess.
-            _socialSync.ApplyOwnAggregate(actor, friends);
-            RenderSocialFriends(actor, friends);
-            RenderSocialInvitePanel(actor);
-            RenderSocialProfilePanel(actor);
-            if (_socialProfile.AvatarPath is { } path && _socialAvatar is null)
-                await LoadOwnAvatarAsync(actor, path, generation);
         }
-        catch (OperationCanceledException) { }
-        catch
+        catch (OperationCanceledException) { return; }
+        catch (Exception error)
         {
             if (generation != _socialGeneration) return;
-            // An unreadable or failed directory load revokes the aggregate and clears the cache,
-            // including the invitation book and any avatar held for display.
-            _socialFriends = null; _socialInvites = null; _socialAvatar?.Dispose(); _socialAvatar = null; _socialAvatarPath = null;
-            // A failed or revoked load must also drop the curves, the weekly plots and the legend.
-            SocialStopCharts();
-            _socialSeries.Clear();
-            _socialDetailHost?.Children.Clear();
-            SocialSuspendSecondarySharing(actor);
+            Debug.WriteLine("[social] own profile unavailable: " + error.GetType().Name);
+            unavailable.Add("云端昵称和头像");
+        }
+        RenderSocialFriends(actor, friends);
+        RenderSocialProfilePanel(actor);
+        if (_socialProfile?.AvatarPath is { } path && _socialAvatar is null)
+            await LoadOwnAvatarAsync(actor, path, generation);
+        if (unavailable.Count > 0)
+        {
+            SocialSetMessage($"好友列表已更新；{string.Join("、", unavailable)}暂时无法读取。登录和本机学习数据未改动。",
+                "The friend list is up to date, but some account details could not be loaded. Your login and local study data are unchanged.");
         }
     }
 
@@ -241,7 +277,13 @@ public partial class MainWindow
         if (generation != _socialGeneration || _socialClient?.UserId != actor || _socialStore is null) return;
         try
         {
-            var binding = _socialStore.GetBinding(actor); if (binding is null) return;
+            var binding = _socialStore.GetBinding(actor);
+            if (binding is null)
+            {
+                // Friends belong to the cloud account even when this local dataset is unbound.
+                await SocialLoadDirectoryAsync(actor, generation);
+                return;
+            }
             binding = await _socialSync.ResumeBindingAsync(actor, _socialCancellation.Token);
             if (generation != _socialGeneration || _socialClient.UserId != actor) return;
             ConfirmSocialBaseline(actor, binding);

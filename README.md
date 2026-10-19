@@ -14,7 +14,7 @@ Apple Silicon · macOS 12+ · 中英文界面 · 离线词典
 
 Lexi 把查词、阅读摘录、词汇整理和日常学习放在同一个应用里。阅读时用快捷小卡片查词或翻译，想记住的词收入档案，再按自己的计划学习。复习由记忆模型安排，无需手动计算间隔。
 
-当前源码版本为 **3.3.1**，安装包为 `Lexi-3.3.1-macOS-arm64.dmg`。前往 [3.3.1 发布页](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.1) 下载。更新沿用原数据目录与数据库身份；时长记录独立保存于 `study-activity.json`，旧版未记录的时长显示“暂无记录”。
+当前源码版本为 **3.3.2**，安装包为 `Lexi-3.3.2-macOS-arm64.dmg`。前往 [3.3.2 发布页](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.2) 下载。更新沿用原数据目录与数据库身份；时长记录独立保存于 `study-activity.json`，旧版未记录的时长显示“暂无记录”。
 
 ## 从阅读到学习，操作自然衔接
 
@@ -113,7 +113,7 @@ IELTS 保留以下六类资料。词汇资料可进入认词、淡写与默写�
 
 ## 复习逐渐适应你的记忆
 
-从 3.1.1 起使用 **FSRS-6** 安排长期复习。模型根据每个词的难度、记忆稳定度与随时间变化的可回忆性，计算下一次复习时间。不同词、不同作答历史会得到不同排期。
+使用 **FSRS-6** 安排长期复习。模型根据每个词的难度、记忆稳定度与随时间变化的可回忆性，计算下一次复习时间。不同词、不同作答历史会得到不同排期。
 
 轮内学习仍保留熟悉的三按钮、三次认识进度、模糊回退、忘记重学、逐遍随机与改判撤销。系统记录呈现、作答和修改轨迹，每个词每轮只形成一个有效长期复习信号，避免把强化练习重复计为多次长期复习。
 
@@ -146,8 +146,8 @@ IELTS 保留以下六类资料。词汇资料可进入认词、淡写与默写�
 
 适用 **Apple Silicon（M 系列）Mac、macOS 12 或更新版本**。安装包包含 .NET 运行环境、离线词典与本地 optimizer，普通使用者无需安装开发工具。
 
-1. 在 [3.3.1 发布页](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.1) 下载 `Lexi-3.3.1-macOS-arm64.dmg` 与 `Lexi-3.3.1-macOS-arm64.dmg.sha256`。
-2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.3.1-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
+1. 在 [3.3.2 发布页](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.2) 下载 `Lexi-3.3.2-macOS-arm64.dmg` 与 `Lexi-3.3.2-macOS-arm64.dmg.sha256`。
+2. 在终端进入下载目录，运行 `shasum -a 256 -c Lexi-3.3.2-macOS-arm64.dmg.sha256`，确认输出为 `OK` 再打开安装包。
 3. 打开 DMG，将 Lexi 拖入“应用程序”，推出磁盘映像后启动。磁盘中另附 `卸载Lexi.command`，用法见下方“卸载与数据保留”。
 4. 使用跨应用选词时，在“系统设置 → 隐私与安全 → 设备控制和数据访问”中授权 Lexi；未授权时仍可手动输入。
 5. 按需配置 AI 服务，开始整理词汇和每日学习计划。
@@ -196,6 +196,15 @@ bash scripts/package_dmg.sh --no-build
 
 `release.sh` 依次执行回归、签名打包、包内隔离验收、许可证与隐私检查，并生成绑定实际应用的合格证明；DMG 打包与安装均验证该证明。测试应使用隔离数据目录，避免向日常学习数据灌入模拟记录。
 
+## 3.3.2 本次更新
+
+- 修复好友列表被昵称、头像或邀请资料读取失败一并清空的问题；好友列表、邀请状态与个人资料分别加载，资料暂时不可用时仍保留已确认好友。
+- 调整好友详情布局：共同学习情况改为统计卡片与可横向滑动的 30 日卡槽，日期选择后显示学习时长、词数与云端状态。
+- 修正记忆曲线和周统计图的绘图区、坐标及标签排布；曲线图例显示样本数并与对应颜色一致。
+- 不改本地学习数据库、登录态、社交数据 sidecar 或云端 RPC 契约；升级沿用现有数据目录。
+
+[3.3.2 详细发布说明](docs/macos/releases/v3.3.2.md)
+
 ## 3.3.1 本次更新
 
 - 新增「一起学习 · 续命局」：双人邀请、达标续命、断局重开、逐好友分享、预测曲线对照、过去一周与累计共同天数。
@@ -228,6 +237,8 @@ bash scripts/package_dmg.sh --no-build
 
 ![3.3.1 英文金句本：原文、译文、来源与编辑入口](docs/macos/images/quotes-en.png)
 
+[3.3.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.1)
+
 ## 版本沿革
 
 | 阶段 | 主要内容 |
@@ -249,25 +260,12 @@ bash scripts/package_dmg.sh --no-build
 | 第三代 · 3.2.2 | 已确认进度快照回收、旧库缩容、自动备份节流与容量管理 |
 | 第三代 · 3.2.3 | 修复计划来源的复习卡显示内部标识、音标与释义缺失的问题；修复复习评分后「下一词」点击与空格失效的问题 |
 | 第三代 · 3.3.1 | 新增「一起学习 · 续命局」：双人邀请、逐好友分享开关、预测曲线对照、一周详情与共同天数统计，头像私有存储；七大考试专题与六类 20 本词书 |
+| 第三代 · 3.3.2 | 修复好友列表与资料加载互相影响；重排好友统计卡片、30 日卡槽和记忆曲线图表 |
 
-[3.3.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.1) · [3.2.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.3) · [3.2.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.2) · [3.2.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.1) · [3.2.0 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.0) · [3.1.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.3) · [3.1.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.2) · [3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
+[3.3.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.2) · [3.3.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.3.1) · [3.2.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.3) · [3.2.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.2) · [3.2.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.1) · [3.2.0 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.2.0) · [3.1.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.3) · [3.1.2 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.2) · [3.1.1 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.1.1) · [3.0.4 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.4) · [3.0.3 发布记录](https://github.com/DespairJasper/lexi-macos/releases/tag/v3.0.3) · [全部发布](https://github.com/DespairJasper/lexi-macos/releases)
 
 ## 许可与第三方内容
 
 Lexi 自有代码采用根目录 [LICENSE](LICENSE) 的**非商业许可**，允许个人、教育与非商业研究用途下使用、修改及再分发；商业使用需事先取得权利人书面授权。
 
 第三方组件、词典、考试词书与 IELTS 资料分别遵循各自条款，不由上述许可重新授权。详见 [NOTICES.md](NOTICES.md) 与 [第三方说明](lexi_avalonia/Notices/)。FSRS 训练器及依赖的许可原文、来源与需提供的源码保留在该目录。
-
-## Windows 与 Android
-
-新增两端源码来自 [Cofran-77/lexi](https://github.com/Cofran-77/lexi)，作者 **Cofran-77、DespairJasper**。原有 macOS 文件、资源与构建布局保持不变，各端独立实现和发布。
-
-| 平台 | 版本 | 源码 | 下载 |
-| --- | --- | --- | --- |
-| macOS | 3.3.1 | [macos 导航](macos/README.md) → 原有 lexi_avalonia | [本仓库 Releases](https://github.com/DespairJasper/lexi-macos/releases) |
-| Windows | 1.2.4 | [windows](windows/README.md) | [完整安装包](https://github.com/DespairJasper/lexi-macos/releases/tag/windows-v1.2.4) |
-| Android | 0.2.2-alpha | [android](android/README.md) | [APK](https://github.com/DespairJasper/lexi-macos/releases/tag/android-v0.2.2) |
-
-Windows 提供离线查词、词汇档案、FSRS-6、每日计划、辅助拼写、专注学习、翻译、金句本和配套专题资料。Android 提供原生查词、档案、固定日期复习、可选 AI、CSV 迁移、PDF 与备份功能，当前不具备全部桌面功能。各端数据库独立，不提供跨端自动同步。
-
-Windows 使用 .NET 8 / Avalonia，Android 使用 Kotlin / Jetpack Compose。详见 [构建指南](docs/platforms/BUILDING.md)。新增平台目录适用各自 LICENSE，来源与第三方权利见 [第三方声明](docs/platforms/THIRD_PARTY_NOTICES.md)，不改变原有 macOS 许可。

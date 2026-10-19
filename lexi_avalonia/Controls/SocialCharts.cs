@@ -69,7 +69,7 @@ public sealed class SocialCurveOverlay : Control
     {
         base.Render(context);
         if (Series.Count == 0) return;
-        var plot = new Rect(46, 22, Math.Max(1, Bounds.Width - 70), Bounds.Height - 88);
+        var plot = new Rect(54, 22, Math.Max(1, Bounds.Width - 74), Math.Max(1, Bounds.Height - 64));
         Point Map(double days, double rate) => new(plot.X + days / SocialCurve.MaximumDays * plot.Width,
             plot.Bottom - Math.Clamp(rate, 0, 1) * plot.Height);
         var grid = new Pen((IBrush?)this.FindResource(ActualThemeVariant, "LineBrush") ?? new SolidColorBrush(Color.Parse("#E7EEF2")), 1);
@@ -80,8 +80,10 @@ public sealed class SocialCurveOverlay : Control
             context.DrawText(Label(percent + "%"), new Point(1, y - 7));
         }
         foreach (var day in new[] { 0, 7, 14, 21, 30 })
-            context.DrawText(Label(day.ToString(CultureInfo.InvariantCulture)), new Point(Map(day, 0).X - 4, plot.Bottom + 8));
-        context.DrawText(Label(Text("距上次学习的天数", "Days since previous study")), new Point(plot.X, plot.Bottom + 26));
+        {
+            var label = Label(day.ToString(CultureInfo.InvariantCulture));
+            context.DrawText(label, new Point(Map(day, 0).X - label.Width / 2, plot.Bottom + 8));
+        }
 
         using (context.PushClip(new Rect(plot.X - 3, plot.Y - 3, plot.Width * _reveal + 6, plot.Height + 6)))
         {
@@ -96,17 +98,6 @@ public sealed class SocialCurveOverlay : Control
             }
         }
 
-        // Legend: every entry is independently hideable and states its own sample count.
-        var legendX = plot.X; var legendY = Bounds.Height - 34;
-        foreach (var series in Series)
-        {
-            var swatch = new Rect(legendX, legendY + 3, 16, 3);
-            context.DrawRectangle(new SolidColorBrush(Color.Parse(series.Color)), null, swatch);
-            var label = Label(series.Label + " · " + series.SampleCount + (series.Visible ? "" : " " + Text("（已隐藏）", "(hidden)")), 10.5);
-            context.DrawText(label, new Point(legendX + 21, legendY - 2));
-            legendX += 21 + label.Width + 16;
-            if (legendX > plot.Right - 60) { legendX = plot.X; legendY += 16; }
-        }
         if (Series.All(s => !s.Visible))
             context.DrawText(Label(Text("全部曲线已隐藏，点击图例可重新显示。", "All curves are hidden. Use the legend to show one again.")),
                 new Point(plot.X + 12, plot.Y + 68));
@@ -116,8 +107,8 @@ public sealed class SocialCurveOverlay : Control
     {
         base.OnPointerMoved(e);
         if (Series.Count == 0 || Bounds.Width <= 0) return;
-        var plotWidth = Math.Max(1, Bounds.Width - 70);
-        var days = Math.Clamp((e.GetPosition(this).X - 46) / plotWidth * SocialCurve.MaximumDays, 0, SocialCurve.MaximumDays);
+        var plotWidth = Math.Max(1, Bounds.Width - 74);
+        var days = Math.Clamp((e.GetPosition(this).X - 54) / plotWidth * SocialCurve.MaximumDays, 0, SocialCurve.MaximumDays);
         var tip = Text($"间隔约 {days:0.#} 天", $"About {days:0.#} days after study");
         foreach (var series in Series)
         {
@@ -143,7 +134,7 @@ public sealed class SocialWeeklyChart : Control
     public Func<string, string, string> Text { get; set; } = (zh, en) => zh;
     private static readonly IBrush Ink = new SolidColorBrush(Color.Parse("#728492"));
 
-    public SocialWeeklyChart() { Height = 200; MinWidth = 300; }
+    public SocialWeeklyChart() { Height = 208; MinWidth = 300; }
 
     private FormattedText Label(string text, double size = 10.5) =>
         new(text, CultureInfo.CurrentCulture, FlowDirection.LeftToRight, new Typeface("Inter"), size,
@@ -153,21 +144,27 @@ public sealed class SocialWeeklyChart : Control
     {
         base.Render(context);
         if (Days.Count == 0) return;
-        var plot = new Rect(46, 20, Math.Max(1, Bounds.Width - 66), Bounds.Height - 62);
+        var plot = new Rect(58, 32, Math.Max(1, Bounds.Width - 78), Math.Max(1, Bounds.Height - 76));
         var values = Days.Select(Value).ToArray();
         // A day with no value is absent data, not a zero, so it neither sets the axis nor joins a line.
         var known = values.Where(v => v is not null).Select(v => v!.Value).ToArray();
         var maximum = known.Length == 0 ? 0 : known.Max();
         if (maximum <= 0) maximum = 1;
-        context.DrawText(Label(Title, 11), new Point(plot.X, 2));
-        context.DrawText(Label(Unit), new Point(0, 6));
+        var title = Label(Title, 11);
+        context.DrawText(title, new Point(plot.X, 2));
+        if (!string.IsNullOrWhiteSpace(Unit))
+            context.DrawText(Label(Unit), new Point(plot.X + title.Width + 10, 2));
 
         var grid = new Pen((IBrush?)this.FindResource(ActualThemeVariant, "LineBrush") ?? new SolidColorBrush(Color.Parse("#E7EEF2")), 1);
         for (var step = 0; step <= 4; step++)
         {
             var y = plot.Bottom - plot.Height * step / 4;
             context.DrawLine(grid, new Point(plot.X, y), new Point(plot.Right, y));
-            if (step % 2 == 0) context.DrawText(Label((maximum * step / 4).ToString("0.#", CultureInfo.CurrentCulture)), new Point(2, y - 7));
+            if (step % 2 == 0)
+            {
+                var label = Label((maximum * step / 4).ToString("0.#", CultureInfo.CurrentCulture));
+                context.DrawText(label, new Point(plot.X - label.Width - 8, y - 7));
+            }
         }
         double X(int index) => plot.X + plot.Width * index / Math.Max(1, Days.Count - 1);
         double Y(double value) => plot.Bottom - Math.Clamp(value / maximum, 0, 1) * plot.Height;
@@ -197,8 +194,10 @@ public sealed class SocialWeeklyChart : Control
         Flush();
 
         for (var index = 0; index < Days.Count; index++)
-            context.DrawText(Label(Days[index].Date.ToString("MM-dd", CultureInfo.InvariantCulture)),
-                new Point(X(index) - 15, plot.Bottom + 8));
+        {
+            var label = Label(Days[index].Date.ToString("MM-dd", CultureInfo.InvariantCulture));
+            context.DrawText(label, new Point(X(index) - label.Width / 2, plot.Bottom + 8));
+        }
         if (known.Length == 0)
             context.DrawText(Label(Text("这段时间没有已授权的数据。", "No authorized data in this window.")), new Point(plot.X + 12, plot.Y + 60));
     }
@@ -207,8 +206,8 @@ public sealed class SocialWeeklyChart : Control
     {
         base.OnPointerMoved(e);
         if (Days.Count == 0 || Bounds.Width <= 0) return;
-        var plotWidth = Math.Max(1, Bounds.Width - 66);
-        var index = (int)Math.Round((e.GetPosition(this).X - 46) / plotWidth * (Days.Count - 1));
+        var plotWidth = Math.Max(1, Bounds.Width - 78);
+        var index = (int)Math.Round((e.GetPosition(this).X - 58) / plotWidth * (Days.Count - 1));
         if (index < 0 || index >= Days.Count) return;
         ToolTip.SetTip(this, Tooltip(Days[index]));
     }
